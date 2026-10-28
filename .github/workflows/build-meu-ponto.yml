@@ -6,6 +6,9 @@ on:
       - '.github/workflows/build-meu-ponto.yml'
       - 'android/**'
   workflow_dispatch:
+concurrency:
+  group: meu-ponto-apk
+  cancel-in-progress: true
 permissions:
   contents: write
 jobs:
