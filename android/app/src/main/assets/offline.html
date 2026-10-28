@@ -1,0 +1,231 @@
+<!doctype html><html lang="pt-BR"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#fbfaf8"><title>Meu Ponto</title><style>
+:root{--bg:#faf8f5;--white:#fff;--ink:#26231f;--muted:#857f7a;--line:#eae5df;--accent:#b65c47;--accent2:#d68e78;--mint:#eaf7f0;--green:#147551;--ice:#e8f1fe;--blue:#1768b4;--rose:#fff0e9;--red:#b74e32;--lav:#f0e9fb;--purple:#7352ab}
+*{box-sizing:border-box}html,body{margin:0;min-height:100%;background:var(--bg);color:var(--ink);font:14px system-ui,-apple-system,Roboto,'Segoe UI',sans-serif}button,input,textarea,select{font:inherit}button{cursor:pointer;-webkit-tap-highlight-color:transparent}button:disabled{opacity:.4}h1,h2,h3,p{margin:0}h1{font-size:26px;letter-spacing:-.9px}h2{font-size:18px;letter-spacing:-.45px}h3{font-size:15px}small,.muted{color:var(--muted)}strong{font-weight:750}.app{max-width:720px;margin:0 auto;padding:calc(env(safe-area-inset-top) + 15px) 16px 113px}.header{display:flex;align-items:center;justify-content:space-between;margin:0 0 21px}.logo-title{display:flex;align-items:center;gap:11px}.logo{width:44px;height:44px;object-fit:cover;border-radius:13px}.head-month{font-size:12px;color:var(--muted);background:#fff;border:1px solid var(--line);border-radius:30px;padding:9px 10px}.eyebrow{font-size:11px;font-weight:730;letter-spacing:.65px;color:var(--muted);text-transform:uppercase}.section-title{display:flex;align-items:center;justify-content:space-between;margin:21px 1px 12px}.section-title button{color:var(--accent);background:transparent;border:0;font-weight:750;font-size:12px}.statgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.stat{padding:15px 13px 13px;min-height:110px;border-radius:14px}.stat.green{background:var(--mint);color:var(--green)}.stat.blue{background:var(--ice);color:var(--blue)}.stat.red{background:var(--rose);color:var(--red)}.stat.purple{background:var(--lav);color:var(--purple)}.stathead{display:flex;align-items:center;gap:7px;font-size:11px;font-weight:600}.stat .value{font-size:25px;letter-spacing:-.8px;font-weight:770;margin:9px 0 0;white-space:nowrap}.stat .subtitle{font-size:11px;margin-top:3px}.card{background:white;border:1px solid var(--line);border-radius:16px;padding:16px;margin-bottom:12px;box-shadow:0 3px 8px #442c1405}.action-scan{display:flex;align-items:center;justify-content:space-between;background:linear-gradient(100deg,#bd755f,#d99b83);color:white;width:100%;border:none;text-align:left;padding:18px 17px;border-radius:15px;box-shadow:0 6px 15px #b16c4730}.action-scan b{font-size:15px}.action-scan small{display:block;margin-top:5px;color:#fff5f0}.circle-arrow{font-size:25px;font-weight:300}.list-row{display:flex;align-items:center;gap:11px;padding:12px 2px;border-bottom:1px solid var(--line);cursor:pointer}.list-row:last-child{border-bottom:0}.daybox{width:45px;min-width:45px;text-align:center}.daybox b{font-size:20px;display:block;line-height:1.25}.daybox small{font-size:10px;text-transform:uppercase}.list-main{min-width:0;flex:1}.list-main strong{font-size:13px}.list-main p{font-size:12px;color:var(--muted);margin-top:4px}.row-right{display:flex;flex-direction:column;align-items:end;gap:5px;white-space:nowrap}.row-right small{font-size:11px}.chip{display:inline-block;border-radius:8px;padding:5px 8px;font-size:10px;font-weight:700;background:#f1efed;color:#69645e}.chip.good{background:#eaf7ea;color:#246a3c}.chip.debit{background:#ffece5;color:#b4482f}.chip.credit{background:#e6f0fe;color:#2867ae}.chip.holiday{background:#f2eafa;color:#8562a4}.empty{text-align:center;padding:25px 10px;color:var(--muted);font-size:13px;line-height:1.55}.page{display:none}.page.active{display:block}.bottom{height:calc(68px + env(safe-area-inset-bottom));padding-bottom:env(safe-area-inset-bottom);background:#fff;position:fixed;bottom:0;left:0;right:0;display:flex;justify-content:center;border-top:1px solid #e9e4e0;z-index:20}.nav-inner{width:100%;max-width:720px;display:grid;grid-template-columns:repeat(5,1fr);align-items:center}.nav{border:0;background:none;color:#8e8a86;display:flex;flex-direction:column;align-items:center;gap:4px;font-size:10px;font-weight:600;padding:6px 3px}.nav.active{color:var(--accent)}.nav svg{width:22px;height:22px;stroke:currentColor;stroke-width:1.85;stroke-linecap:round;stroke-linejoin:round;fill:none}.plus{width:51px;height:51px;background:#bc6f59;color:white;border-radius:50%;font-size:33px;line-height:48px;box-shadow:0 6px 16px #b56b5540;margin-top:-12px}.panel-header{display:flex;align-items:center;justify-content:space-between;gap:6px;margin:0 0 19px}.panel-header button{border:0;background:#fff;color:#6b605a;padding:8px 12px;border-radius:12px}.panel-header strong{font-size:19px}.field{margin:0 0 14px;min-width:0}.field label{display:block;font-size:12px;font-weight:670;color:#68615a;margin-bottom:7px}.field input,.field select,.field textarea{width:100%;height:46px;min-width:0;background:#fbfaf8;border:1px solid #e2dcd5;border-radius:11px;padding:10px 11px;outline:none;color:#26231f;font-size:15px}.field textarea{height:68px;resize:vertical}.field input:focus,.field textarea:focus,.field select:focus{border-color:#c77b63;background:white}.field input::placeholder{color:#b8b4b0}.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}.hint{font-size:11px;color:#a39b95;margin-top:5px;line-height:1.45}.btn{width:100%;border:0;border-radius:12px;background:var(--accent2);color:white;font-weight:730;padding:13px 16px;min-height:44px}.btn.light{background:#faefeb;color:var(--accent)}.btn.outline{border:1px solid #ded8d3;background:#fff;color:#665b55}.btn.danger{background:#fff0ed;color:#c14c3d}.btnline{display:flex;gap:10px}.btnline>*{flex:1;min-width:0}.select-group{display:grid;gap:8px}.choice{display:flex;align-items:start;gap:8px;border:1px solid #e8e1da;padding:11px;border-radius:12px;line-height:1.4}.choice:has(input:checked){border-color:#cb8370;background:#fff4ef}.choice input{accent-color:var(--accent);margin-top:3px}.choice strong{display:block}.choice span{font-size:11px;color:#847c76}.info{background:#f5f0ec;border-radius:12px;padding:12px;font-size:12px;line-height:1.65;color:#6b625c}.spaced{margin-bottom:12px}.timeline .list-row{padding:14px 0}.monthnav{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:15px}.monthnav button{background:#fff;border:1px solid var(--line);border-radius:10px;padding:9px 15px;font-size:18px}.monthnav strong{text-transform:capitalize}.adjust{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 0;border-bottom:1px solid var(--line)}.adjust button{border:0;background:#fff0ed;color:var(--red);padding:7px 10px;border-radius:8px}.divider{height:1px;background:var(--line);margin:16px 0}.date-message{font-size:12px;color:var(--muted);margin:5px 0 14px}.hidden{display:none!important}.scan-picture{display:block;object-fit:contain;width:100%;max-height:290px;border-radius:12px;background:#f5eee7;margin:12px 0}.toast{position:fixed;bottom:82px;left:50%;transform:translate(-50%,15px);background:#392d26;color:#fff;padding:10px 15px;border-radius:12px;z-index:40;opacity:0;transition:.2s;pointer-events:none;max-width:90vw;text-align:center;font-size:12px}.toast.show{opacity:1;transform:translate(-50%,0)}.progress{font-size:12px;color:var(--muted);margin-top:10px;line-height:1.6}.upload{display:none}details summary{cursor:pointer;color:var(--accent);font-size:12px;margin-top:10px}.ocrtext{white-space:pre-wrap;max-height:150px;overflow:auto;font:11px/1.4 monospace;background:#f8f5f2;padding:10px;border-radius:8px;margin-top:8px}.value-line{display:flex;align-items:baseline;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--line)}.value-line:last-child{border-bottom:0}.value-line b{font-size:16px}.label-holiday{background:#f3ebff;color:#71529e;border-radius:9px;padding:7px 11px;margin:9px 0;font-size:11px}.edit-bottom{position:sticky;bottom:78px;background:#faf8f5;padding:7px 0}.status-day{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:14px 0}.status-day div{background:#f8f4f0;border-radius:12px;padding:13px}.status-day b{display:block;margin-top:5px;font-size:17px}.kicker{font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.5px}.no-select{user-select:none}@media(min-width:580px){.app{padding-left:28px;padding-right:28px}}
+</style></head><body><div class="app">
+<div class="header"><div class="logo-title"><div class="logo" style="background:linear-gradient(135deg,#da9c86,#875144);color:white;font-size:29px;display:flex;align-items:center;justify-content:center">◷</div><div><h1>Meu Ponto</h1></div></div><button class="head-month" id="headMonth"></button></div>
+<section id="home" class="page active">
+<div class="statgrid">
+<div class="stat green"><div class="stathead">▣ Horas trabalhadas</div><div class="value" id="workedStat">0h 00m</div><div class="subtitle">Neste mês</div></div>
+<div class="stat blue"><div class="stathead">◷ Banco de horas</div><div class="value" id="bankStat">+0h 00m</div><div class="subtitle">Saldo do semestre</div></div>
+<div class="stat red"><div class="stathead">◴ Atrasos em folha</div><div class="value" id="lateStat">R$ 0,00</div><div class="subtitle" id="lateMinutes">0 minuto descontado</div></div>
+<div class="stat purple"><div class="stathead">♧ Horas extras (1,5×)</div><div class="value" id="extraStat">0h 00m</div><div class="subtitle" id="extraBank">0h 00m no banco</div></div>
+</div>
+<div class="section-title"><h2>Registrar ponto</h2></div><button class="action-scan" id="scanHome"><span><b>▣ Escanear comprovante</b><small>Leia data e horário de uma foto</small></span><span class="circle-arrow">›</span></button>
+<div class="section-title"><h2>Registros do mês</h2><button id="allRecords">Ver todos</button></div><div class="card" id="homeRecords"></div>
+<div class="info">A previsão de saída aparece em cinza no próprio campo durante o cadastro. O valor de atrasos e o saldo negativo do banco são calculados separadamente.</div>
+</section>
+<section id="records" class="page"><div class="section-title"><h2>Histórico de registros</h2></div><div class="monthnav"><button id="previousMonth">‹</button><strong id="monthTitle"></strong><button id="nextMonth">›</button></div><div id="holidayNote"></div><div class="card" id="recordsList"></div></section>
+<section id="edit" class="page"><div class="panel-header"><button id="backEdit">‹ Voltar</button><strong id="editTitle">Novo registro</strong><span style="width:58px"></span></div>
+<div class="card"><div class="field"><label for="editDate">Data</label><input id="editDate" type="date"></div><div id="editHoliday" class="label-holiday hidden"></div>
+<div class="two"><div class="field"><label for="entry">Entrada</label><input id="entry" placeholder="07:45" inputmode="numeric" maxlength="5"></div><div class="field"><label for="lunchOut">Saída para almoço</label><input id="lunchOut" placeholder="12:00" inputmode="numeric" maxlength="5"></div><div class="field"><label for="lunchIn">Retorno do almoço</label><input id="lunchIn" placeholder="13:00" inputmode="numeric" maxlength="5"><p class="hint" id="lunchForecast"></p></div><div class="field"><label for="exit">Saída final</label><input id="exit" placeholder="Previsão" inputmode="numeric" maxlength="5"><p class="hint" id="exitForecast">Saída prevista em cinza</p></div></div>
+<div class="section-title"><h3>Entrada após 9h10</h3></div><div id="delayChooser" class="select-group"><label class="choice"><input type="radio" name="delay" value="pay" checked><div><strong>Atraso (desconto na folha)</strong><span>R$ 0,21 por minuto, configurável. Não lança o mesmo atraso no banco.</span></div></label><label class="choice"><input type="radio" name="delay" value="bank"><div><strong>Banco de horas</strong><span>Debita os minutos no banco, sem cobrar como atraso salarial.</span></div></label></div>
+<div class="field" style="margin-top:16px"><label for="note">Observações</label><textarea id="note" placeholder="Abono, justificativa ou anotação (opcional)"></textarea></div>
+<div id="dayPreview" class="info"></div><div class="btnline" style="margin-top:15px"><button id="saveDay" class="btn">Salvar registro</button><button id="deleteDay" class="btn danger" style="flex:0 0 30%">Excluir</button></div></div>
+</section>
+<section id="scanner" class="page"><div class="panel-header"><button id="backScanner">‹ Voltar</button><strong>Scanner de ponto</strong><span style="width:58px"></span></div><div class="card"><h3>Escanear comprovante</h3><div class="btnline"><button class="btn" id="takePhoto">📷 Tirar foto</button><button class="btn outline" id="pickPhoto">Galeria</button></div><input class="upload" id="fileCamera" type="file" accept="image/*" capture="environment"><input class="upload" id="fileGallery" type="file" accept="image/*"><img id="scanImage" class="scan-picture hidden" alt="Foto do comprovante"><p id="scanMessage" class="progress hidden" role="status" aria-live="polite"></p>
+<div id="scanReview" class="hidden"><div class="divider"></div><h3>Confirme o que foi lido</h3><div class="two" style="margin-top:15px"><div class="field"><label>Data do comprovante</label><input type="date" id="scanDate"></div><div class="field"><label>Horário do recibo</label><input id="scanTime" inputmode="numeric" placeholder="14:03" maxlength="5"></div></div><div class="field"><label>Tipo da batida</label><select id="scanKind"><option value="entry">Entrada</option><option value="lunchOut">Saída para almoço</option><option value="lunchIn">Retorno do almoço</option><option value="exit">Saída final</option></select></div><button class="btn" id="confirmScan">Adicionar batida ao registro</button><details><summary>Ver texto reconhecido</summary><div class="ocrtext" id="scanRaw"></div></details></div></div></section>
+<section id="summary" class="page"><div class="section-title"><h2>Resumo do banco</h2></div><div class="card"><p class="eyebrow" id="semesterTitle">Semestre</p><div id="semBalance" style="font-size:33px;font-weight:800;margin:9px 0 12px;color:var(--blue)">+0h 00m</div><div class="value-line"><span>Créditos do banco (com 1,5×)</span><b id="creditTotal">0h 00m</b></div><div class="value-line"><span>Débitos do banco</span><b id="debitTotal">0h 00m</b></div><div class="value-line"><span>Desconto por atrasos neste mês</span><b id="payTotal">R$ 0,00</b></div><div class="value-line"><span>Estimativa de desconto do banco negativo</span><b id="negativeMoney">A definir</b></div><p class="hint" style="margin-top:15px">O banco recomeça em zero nos dias 01/01 e 01/07. Saldos anteriores permanecem no histórico.</p></div><div class="section-title"><h2>Ajustes do banco</h2></div><div class="card"><div class="two"><div class="field"><label>Data</label><input id="adjustDate" type="date"></div><div class="field"><label>Minutos (+ ou −)</label><input id="adjustMinutes" type="number" placeholder="-30 ou 45"></div></div><div class="field"><label>Motivo</label><input id="adjustReason" placeholder="Abono, correção..."></div><button class="btn light" id="addAdjust">Adicionar ajuste</button><div id="adjustList" style="margin-top:10px"></div></div><div class="section-title"><h2>Semestres anteriores</h2></div><div class="card" id="periodHistory"></div></section>
+<section id="settings" class="page"><div class="section-title"><h2>Configurações</h2></div><div class="card"><h3>Regras da jornada</h3><div class="two" style="margin-top:15px"><div class="field"><label>Entrada mínima</label><input id="cfgStart" inputmode="numeric"></div><div class="field"><label>Limite flexível</label><input id="cfgEnd" inputmode="numeric"></div><div class="field"><label>Tolerância (min)</label><input id="cfgTolerance" type="number" min="0"></div><div class="field"><label>Jornada diária (min)</label><input id="cfgWorkday" type="number" min="1"></div><div class="field"><label>Almoço padrão (min)</label><input id="cfgLunch" type="number" min="0"></div><div class="field"><label>Multiplicador extra</label><input id="cfgMultiplier" type="number" step="0.1" min="1"></div><div class="field"><label>R$/min atraso salarial</label><input id="cfgLateValue" type="number" step="0.01" min="0"></div><div class="field"><label>R$/min banco negativo</label><input id="cfgBankValue" type="number" step="0.01" min="0" placeholder="A definir"></div></div><div class="divider"></div><h3>Localidade e feriados</h3><div class="two" style="margin-top:15px"><div class="field"><label>UF</label><input id="cfgUF" maxlength="2"></div><div class="field"><label>Cidade</label><input id="cfgCity"></div></div><p class="hint">Feriados nacionais são pré-carregados. O app consulta atualizações quando houver conexão; feriados municipais de Curitiba têm regras locais.</p><button class="btn light" id="refreshHolidays" style="margin:12px 0 8px">Atualizar feriados</button><p class="progress" id="holidayStatus"></p><button id="saveSettings" class="btn" style="margin-top:12px">Salvar configurações</button></div><div class="section-title"><h2>Seus dados</h2></div><div class="card"><p class="date-message">Os dados ficam salvos neste aparelho, sem precisar de conta. Faça backup antes de trocar de celular.</p><div class="btnline"><button id="backup" class="btn outline">Exportar backup</button><button id="restore" class="btn outline">Restaurar backup</button></div><input id="restoreFile" class="upload" type="file" accept="application/json,.json"></div><p class="hint">Controle pessoal. Confira o tratamento de ausências, abonos e descontos com o espelho de ponto da empresa.</p><div class="card" style="margin-top:16px"><button class="btn" style="width:100%" onclick="location.href='file:///android_asset/index.html?refresh='+Date.now()">↻ Verificar atualização</button><div style="text-align:center;color:#857f7a;margin-top:8px;font-size:11px">Atualizações via GitHub · versão 3.0</div></div></section>
+</div><nav class="bottom"><div class="nav-inner"><button class="nav active" data-page="home"><svg viewBox="0 0 24 24"><path d="M3 11 12 3l9 8v9H3z"/><path d="M9 20v-7h6v7"/></svg>Início</button><button class="nav" data-page="records"><svg viewBox="0 0 24 24"><path d="M9 5h12M9 12h12M9 19h12M3 5h2M3 12h2M3 19h2"/></svg>Registros</button><button class="nav" data-page="edit"><span class="plus">+</span></button><button class="nav" data-page="summary"><svg viewBox="0 0 24 24"><path d="M4 21V10h3v11M11 21V4h3v17M18 21v-8h3v8"/></svg>Resumo</button><button class="nav" data-page="settings"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/></svg>Mais</button></div></nav><div class="toast" id="toast"></div>
+<script>
+(()=>{'use strict';
+const $=id=>document.getElementById(id),defaultSettings={start:'07:45',end:'09:00',tolerance:10,workday:480,lunch:60,multiplier:1.5,lateValue:.21,bankValue:'',uf:'PR',city:'Curitiba'};
+const localDate=(d=new Date())=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+const load=(key,fallback)=>{try{return JSON.parse(localStorage.getItem(key))??fallback}catch{return fallback}};
+let cfg={...defaultSettings,...load('ponto2_cfg',{})},records=load('ponto2_records',{}),adjustments=load('ponto2_adjustments',[]),holidayCache=load('ponto2_holidays',{}),currentMonth=localDate().slice(0,7),editFor=localDate(),page='home',scanURL=null,scanBusy=false;let toastTimeout;
+const save=()=>{localStorage.setItem('ponto2_cfg',JSON.stringify(cfg));localStorage.setItem('ponto2_records',JSON.stringify(records));localStorage.setItem('ponto2_adjustments',JSON.stringify(adjustments));localStorage.setItem('ponto2_holidays',JSON.stringify(holidayCache));};
+const alertUser=t=>{let v=$('toast');v.textContent=t;v.classList.add('show');clearTimeout(toastTimeout);toastTimeout=setTimeout(()=>v.classList.remove('show'),3200)};
+const parseTime=t=>{let m=/^(\d{1,2}):(\d{2})$/.exec((t||'').trim());if(!m)return null;let a=+m[1],b=+m[2];return a<24&&b<60?a*60+b:null};
+const formatInput=v=>{let s=String(v||'').trim().replace(/[^\d:]/g,'');if(/^\d{3,4}$/.test(s))s=s.padStart(4,'0').replace(/^(\d{2})/,'$1:');if(/^\d:\d{2}$/.test(s))s='0'+s;return parseTime(s)===null?'':s};
+const fmtMin=(n,signed=false)=>{let neg=n<0;n=Math.round(Math.abs(n));return `${signed?(neg?'−':'+'):neg?'−':''}${Math.floor(n/60)}h ${String(n%60).padStart(2,'0')}m`};
+const brl=n=>Number(n||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+const fmtDate=d=>d?d.split('-').reverse().join('/'):'—';
+const fromMinutes=m=>{if(m<0||m>=1440)return '';return `${String(Math.floor(m/60)).padStart(2,'0')}:${String(m%60).padStart(2,'0')}`};
+const safe=s=>String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const semKey=d=>d.slice(0,4)+(Number(d.slice(5,7))<=6?'A':'B');
+const semLabel=k=>`${k.slice(0,4)} · ${k.endsWith('A')?'jan–jun':'jul–dez'}`;
+const addDays=(date,n)=>{let d=new Date(date+'T12:00:00');d.setDate(d.getDate()+n);return localDate(d)};
+const easter=y=>{let a=y%19,b=Math.floor(y/100),c=y%100,d=Math.floor(b/4),e=b%4,f=Math.floor((b+8)/25),g=Math.floor((b-f+1)/3),h=(19*a+b-d-g+15)%30,i=Math.floor(c/4),k=c%4,l=(32+2*e+2*i-h-k+7)%7,m=Math.floor((a+11*h+22*l)/451),month=Math.floor((h+l-7*m+114)/31),day=(h+l-7*m+114)%31+1;return localDate(new Date(y,month-1,day))};
+function baseHolidays(y){let h={};[['01-01','Ano-Novo'],['04-21','Tiradentes'],['05-01','Dia do Trabalho'],['09-07','Independência'],['10-12','Nossa Senhora Aparecida'],['11-02','Finados'],['11-15','Proclamação da República'],['11-20','Consciência Negra'],['12-25','Natal']].forEach(([d,n])=>h[`${y}-${d}`]=n);let e=easter(y);h[addDays(e,-2)]='Sexta-feira Santa';if(cfg.city.trim().toLowerCase()==='curitiba'){h[addDays(e,60)]='Corpus Christi (Curitiba)';h[`${y}-09-08`]='Nossa Senhora da Luz (Curitiba)'}return h}
+function holidayName(date){const yr=Number(date.slice(0,4));return {...baseHolidays(yr),...(holidayCache[`${yr}_${cfg.uf.toUpperCase()}`]||{})}[date]||''}
+function isRestDay(date){let d=new Date(date+'T12:00:00').getDay();return d===0||d===6||!!holidayName(date)}
+function calc(date,r){let entry=parseTime(r.entry),exit=parseTime(r.exit),l1=parseTime(r.lunchOut),l2=parseTime(r.lunchIn);if(entry===null||exit===null||exit<=entry)return null;if((l1===null)!==(l2===null))return null;if(l1!==null&&!(entry<=l1&&l1<l2&&l2<=exit))return null;let minutes=exit-entry-(l1===null?+cfg.lunch:l2-l1);if(minutes<0)return null;let isRest=isRestDay(date);let late=Math.max(0,entry-parseTime(cfg.end));let lateBank=!isRest&&late>0&&(late<=+cfg.tolerance||r.delay==='bank')?late:0;let latePay=!isRest&&late>+cfg.tolerance&&r.delay!=='bank'?late:0;let deficit=isRest?0:Math.max(0,+cfg.workday-minutes),extra=isRest?minutes:Math.max(0,minutes-+cfg.workday);let debit=isRest?0:latePay>0?Math.max(0,deficit-latePay):Math.max(deficit,lateBank);let credit=Math.round(extra*+cfg.multiplier);return {minutes,late,lateBank,latePay,lateMoney:latePay*+cfg.lateValue,credit,debit,bank:credit-debit,rest:isRest};}
+function summaryMonth(ym){let s={minutes:0,lateMoney:0,lateMinutes:0,extra:0,credit:0,debit:0,count:0};for(let [date,r] of Object.entries(records)){if(!date.startsWith(ym))continue;let c=calc(date,r);if(!c)continue;s.count++;s.minutes+=c.minutes;s.lateMoney+=c.lateMoney;s.lateMinutes+=c.latePay;s.credit+=c.credit;s.debit+=c.debit;if(c.minutes>+cfg.workday&&!c.rest)s.extra+=c.minutes-+cfg.workday;}return s}
+function summarySem(k){let s={credit:0,debit:0,balance:0,days:0};for(let [date,r] of Object.entries(records)){if(semKey(date)!==k)continue;let c=calc(date,r);if(!c)continue;s.credit+=c.credit;s.debit+=c.debit;s.days++}for(let a of adjustments){if(semKey(a.date)!==k)continue;let m=+a.minutes;if(m>0)s.credit+=m;else s.debit-=m}s.balance=s.credit-s.debit;return s}
+function go(next){page=next;document.querySelectorAll('.page').forEach(x=>x.classList.toggle('active',x.id===next));document.querySelectorAll('.nav').forEach(x=>x.classList.toggle('active',x.dataset.page===next));if(next==='home')renderHome();if(next==='records')renderRecords();if(next==='summary')renderSummary();if(next==='settings')renderSettings();window.scrollTo(0,0)}
+function recordRow(date,r){let c=calc(date,r),hol=holidayName(date),status=hol?'Feriado':!c?'Parcial':c.latePay?'Atraso':c.lateBank?'Banco':c.bank>0?'Extra':c.bank<0?'Débito':'Normal';let cls=hol?'holiday':status==='Atraso'?'debit':status==='Banco'?'credit':c?.bank>0?'good':'';return `<div class="list-row" data-date="${date}"><div class="daybox"><b>${date.slice(8)}</b><small>${new Date(date+'T12:00:00').toLocaleDateString('pt-BR',{weekday:'short'}).replace('.','')}</small></div><div class="list-main"><strong>${safe(r.entry)||'—'} → ${safe(r.exit)||'—'}</strong><p>${c?fmtMin(c.minutes)+' trabalhadas':'Registro incompleto'}${c?.latePay?' • '+brl(c.lateMoney):''}</p></div><div class="row-right">${c?`<small style="color:${c.bank<0?'#b74e32':'#1768b4'}">${fmtMin(c.bank,true)}</small>`:''}<span class="chip ${cls}">${status}</span></div></div>`}
+function renderHome(){const m=summaryMonth(localDate().slice(0,7)),sem=summarySem(semKey(localDate()));$('workedStat').textContent=fmtMin(m.minutes);$('bankStat').textContent=fmtMin(sem.balance,true);$('bankStat').style.fontSize=sem.balance>9999?'20px':'';$('lateStat').textContent=brl(m.lateMoney);$('lateMinutes').textContent=`${m.lateMinutes} min em folha`;$('extraStat').textContent=fmtMin(m.extra);$('extraBank').textContent=fmtMin(m.credit)+' no banco';$('headMonth').textContent=new Date(localDate()+'T12:00:00').toLocaleDateString('pt-BR',{month:'short',year:'numeric'}).replace('.','');let dates=Object.keys(records).filter(d=>d.startsWith(localDate().slice(0,7))).sort().reverse().slice(0,5);$('homeRecords').innerHTML=dates.length?dates.map(d=>recordRow(d,records[d])).join(''):'<div class="empty">Ainda não há registros neste mês.<br>Toque no <b>+</b> para começar.</div>'}
+function renderRecords(){let [y,m]=currentMonth.split('-').map(Number);$('monthTitle').textContent=new Date(y,m-1,1).toLocaleDateString('pt-BR',{month:'long',year:'numeric'});let dates=Object.keys(records).filter(d=>d.startsWith(currentMonth)).sort().reverse();$('recordsList').innerHTML=dates.length?dates.map(d=>recordRow(d,records[d])).join(''):'<div class="empty">Não há registros neste mês.</div>';let h={...baseHolidays(y),...(holidayCache[`${y}_${cfg.uf.toUpperCase()}`]||{})};$('holidayNote').innerHTML=Object.entries(h).filter(([d])=>d.startsWith(currentMonth)).map(([d,n])=>`<p class="date-message">✦ ${fmtDate(d)} · ${safe(n)}</p>`).join('')}
+function openEdit(date=localDate()){editFor=date;$('editDate').value=date;let r=records[date]||{};['entry','lunchOut','lunchIn','exit'].forEach(k=>$(k).value=r[k]||'');$('note').value=r.note||'';document.querySelector(`input[name=delay][value=${r.delay==='bank'?'bank':'pay'}]`).checked=true;$('editTitle').textContent=records[date]?'Editar registro':'Novo registro';$('deleteDay').disabled=!records[date];previewDay();go('edit')}
+function readForm(){let x={};['entry','lunchOut','lunchIn','exit'].forEach(k=>x[k]=formatInput($(k).value));x.note=$('note').value.trim();x.delay=document.querySelector('input[name=delay]:checked').value;return x}
+function previewDay(){let date=$('editDate').value||editFor;let en=parseTime($('entry').value),l1=parseTime($('lunchOut').value),l2=parseTime($('lunchIn').value);$('lunchIn').placeholder=l1===null?'13:00':fromMinutes(l1+Number(cfg.lunch));let rem=+cfg.workday;let forecast=en===null?null:en+rem+(l1!==null&&l2!==null?l2-l1:+cfg.lunch);let text=forecast!==null&&forecast<1440?fromMinutes(forecast):'—';$('exit').placeholder=text;$('exitForecast').textContent=forecast!==null?`Saída prevista: ${text}`:'A saída prevista aparecerá aqui';$('lunchForecast').textContent=l1!==null&&l2===null?'Previsão do retorno: '+$('lunchIn').placeholder:'';let late=en===null?0:en-parseTime(cfg.end);$('delayChooser').classList.toggle('hidden',late<=+cfg.tolerance);let h=holidayName(date);$('editHoliday').classList.toggle('hidden',!h);$('editHoliday').textContent=h?'✦ Feriado: '+h:'';let r=readForm();let c=calc(date,r);$('dayPreview').textContent=c?`Trabalhadas: ${fmtMin(c.minutes)} · Banco: ${fmtMin(c.bank,true)} · Desconto salarial: ${brl(c.lateMoney)}`:'Preencha entrada e saída para calcular a jornada. Pode salvar batidas parciais.'}
+function saveDay(){let date=$('editDate').value;if(!/^\d{4}-\d{2}-\d{2}$/.test(date)){alertUser('Informe uma data válida');return}for(let k of ['entry','lunchOut','lunchIn','exit']){if($(k).value.trim()&&!formatInput($(k).value)){alertUser('Confira o horário em '+k);return}}let r=readForm();if(!['entry','lunchOut','lunchIn','exit'].some(k=>r[k])){alertUser('Informe pelo menos uma batida');return}let en=parseTime(r.entry),ex=parseTime(r.exit),l1=parseTime(r.lunchOut),l2=parseTime(r.lunchIn);if(en!==null&&ex!==null&&ex<=en){alertUser('Saída deve ser posterior à entrada');return}if(l1!==null&&l2!==null&&l2<=l1){alertUser('Confira o horário do almoço');return}if((l1!==null&&en!==null&&l1<=en)||(l2!==null&&ex!==null&&l2>=ex)){alertUser('Confira a ordem das batidas');return}records[date]=r;save();alertUser('Registro salvo');go('home')}
+function renderSummary(){let today=localDate(),k=semKey(today),s=summarySem(k),m=summaryMonth(today.slice(0,7));$('semesterTitle').textContent=semLabel(k);$('semBalance').textContent=fmtMin(s.balance,true);$('semBalance').style.color=s.balance<0?'#b74e32':'#1768b4';$('creditTotal').textContent=fmtMin(s.credit);$('debitTotal').textContent=fmtMin(s.debit);$('payTotal').textContent=brl(m.lateMoney);$('negativeMoney').textContent=cfg.bankValue===''?'A definir':brl(Math.max(0,-s.balance)*+cfg.bankValue);$('adjustDate').value||=today;let arr=adjustments.slice().sort((a,b)=>b.date.localeCompare(a.date));$('adjustList').innerHTML=arr.map(a=>`<div class="adjust"><div><strong>${fmtDate(a.date)} · ${fmtMin(a.minutes,true)}</strong><br><small>${safe(a.reason||'Ajuste manual')}</small></div><button data-adjust-delete="${safe(a.id)}">Excluir</button></div>`).join('');let keys=new Set([k,...Object.keys(records).map(semKey),...adjustments.map(a=>semKey(a.date))]);$('periodHistory').innerHTML=[...keys].sort().reverse().map(p=>{let data=summarySem(p);return `<div class="value-line"><span>${semLabel(p)}</span><b>${fmtMin(data.balance,true)}</b></div>`}).join('')}
+function renderSettings(){let map={cfgStart:'start',cfgEnd:'end',cfgTolerance:'tolerance',cfgWorkday:'workday',cfgLunch:'lunch',cfgMultiplier:'multiplier',cfgLateValue:'lateValue',cfgBankValue:'bankValue',cfgUF:'uf',cfgCity:'city'};Object.entries(map).forEach(([id,k])=>$(id).value=cfg[k]);}
+function saveSettings(){let c={...cfg,start:formatInput($('cfgStart').value),end:formatInput($('cfgEnd').value),tolerance:Number($('cfgTolerance').value),workday:Number($('cfgWorkday').value),lunch:Number($('cfgLunch').value),multiplier:Number($('cfgMultiplier').value),lateValue:Number($('cfgLateValue').value),bankValue:$('cfgBankValue').value.trim()===''?'':Number($('cfgBankValue').value),uf:$('cfgUF').value.toUpperCase().trim(),city:$('cfgCity').value.trim()};if(!c.start||!c.end||parseTime(c.start)>parseTime(c.end)||!Number.isFinite(c.workday)||c.workday<=0||c.workday>1440||c.lunch<0||c.lunch>480||c.tolerance<0||c.tolerance>240||c.multiplier<1||c.multiplier>10||c.lateValue<0||(c.bankValue!==''&&c.bankValue<0)){alertUser('Confira os valores das configurações');return}cfg=c;save();renderHome();alertUser('Configurações salvas')}
+async function refreshHolidays(){let year=new Date().getFullYear();$('holidayStatus').textContent='Consultando calendário...';try{let r=await fetch(`https://brasilapi.com.br/api/feriados/v1/${year}`,{cache:'no-store'});if(!r.ok)throw Error(r.status);let arr=await r.json();if(!Array.isArray(arr))throw Error('Resposta inesperada');let h={};arr.forEach(a=>{if(/^\d{4}-\d{2}-\d{2}$/.test(a.date))h[a.date]=a.name});holidayCache[`${year}_${cfg.uf.toUpperCase()}`]=h;save();$('holidayStatus').textContent=`${Object.keys(h).length} feriados consultados em ${year}. Feriados de Curitiba incluídos localmente.`;alertUser('Feriados atualizados')}catch(e){$('holidayStatus').textContent='Sem conexão. O calendário nacional básico continua disponível offline.'}}
+function exportBackup(){let blob=new Blob([JSON.stringify({version:2,exportedAt:new Date().toISOString(),settings:cfg,records,adjustments,holidayCache},null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=`meu-ponto-backup-${localDate()}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(url),15000);alertUser('Backup criado')}
+async function importBackup(e){let f=e.target.files?.[0];if(!f)return;try{let o=JSON.parse(await f.text());if(!o.records||!o.settings||!Array.isArray(o.adjustments))throw Error('Incompatível');if(!confirm('Substituir todos os registros salvos pelos dados do backup?'))return;records=o.records;cfg={...defaultSettings,...o.settings};adjustments=o.adjustments;holidayCache=o.holidayCache||{};save();go('home');alertUser('Backup restaurado')}catch(err){alertUser('Backup inválido')}finally{e.target.value=''}}
+function parseReceipt(text){
+ // Comprovante INNer REP: data e hora costumam anteceder PIS/PTS.
+ // Corrige caracteres frequentemente confundidos pelo OCR, mas valida o calendário.
+ const lines=String(text||'').normalize('NFKC').toUpperCase().replace(/\r/g,'').split(/\n/).map(x=>x.trim()).filter(Boolean);
+ const numeric=s=>String(s).replace(/[OQD]/g,'0').replace(/[I|L!]/g,'1').replace(/Z/g,'2').replace(/S/g,'5').replace(/G/g,'6').replace(/B/g,'8');
+ const valid=(d,m,y)=>{
+  d=+numeric(d);m=+numeric(m);let yy=numeric(y);y=yy.length===2?2000+Number(yy):Number(yy);
+  if(!Number.isFinite(d)||!Number.isFinite(m)||!Number.isFinite(y)||y<2020||y>2100||m<1||m>12||d<1||d>31)return '';
+  const test=new Date(y,m-1,d);if(test.getFullYear()!==y||test.getMonth()+1!==m||test.getDate()!==d)return '';
+  return `${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+ };
+ const timesOn=line=>{
+  let arr=[],rx=/(^|[^0-9A-Z])([0-9OQIL]{1,2})\s*[:Hh.,]\s*([0-5OQILSZBG][0-9OQILSZBG])(?![0-9A-Z])/g,m;
+  while((m=rx.exec(line))){let h=Number(numeric(m[2])),minute=Number(numeric(m[3]));if(h<=23&&minute<=59)arr.push({time:`${String(h).padStart(2,'0')}:${String(minute).padStart(2,'0')}`,pos:m.index+m[1].length});}
+  return arr;
+ };
+ const dates=[];
+ for(let i=0;i<lines.length;i++){
+  const line=lines[i],next=lines[i+1]||'',prev=lines[i-1]||'';
+  // Slash, bars, dots, hyphens, commas, colons and even spaces between the 3 parts.
+  const candidate=/(^|[^A-Z0-9])([0-3OQILSZBG][0-9OQILSZBG]?)\s*[\/.|,:\-\s]\s*([01OQILSB][0-9OQILSB]?)\s*[\/.|,:\-\s]\s*(2[0OQ][0-9OQILSZBG]{2}|[0-9OQILSZBG]{2})(?![A-Z0-9])/g;
+  let m;
+  while((m=candidate.exec(line))){
+   const iso=valid(m[2],m[3],m[4]);if(!iso)continue;
+   const ts=timesOn(line.slice(m.index+m[0].length));
+   const nearby=ts[0]?.time||(timesOn(next)[0]?.time||'');
+   let rank=20+(nearby?100:0)+(/\bP[I1]?[ST5]\b|PIS|PTS/.test(line+next)?40:0)+(i>1?3:0);
+   dates.push({date:iso,time:nearby,rank,pos:i});
+  }
+  // Thermal printing / OCR sometimes loses all slashes: 27102026 or 271020261405.
+  const packed=/(^|[^A-Z0-9])([0-3OQILSZBG][0-9OQILSZBG])([01OQILSB][0-9OQILSB])(20[0-9OQILSZBG]{2})(?:\s+|(?=[0-2][0-9][:H.]))/g;
+  while((m=packed.exec(line))){
+   const iso=valid(m[2],m[3],m[4]);if(!iso)continue;
+   const t=timesOn(line.slice(m.index+m[0].length))[0]?.time||timesOn(next)[0]?.time||'';
+   dates.push({date:iso,time:t,rank:30+(t?100:0)+(/PIS|PTS/.test(line+next)?40:0),pos:i});
+  }
+  // If the whole line collapsed without separators after the year.
+  const combined=/(^|[^A-Z0-9])([0-3][0-9])([01][0-9])(20[0-9]{2})([0-2][0-9])([0-5][0-9])(?![A-Z0-9])/g;
+  while((m=combined.exec(numeric(line)))){
+   const iso=valid(m[2],m[3],m[4]),hh=+m[5],mm=+m[6];if(!iso||hh>23)continue;
+   dates.push({date:iso,time:`${m[5]}:${m[6]}`,rank:160,pos:i});
+  }
+ }
+ dates.sort((a,b)=>b.rank-a.rank||a.pos-b.pos);
+ const chosen=dates[0];
+ if(chosen?.date&&chosen.time)return {date:chosen.date,time:chosen.time};
+ const ts=[];
+ for(let i=0;i<lines.length;i++)for(let t of timesOn(lines[i]))ts.push({time:t.time,rank:(/PIS|PTS/.test(lines[i]+(lines[i+1]||''))?50:0)+(i>1?1:0),pos:i});
+ ts.sort((a,b)=>b.rank-a.rank||a.pos-b.pos);
+ return {date:chosen?.date||'',time:chosen?.time||ts[0]?.time||''};
+}
+function guessKind(date,time){let r=records[date]||{},m=parseTime(time);let suggestion=m===null?'entry':m<630?'entry':m<780?'lunchOut':m<930?'lunchIn':'exit';if(!r[suggestion])return suggestion;return ['entry','lunchOut','lunchIn','exit'].find(k=>!r[k])||suggestion;}
+let ocrStartup=null,ocrImageId=0;
+function warmOCR(){
+ if(ocrStartup)return ocrStartup;
+ ocrStartup=(async()=>{
+  if(!window.Tesseract){
+   await new Promise((ok,fail)=>{let done=false,script=document.createElement('script');
+    script.src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
+    let timer=setTimeout(()=>{if(!done){done=true;fail(Error('O leitor demorou para carregar; confira a internet.'))}},20000);
+    script.onload=()=>{if(!done){done=true;clearTimeout(timer);ok()}};
+    script.onerror=()=>{if(!done){done=true;clearTimeout(timer);fail(Error('Sem internet para carregar o leitor.'))}};
+    document.head.appendChild(script);
+   });
+  }
+  return Tesseract.createWorker('eng',1,{logger:m=>{if(scanBusy&&m.status==='recognizing text'&&typeof m.progress==='number')$('scanMessage').textContent=`Lendo data e hora: ${Math.round(m.progress*100)}%`}});
+ })().catch(err=>{ocrStartup=null;throw err});
+ return ocrStartup;
+}
+function showScanStatus(text){let el=$('scanMessage');el.textContent=text||'';el.classList.toggle('hidden',!text);}
+function startScan(){
+ if(scanURL){URL.revokeObjectURL(scanURL);scanURL=null}
+ $('scanImage').classList.add('hidden');$('scanReview').classList.add('hidden');
+ showScanStatus('');$('scanDate').value=localDate();scanDateEdited=false;go('scanner');warmOCR().catch(()=>{});
+}
+function findReceiptBounds(img){
+ // Identify the light rectangle of the thermal receipt against a darker background.
+ let w=160,h=Math.round(w*img.height/img.width);if(h>265){h=265;w=Math.round(h*img.width/img.height)}
+ let c=document.createElement('canvas');c.width=w;c.height=h;
+ let ctx=c.getContext('2d',{willReadFrequently:true});ctx.drawImage(img,0,0,w,h);
+ let rgba=ctx.getImageData(0,0,w,h).data,lum=new Uint8Array(w*h),sum=0;
+ for(let y=0;y<h;y++)for(let x=0;x<w;x++){
+  let z=(y*w+x)*4,v=Math.round(rgba[z]*.299+rgba[z+1]*.587+rgba[z+2]*.114);
+  lum[y*w+x]=v;sum+=v;
+ }
+ let threshold=Math.min(228,Math.max(142,sum/(w*h)+30));
+ let bright=new Uint8Array(w*h);
+ for(let i=0;i<bright.length;i++)bright[i]=lum[i]>threshold?1:0;
+ let runs=[],begin=-1;
+ for(let y=0;y<=h;y++){
+  let amount=0;if(y<h)for(let x=0;x<w;x++)amount+=bright[y*w+x];
+  let ok=y<h&&amount/w>.29;
+  if(ok&&begin<0)begin=y;
+  if(!ok&&begin>=0){runs.push([begin,y]);begin=-1}
+ }
+ runs.sort((a,b)=>(b[1]-b[0])-(a[1]-a[0]));let r=runs[0];
+ if(!r||r[1]-r[0]<h*.08||r[1]-r[0]>h*.83)return null;
+ let [top,bottom]=r,xs=[];
+ for(let x=0;x<w;x++){let count=0;for(let y=top;y<bottom;y++)count+=bright[y*w+x];if(count/(bottom-top)>.12)xs.push(x)}
+ if(xs.length<w*.18)return null;
+ let left=Math.max(0,xs[0]-w*.035),right=Math.min(w,xs[xs.length-1]+w*.035);
+ top=Math.max(0,top-h*.025);bottom=Math.min(h,bottom+h*.025);
+ let area=(right-left)*(bottom-top)/(w*h);
+ if(area<.07||area>.84)return null;
+ return {sx:Math.floor(left/w*img.width),sy:Math.floor(top/h*img.height),sw:Math.ceil((right-left)/w*img.width),sh:Math.ceil((bottom-top)/h*img.height)};
+}
+async function makeOCRCanvas(file){
+ // A única leitura OCR usa uma faixa com nome, data, hora e início do PIS.
+ // Uma imagem menor reduz drasticamente o tempo de processamento no celular.
+ const img=await createImageBitmap(file);
+ try{
+  const b=findReceiptBounds(img)||{sx:0,sy:0,sw:img.width,sh:img.height};
+  // No modelo INNer REP, a data fica logo abaixo do nome do colaborador.
+  // Evitamos reconhecer cabeçalho e sequência longa de hashes.
+  const sy=Math.round(b.sy+b.sh*.42),sh=Math.max(1,Math.round(b.sh*.34));
+  const targetW=Math.min(1450,Math.max(850,b.sw*1.45));
+  const scale=targetW/b.sw;
+  let c=document.createElement('canvas');c.width=Math.round(b.sw*scale);c.height=Math.round(sh*scale);
+  let ctx=c.getContext('2d',{willReadFrequently:false});ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';
+  ctx.filter='grayscale(1) contrast(1.28)';
+  ctx.drawImage(img,b.sx,sy,b.sw,Math.min(sh,img.height-sy),0,0,c.width,c.height);
+  return c;
+ }finally{img.close?.()}
+}
+async function readOCR(file){
+ const worker=await warmOCR();showScanStatus('Lendo data e horário...');
+ const canvas=await makeOCRCanvas(file);
+ try{
+  // Uma única passagem, focada na linha relevante do comprovante.
+  // PSM 6: bloco de texto uniforme, útil para impressões térmicas.
+  const result=await worker.recognize(canvas,{}, {text:true});
+  const text=result?.data?.text||'';
+  return {text,found:parseReceipt(text)};
+ }finally{canvas.width=0;canvas.height=0}
+}
+let scanDateEdited=false;
+async function handleImage(e){
+ const f=e.target.files?.[0];if(!f)return;
+ if(scanBusy){alertUser('A leitura anterior ainda não terminou');e.target.value='';return}
+ scanBusy=true;let imageId=++ocrImageId;scanDateEdited=false;
+ try{
+  if(scanURL)URL.revokeObjectURL(scanURL);scanURL=URL.createObjectURL(f);
+  $('scanImage').src=scanURL;$('scanImage').classList.remove('hidden');$('scanReview').classList.remove('hidden');
+  $('scanDate').value=localDate();$('scanTime').value='';$('scanKind').value='entry';$('scanRaw').textContent='';
+  showScanStatus('Preparando leitura...');
+  const {text,found}=await readOCR(f);if(imageId!==ocrImageId)return;
+  $('scanRaw').textContent=text||'Não foi possível reconhecer o texto';
+  // A data de hoje é o padrão. A data lida no papel tem prioridade.
+  // Não anulamos uma correção manual feita enquanto o OCR trabalhava.
+  if(found.date&&!scanDateEdited)$('scanDate').value=found.date;
+  if(found.time&& !$('scanTime').value)$('scanTime').value=found.time;
+  $('scanKind').value=guessKind($('scanDate').value,$('scanTime').value);
+  showScanStatus('');
+  if(!found.date)alertUser('Confira a data: o scanner manteve a data de hoje.');
+ }catch(err){showScanStatus('Leitura indisponível. Confira os campos manualmente.');$('scanRaw').textContent=String(err?.message||err)}
+ finally{e.target.value='';scanBusy=false}
+}
+function confirmScan(){let date=$('scanDate').value,time=formatInput($('scanTime').value),kind=$('scanKind').value;if(!date||!time){alertUser('Confirme a data e a hora');return}openEdit(date);if($(kind).value&&$(kind).value!==time&&!confirm('Substituir a batida existente desse campo?')){go('scanner');return}$(kind).value=time;previewDay();alertUser('Batida adicionada. Toque em Salvar registro.')}
+function bind(){document.querySelectorAll('.nav').forEach(b=>b.addEventListener('click',()=>{if(b.dataset.page==='edit')openEdit(localDate());else go(b.dataset.page)}));$('headMonth').onclick=()=>go('records');$('allRecords').onclick=()=>go('records');$('scanHome').onclick=startScan;$('backEdit').onclick=()=>go('home');$('backScanner').onclick=()=>go('home');$('takePhoto').onclick=()=>{$('fileCamera').click()};$('pickPhoto').onclick=()=>{$('fileGallery').click()};$('fileCamera').onchange=handleImage;$('fileGallery').onchange=handleImage;$('confirmScan').onclick=confirmScan;$('scanDate').onchange=()=>{scanDateEdited=true;$('scanKind').value=guessKind($('scanDate').value,$('scanTime').value)};$('scanTime').oninput=()=>{$('scanKind').value=guessKind($('scanDate').value,$('scanTime').value)};for(let k of ['entry','lunchOut','lunchIn','exit']){$(k).addEventListener('input',previewDay);$(k).addEventListener('blur',()=>{if($(k).value)$(k).value=formatInput($(k).value)||$(k).value;previewDay()})}$('editDate').onchange=()=>openEdit($('editDate').value);document.querySelectorAll('input[name=delay]').forEach(x=>x.onchange=previewDay);$('saveDay').onclick=saveDay;$('deleteDay').onclick=()=>{if(!records[editFor]||!confirm('Excluir este dia?'))return;delete records[editFor];save();go('home');alertUser('Registro excluído')};$('homeRecords').onclick=$('recordsList').onclick=e=>{let el=e.target.closest('[data-date]');if(el)openEdit(el.dataset.date)};$('previousMonth').onclick=()=>shiftMonth(-1);$('nextMonth').onclick=()=>shiftMonth(1);$('saveSettings').onclick=saveSettings;$('refreshHolidays').onclick=refreshHolidays;$('backup').onclick=exportBackup;$('restore').onclick=()=>$('restoreFile').click();$('restoreFile').onchange=importBackup;$('addAdjust').onclick=()=>{let date=$('adjustDate').value,num=Number($('adjustMinutes').value);if(!date||!Number.isInteger(num)||!num){alertUser('Informe data e minutos');return}adjustments.push({id:Date.now().toString(36)+Math.random().toString(36).slice(2,6),date,minutes:num,reason:$('adjustReason').value.trim()});save();$('adjustMinutes').value='';$('adjustReason').value='';renderSummary();alertUser('Ajuste adicionado')};$('adjustList').onclick=e=>{let el=e.target.closest('[data-adjust-delete]');if(!el)return;adjustments=adjustments.filter(a=>a.id!==el.dataset.adjustDelete);save();renderSummary()};}
+function shiftMonth(delta){let [y,m]=currentMonth.split('-').map(Number),d=new Date(y,m-1+delta,1);currentMonth=localDate(d).slice(0,7);renderRecords()}
+window.__pontoTest={calc,parseReceipt,formatInput,summarySem,summaryMonth,baseHolidays,openEdit,findReceiptBounds};bind();renderHome();setTimeout(()=>warmOCR().catch(()=>{}),2500);setTimeout(()=>{let year=new Date().getFullYear();if(!holidayCache[`${year}_${cfg.uf.toUpperCase()}`])refreshHolidays().catch(()=>{})},1200);}
+)();
+</script></body></html>
