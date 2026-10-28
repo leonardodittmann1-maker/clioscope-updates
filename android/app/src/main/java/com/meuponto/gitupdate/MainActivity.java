@@ -9,12 +9,20 @@ import android.net.Uri;
 import android.provider.MediaStore;
 import android.view.View;
 import android.webkit.WebChromeClient;
+import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.webkit.ValueCallback;
+import java.io.InputStream;
+import java.io.ByteArrayOutputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.nio.charset.StandardCharsets;
 
 public class MainActivity extends Activity {
+    private static final String HOME = "https://meuponto.app.local/";
+    private static final String REMOTE = "https://raw.githubusercontent.com/leonardodittmann1-maker/clioscope-updates/meu-ponto-app/app.html";
     private static final int REQ_PICK = 501;
     private static final int REQ_CAMERA = 502;
     private ValueCallback<Uri[]> callback;
@@ -30,9 +38,23 @@ public class MainActivity extends Activity {
         WebSettings st = web.getSettings();
         st.setJavaScriptEnabled(true);
         st.setDomStorageEnabled(true);
-        st.setAllowFileAccess(true);
+        st.setAllowFileAccess(false);
         st.setDefaultTextEncodingName("UTF-8");
-        web.setWebViewClient(new WebViewClient());
+        web.setWebViewClient(new WebViewClient() {
+            @Override public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
+                Uri target = request.getUrl();
+                if ("meuponto.app.local".equals(target.getHost()) && "/refresh".equals(target.getPath())) {
+                    loadApplication();
+                    return true;
+                }
+                if ("http".equals(target.getScheme()) || "https".equals(target.getScheme())) {
+                    try { startActivity(new Intent(Intent.ACTION_VIEW, target)); }
+                    catch (Exception ignored) {}
+                    return true;
+                }
+                return false;
+            }
+        });
         web.setWebChromeClient(new WebChromeClient() {
             @Override public boolean onShowFileChooser(WebView view, ValueCallback<Uri[]> newCallback, FileChooserParams params) {
                 if (callback != null) callback.onReceiveValue(null);
@@ -64,7 +86,45 @@ public class MainActivity extends Activity {
             }
         });
         setContentView(web);
-        web.loadUrl("file:///android_asset/index.html");
+        loadApplication();
+    }
+
+    private static String readText(InputStream input) throws Exception {
+        try (InputStream in = input; ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+            byte[] buffer = new byte[8192];
+            int count;
+            while ((count = in.read(buffer)) != -1) {
+                out.write(buffer,0,count);
+                if (out.size() > 500000) throw new IllegalStateException("Arquivo muito grande");
+            }
+            return new String(out.toByteArray(), StandardCharsets.UTF_8);
+        }
+    }
+
+    private void loadApplication() {
+        new Thread(() -> {
+            String html = null;
+            HttpURLConnection connection = null;
+            try {
+                URL url = new URL(REMOTE+"?at="+System.currentTimeMillis());
+                connection = (HttpURLConnection)url.openConnection();
+                connection.setConnectTimeout(5500);
+                connection.setReadTimeout(5500);
+                connection.setRequestProperty("Cache-Control","no-cache");
+                if (connection.getResponseCode() != 200) throw new Exception("Sem versão online");
+                html = readText(connection.getInputStream());
+                if (!html.contains("ponto2_records") || !html.contains("Confirme o que foi lido")) throw new Exception("Conteúdo inválido");
+            } catch (Exception ignored) {}
+            finally { if (connection != null) connection.disconnect(); }
+            if (html == null) {
+                try { html = readText(getAssets().open("offline.html")); } catch (Exception ignored) {}
+            }
+            final String result = html;
+            runOnUiThread(() -> {
+                if (result != null && web != null)
+                    web.loadDataWithBaseURL(HOME,result,"text/html","UTF-8",null);
+            });
+        }).start();
     }
 
     @Override protected void onActivityResult(int req, int result, Intent data) {
