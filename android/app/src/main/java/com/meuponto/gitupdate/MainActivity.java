@@ -8,17 +8,23 @@ import android.graphics.Color;
 import android.net.Uri;
 import android.provider.MediaStore;
 import android.view.View;
+import android.webkit.JavascriptInterface;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.webkit.ValueCallback;
+import org.json.JSONObject;
 import java.io.InputStream;
 import java.io.ByteArrayOutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import com.google.mlkit.vision.common.InputImage;
+import com.google.mlkit.vision.text.TextRecognition;
+import com.google.mlkit.vision.text.latin.TextRecognizerOptions;
+import com.google.mlkit.vision.text.TextRecognizer;
 
 public class MainActivity extends Activity {
     private static final String HOME = "https://meuponto.app.local/";
@@ -28,6 +34,11 @@ public class MainActivity extends Activity {
     private ValueCallback<Uri[]> callback;
     private Uri capturedPhoto;
     private WebView web;
+    private TextRecognizer recognizer;
+
+    public final class NativeOCR {
+        @JavascriptInterface public boolean isAvailable() { return true; }
+    }
 
     @Override public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -40,6 +51,8 @@ public class MainActivity extends Activity {
         st.setDomStorageEnabled(true);
         st.setAllowFileAccess(false);
         st.setDefaultTextEncodingName("UTF-8");
+        web.addJavascriptInterface(new NativeOCR(), "MeupontoOCR");
+        recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS);
         web.setWebViewClient(new WebViewClient() {
             @Override public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
                 Uri target = request.getUrl();
@@ -91,8 +104,7 @@ public class MainActivity extends Activity {
 
     private static String readText(InputStream input) throws Exception {
         try (InputStream in = input; ByteArrayOutputStream out = new ByteArrayOutputStream()) {
-            byte[] buffer = new byte[8192];
-            int count;
+            byte[] buffer = new byte[8192]; int count;
             while ((count = in.read(buffer)) != -1) {
                 out.write(buffer,0,count);
                 if (out.size() > 500000) throw new IllegalStateException("Arquivo muito grande");
@@ -108,12 +120,12 @@ public class MainActivity extends Activity {
             try {
                 URL url = new URL(REMOTE+"?at="+System.currentTimeMillis());
                 connection = (HttpURLConnection)url.openConnection();
-                connection.setConnectTimeout(5500);
-                connection.setReadTimeout(5500);
+                connection.setConnectTimeout(4500);
+                connection.setReadTimeout(4500);
                 connection.setRequestProperty("Cache-Control","no-cache");
                 if (connection.getResponseCode() != 200) throw new Exception("Sem versão online");
                 html = readText(connection.getInputStream());
-                if (!html.contains("ponto2_records") || !html.contains("Confirme o que foi lido")) throw new Exception("Conteúdo inválido");
+                if (!html.contains("ponto2_records") || !html.contains("__nativeOCRCallback")) throw new Exception("Conteúdo inválido");
             } catch (Exception ignored) {}
             finally { if (connection != null) connection.disconnect(); }
             if (html == null) {
@@ -124,6 +136,26 @@ public class MainActivity extends Activity {
                 if (result != null && web != null)
                     web.loadDataWithBaseURL(HOME,result,"text/html","UTF-8",null);
             });
+        }).start();
+    }
+
+    private void showOcrResult(String text, String error) {
+        final String js = "window.__nativeOCRCallback && window.__nativeOCRCallback("
+               +JSONObject.quote(text == null ? "" : text)+","
+               +JSONObject.quote(error == null ? "" : error)+");";
+        runOnUiThread(() -> { if(web != null) web.evaluateJavascript(js,null); });
+    }
+
+    private void recognizePhoto(Uri uri) {
+        new Thread(() -> {
+            try {
+                InputImage image = InputImage.fromFilePath(getApplicationContext(),uri);
+                recognizer.process(image)
+                    .addOnSuccessListener(result -> showOcrResult(result.getText(), ""))
+                    .addOnFailureListener(err -> showOcrResult("", "Erro na leitura: "+err.getMessage()));
+            } catch (Exception e) {
+                showOcrResult("", "Não foi possível abrir a foto: "+e.getMessage());
+            }
         }).start();
     }
 
@@ -138,9 +170,16 @@ public class MainActivity extends Activity {
         callback.onReceiveValue(uri == null ? null : new Uri[]{uri});
         callback = null;
         capturedPhoto = null;
+        if(uri != null) recognizePhoto(uri);
     }
+
     @Override public void onBackPressed() {
         if (web != null && web.canGoBack()) web.goBack();
         else super.onBackPressed();
+    }
+
+    @Override protected void onDestroy(){
+        if(recognizer != null) recognizer.close();
+        super.onDestroy();
     }
 }
