@@ -120,6 +120,7 @@ function parseReceipt(text){
 function guessKind(date,time){let r=records[date]||{},m=parseTime(time);let suggestion=m===null?'entry':m<630?'entry':m<780?'lunchOut':m<930?'lunchIn':'exit';if(!r[suggestion])return suggestion;return ['entry','lunchOut','lunchIn','exit'].find(k=>!r[k])||suggestion;}
 let ocrStartup=null,ocrImageId=0;
 function warmOCR(){
+ if(window.MeupontoOCR?.isAvailable?.())return Promise.resolve(null);
  if(ocrStartup)return ocrStartup;
  ocrStartup=(async()=>{
   if(!window.Tesseract){
@@ -139,7 +140,7 @@ function showScanStatus(text){let el=$('scanMessage');el.textContent=text||'';el
 function startScan(){
  if(scanURL){URL.revokeObjectURL(scanURL);scanURL=null}
  $('scanImage').classList.add('hidden');$('scanReview').classList.add('hidden');
- showScanStatus('');$('scanDate').value=localDate();scanDateEdited=false;go('scanner');warmOCR().catch(()=>{});
+ showScanStatus('');$('scanDate').value=localDate();scanDateEdited=false;go('scanner');if(!window.MeupontoOCR?.isAvailable?.())warmOCR().catch(()=>{});
 }
 function findReceiptBounds(img){
  // Identify the light rectangle of the thermal receipt against a darker background.
@@ -181,7 +182,7 @@ async function makeOCRCanvas(file){
   // No modelo INNer REP, a data fica logo abaixo do nome do colaborador.
   // Evitamos reconhecer cabeçalho e sequência longa de hashes.
   const sy=Math.round(b.sy+b.sh*.42),sh=Math.max(1,Math.round(b.sh*.34));
-  const targetW=Math.min(1450,Math.max(850,b.sw*1.45));
+  const targetW=Math.min(1050,Math.max(700,b.sw*1.10));
   const scale=targetW/b.sw;
   let c=document.createElement('canvas');c.width=Math.round(b.sw*scale);c.height=Math.round(sh*scale);
   let ctx=c.getContext('2d',{willReadFrequently:false});ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';
@@ -202,6 +203,22 @@ async function readOCR(file){
  }finally{canvas.width=0;canvas.height=0}
 }
 let scanDateEdited=false;
+window.__nativeOCRCallback=function(text,error){
+ if(!scanBusy)return;
+ try{
+  const found=parseReceipt(String(text||''));
+  $('scanRaw').textContent=String(text||error||'Nenhum texto reconhecido');
+  if(found.date&&!scanDateEdited)$('scanDate').value=found.date;
+  if(found.time&&!$('scanTime').value)$('scanTime').value=found.time;
+  $('scanKind').value=guessKind($('scanDate').value,$('scanTime').value);
+  showScanStatus('');
+  if(!found.date)alertUser('A data não foi identificada. Confira a data de hoje antes de salvar.');
+  if(!found.time)alertUser('Confira o horário do comprovante.');
+ }catch(err){
+  showScanStatus('Confira a data e o horário manualmente.');
+  $('scanRaw').textContent=String(err?.message||err);
+ }finally{scanBusy=false}
+};
 async function handleImage(e){
  const f=e.target.files?.[0];if(!f)return;
  if(scanBusy){alertUser('A leitura anterior ainda não terminou');e.target.value='';return}
@@ -211,6 +228,11 @@ async function handleImage(e){
   $('scanImage').src=scanURL;$('scanImage').classList.remove('hidden');$('scanReview').classList.remove('hidden');
   $('scanDate').value=localDate();$('scanTime').value='';$('scanKind').value='entry';$('scanRaw').textContent='';
   showScanStatus('Preparando leitura...');
+  if(window.MeupontoOCR?.isAvailable?.()){
+   // OCR local do Android: a câmera entrega o mesmo URI ao leitor nativo.
+   showScanStatus('Lendo no celular...');
+   return;
+  }
   const {text,found}=await readOCR(f);if(imageId!==ocrImageId)return;
   $('scanRaw').textContent=text||'Não foi possível reconhecer o texto';
   // A data de hoje é o padrão. A data lida no papel tem prioridade.
@@ -221,11 +243,11 @@ async function handleImage(e){
   showScanStatus('');
   if(!found.date)alertUser('Confira a data: o scanner manteve a data de hoje.');
  }catch(err){showScanStatus('Leitura indisponível. Confira os campos manualmente.');$('scanRaw').textContent=String(err?.message||err)}
- finally{e.target.value='';scanBusy=false}
+ finally{e.target.value='';if(!window.MeupontoOCR?.isAvailable?.())scanBusy=false}
 }
 function confirmScan(){let date=$('scanDate').value,time=formatInput($('scanTime').value),kind=$('scanKind').value;if(!date||!time){alertUser('Confirme a data e a hora');return}openEdit(date);if($(kind).value&&$(kind).value!==time&&!confirm('Substituir a batida existente desse campo?')){go('scanner');return}$(kind).value=time;previewDay();alertUser('Batida adicionada. Toque em Salvar registro.')}
 function bind(){document.querySelectorAll('.nav').forEach(b=>b.addEventListener('click',()=>{if(b.dataset.page==='edit')openEdit(localDate());else go(b.dataset.page)}));$('headMonth').onclick=()=>go('records');$('allRecords').onclick=()=>go('records');$('scanHome').onclick=startScan;$('backEdit').onclick=()=>go('home');$('backScanner').onclick=()=>go('home');$('takePhoto').onclick=()=>{$('fileCamera').click()};$('pickPhoto').onclick=()=>{$('fileGallery').click()};$('fileCamera').onchange=handleImage;$('fileGallery').onchange=handleImage;$('confirmScan').onclick=confirmScan;$('scanDate').onchange=()=>{scanDateEdited=true;$('scanKind').value=guessKind($('scanDate').value,$('scanTime').value)};$('scanTime').oninput=()=>{$('scanKind').value=guessKind($('scanDate').value,$('scanTime').value)};for(let k of ['entry','lunchOut','lunchIn','exit']){$(k).addEventListener('input',previewDay);$(k).addEventListener('blur',()=>{if($(k).value)$(k).value=formatInput($(k).value)||$(k).value;previewDay()})}$('editDate').onchange=()=>openEdit($('editDate').value);document.querySelectorAll('input[name=delay]').forEach(x=>x.onchange=previewDay);$('saveDay').onclick=saveDay;$('deleteDay').onclick=()=>{if(!records[editFor]||!confirm('Excluir este dia?'))return;delete records[editFor];save();go('home');alertUser('Registro excluído')};$('homeRecords').onclick=$('recordsList').onclick=e=>{let el=e.target.closest('[data-date]');if(el)openEdit(el.dataset.date)};$('previousMonth').onclick=()=>shiftMonth(-1);$('nextMonth').onclick=()=>shiftMonth(1);$('saveSettings').onclick=saveSettings;$('refreshHolidays').onclick=refreshHolidays;$('backup').onclick=exportBackup;$('restore').onclick=()=>$('restoreFile').click();$('restoreFile').onchange=importBackup;$('addAdjust').onclick=()=>{let date=$('adjustDate').value,num=Number($('adjustMinutes').value);if(!date||!Number.isInteger(num)||!num){alertUser('Informe data e minutos');return}adjustments.push({id:Date.now().toString(36)+Math.random().toString(36).slice(2,6),date,minutes:num,reason:$('adjustReason').value.trim()});save();$('adjustMinutes').value='';$('adjustReason').value='';renderSummary();alertUser('Ajuste adicionado')};$('adjustList').onclick=e=>{let el=e.target.closest('[data-adjust-delete]');if(!el)return;adjustments=adjustments.filter(a=>a.id!==el.dataset.adjustDelete);save();renderSummary()};}
 function shiftMonth(delta){let [y,m]=currentMonth.split('-').map(Number),d=new Date(y,m-1+delta,1);currentMonth=localDate(d).slice(0,7);renderRecords()}
-window.__pontoTest={calc,parseReceipt,formatInput,summarySem,summaryMonth,baseHolidays,openEdit,findReceiptBounds};bind();renderHome();setTimeout(()=>warmOCR().catch(()=>{}),2500);setTimeout(()=>{let year=new Date().getFullYear();if(!holidayCache[`${year}_${cfg.uf.toUpperCase()}`])refreshHolidays().catch(()=>{})},1200);}
+window.__pontoTest={calc,parseReceipt,formatInput,summarySem,summaryMonth,baseHolidays,openEdit,findReceiptBounds};bind();renderHome();if(!window.MeupontoOCR?.isAvailable?.())setTimeout(()=>warmOCR().catch(()=>{}),2500);setTimeout(()=>{let year=new Date().getFullYear();if(!holidayCache[`${year}_${cfg.uf.toUpperCase()}`])refreshHolidays().catch(()=>{})},1200);}
 )();
 </script></body></html>
