@@ -125,7 +125,7 @@ function renderToday(){
 }
 function renderHome(){renderToday();const m=summaryMonth(localDate().slice(0,7)),sem=summarySem(semKey(localDate()));$('workedStat').textContent=fmtMin(m.minutes);$('bankStat').textContent=fmtMin(sem.balance,true);$('bankStat').style.fontSize=sem.balance>9999?'20px':'';$('lateStat').textContent=brl(m.lateMoney);$('lateMinutes').textContent=`${m.lateMinutes} min em folha`;$('extraStat').textContent=fmtMin(m.extra);$('extraBank').textContent=fmtMin(m.credit)+' no banco';$('headMonth').textContent=new Date(localDate()+'T12:00:00').toLocaleDateString('pt-BR',{month:'short',year:'numeric'}).replace('.','');let dates=Object.keys(records).filter(d=>d.startsWith(localDate().slice(0,7))).sort().reverse().slice(0,5);$('homeRecords').innerHTML=dates.length?dates.map(d=>recordRow(d,records[d])).join(''):'<div class="empty">Ainda não há registros neste mês.</div>'}
 function renderRecords(){let [y,m]=currentMonth.split('-').map(Number);$('monthTitle').textContent=new Date(y,m-1,1).toLocaleDateString('pt-BR',{month:'long',year:'numeric'});let dates=Object.keys(records).filter(d=>d.startsWith(currentMonth)).sort().reverse();$('recordsList').innerHTML=dates.length?dates.map(d=>recordRow(d,records[d])).join(''):'<div class="empty">Não há registros neste mês.</div>';let h={...baseHolidays(y),...(holidayCache[`${y}_${cfg.uf.toUpperCase()}`]||{})};$('holidayNote').innerHTML=Object.entries(h).filter(([d])=>d.startsWith(currentMonth)).map(([d,n])=>`<p class="date-message">✦ ${fmtDate(d)} · ${safe(n)}</p>`).join('')}
-function openEdit(date=localDate()){editFor=date;$('editDate').value=date;let r=records[date]||{};['entry','lunchOut','lunchIn','exit'].forEach(k=>$(k).value=r[k]||'');$('note').value=r.note||'';document.querySelector(`input[name=delay][value=${r.delay==='bank'?'bank':'pay'}]`).checked=true;$('editTitle').textContent=records[date]?'Editar registro':'Novo registro';$('deleteDay').disabled=!records[date];previewDay();go('edit')}
+function openEdit(date=localDate()){if(!activeScan)$('editReceiptPanel').classList.add('hidden');editFor=date;$('editDate').value=date;let r=records[date]||{};['entry','lunchOut','lunchIn','exit'].forEach(k=>$(k).value=r[k]||'');$('note').value=r.note||'';document.querySelector(`input[name=delay][value=${r.delay==='bank'?'bank':'pay'}]`).checked=true;$('editTitle').textContent=records[date]?'Editar registro':'Novo registro';$('deleteDay').disabled=!records[date];previewDay();go('edit')}
 function readForm(){let x={};['entry','lunchOut','lunchIn','exit'].forEach(k=>x[k]=formatInput($(k).value));x.note=$('note').value.trim();x.delay=document.querySelector('input[name=delay]:checked').value;return x}
 function previewDay(){let date=$('editDate').value||editFor;let en=parseTime($('entry').value),l1=parseTime($('lunchOut').value),l2=parseTime($('lunchIn').value);$('lunchIn').placeholder=l1===null?'13:00':fromMinutes(l1+Number(cfg.lunch));let rem=+cfg.workday;let forecast=en===null?null:en+rem+(l1!==null&&l2!==null?l2-l1:+cfg.lunch);let text=forecast!==null&&forecast<1440?fromMinutes(forecast):'—';$('exit').placeholder=text;$('exitForecast').textContent=forecast!==null?`Saída prevista: ${text}`:'A saída prevista aparecerá aqui';$('lunchForecast').textContent=l1!==null&&l2===null?'Previsão do retorno: '+$('lunchIn').placeholder:'';let late=en===null?0:en-parseTime(cfg.end);$('delayChooser').classList.toggle('hidden',late<=+cfg.tolerance);let h=holidayName(date);$('editHoliday').classList.toggle('hidden',!h);$('editHoliday').textContent=h?'✦ Feriado: '+h:'';let r=readForm();let c=calc(date,r);$('dayPreview').textContent=c?`Trabalhadas: ${fmtMin(c.minutes)} · Banco: ${fmtMin(c.bank,true)} · Desconto salarial: ${brl(c.lateMoney)}`:'Preencha entrada e saída para calcular a jornada. Pode salvar batidas parciais.'}
 function saveDay(){let date=$('editDate').value;if(!/^\d{4}-\d{2}-\d{2}$/.test(date)){alertUser('Informe uma data válida');return}for(let k of ['entry','lunchOut','lunchIn','exit']){if($(k).value.trim()&&!formatInput($(k).value)){alertUser('Confira o horário em '+k);return}}let r=readForm();if(!['entry','lunchOut','lunchIn','exit'].some(k=>r[k])){alertUser('Informe pelo menos uma batida');return}let en=parseTime(r.entry),ex=parseTime(r.exit),l1=parseTime(r.lunchOut),l2=parseTime(r.lunchIn);if(en!==null&&ex!==null&&ex<=en){alertUser('Saída deve ser posterior à entrada');return}if(l1!==null&&l2!==null&&l2<=l1){alertUser('Confira o horário do almoço');return}if((l1!==null&&en!==null&&l1<=en)||(l2!==null&&ex!==null&&l2>=ex)){alertUser('Confira a ordem das batidas');return}records[date]=r;save();alertUser('Registro salvo');go('home')}
@@ -207,9 +207,10 @@ function warmOCR(){
 }
 function showScanStatus(text){let el=$('scanMessage');el.textContent=text||'';el.classList.toggle('hidden',!text);}
 function startScan(){
- if(scanURL){URL.revokeObjectURL(scanURL);scanURL=null}
- $('scanImage').classList.add('hidden');$('scanReview').classList.add('hidden');
- showScanStatus('');$('scanDate').value=localDate();scanDateEdited=false;go('scanner');if(!window.MeupontoOCR?.isAvailable?.())warmOCR().catch(()=>{});
+ if(scanBusy){alertUser('A leitura anterior ainda não terminou');return false}
+ earlyNativeResult=null;activeScan=null;scanDateEdited=false;
+ if(!window.MeupontoOCR?.isAvailable?.())warmOCR().catch(()=>{});
+ return true;
 }
 function findReceiptBounds(img){
  // Identify the light rectangle of the thermal receipt against a darker background.
@@ -271,50 +272,84 @@ async function readOCR(file){
   return {text,found:parseReceipt(text)};
  }finally{canvas.width=0;canvas.height=0}
 }
-let scanDateEdited=false;
-window.__nativeOCRCallback=function(text,error){
- if(!scanBusy)return;
+
+let scanDateEdited=false,activeScan=null,earlyNativeResult=null;
+function showEditReceipt(message,loading=false){
+ $('editReceiptPanel').classList.remove('hidden');
+ $('editReceiptMessage').textContent=message;
+ $('editReceiptSpinner').classList.toggle('hidden',!loading);
+}
+function useDetectedTime(kind,allowOverwrite=false){
+ if(!activeScan?.time||!['entry','lunchOut','lunchIn','exit'].includes(kind))return false;
+ const date=$('editDate').value,target=$(kind);
+ if(target.value&&formatInput(target.value)!==activeScan.time){
+  if(!allowOverwrite||!confirm('Substituir a batida existente desse campo?'))return false;
+ }
+ const old=activeScan.applied;
+ if(old&&old.kind!==kind&&old.date===date&&$(old.kind).value===old.time&&(!records[date]||records[date][old.kind]!==old.time))$(old.kind).value='';
+ target.value=activeScan.time;
+ activeScan.applied={kind,date,time:activeScan.time};
+ $('editReceiptKind').value=kind;
+ previewDay();
+ return true;
+}
+function handleRecognizedReceipt(text,error,id){
+ if(!activeScan||activeScan.id!==id||!scanBusy)return;
  try{
-  const found=parseReceipt(String(text||''));
-  $('scanRaw').textContent=String(text||error||'Nenhum texto reconhecido');
-  if(found.date&&!scanDateEdited)$('scanDate').value=found.date;
-  if(found.time&&!$('scanTime').value)$('scanTime').value=found.time;
-  $('scanKind').value=guessKind($('scanDate').value,$('scanTime').value);
-  showScanStatus('');
-  if(!found.date)alertUser('A data não foi identificada. Confira a data de hoje antes de salvar.');
-  if(!found.time)alertUser('Confira o horário do comprovante.');
- }catch(err){
-  showScanStatus('Confira a data e o horário manualmente.');
-  $('scanRaw').textContent=String(err?.message||err);
- }finally{scanBusy=false}
+  const found=parseReceipt(String(text||'')),time=formatInput(found.time);
+  const hasDate=Boolean(found.date);
+  if(found.date&&!activeScan.userDateChanged&&page==='edit'&&$('editDate').value===activeScan.initialDate)openEdit(found.date);
+  if(page!=='edit'){scanBusy=false;activeScan=null;return}
+  if(time){
+   activeScan.time=time;
+   const kind=guessKind($('editDate').value,time);
+   $('editReceiptTime').textContent=time;
+   $('editReceiptSelectRow').classList.remove('hidden');
+   $('editReceiptKind').value=kind;
+   if(useDetectedTime(kind))showEditReceipt(hasDate?'Data e horário identificados':'Horário identificado · confira a data');
+   else showEditReceipt('Horário identificado · escolha ou substitua uma batida');
+  }else{
+   $('editReceiptSelectRow').classList.add('hidden');
+   showEditReceipt(hasDate?'Data identificada · preencha o horário':'Confira a data e informe o horário');
+  }
+  if(error&&!hasDate&&!time)showEditReceipt('Não foi possível ler a foto · preencha manualmente');
+ }catch(err){showEditReceipt('Confira a data e o horário manualmente')}
+ finally{scanBusy=false}
+}
+window.__nativeOCRCallback=function(text,error){
+ if(!scanBusy||!activeScan){earlyNativeResult={text,error};return}
+ handleRecognizedReceipt(text,error,activeScan.id);
 };
 async function handleImage(e){
- const f=e.target.files?.[0];if(!f)return;
- if(scanBusy){alertUser('A leitura anterior ainda não terminou');e.target.value='';return}
- scanBusy=true;let imageId=++ocrImageId;scanDateEdited=false;
+ const input=e.target,file=input.files?.[0];
+ if(!file)return;
+ if(scanBusy){alertUser('A leitura anterior ainda não terminou');input.value='';return}
+ scanBusy=true;
+ const id=++ocrImageId;
+ activeScan={id,initialDate:localDate(),userDateChanged:false,time:'',applied:null};
+ openEdit(activeScan.initialDate);
+ $('editReceiptSelectRow').classList.add('hidden');
+ showEditReceipt('Lendo comprovante...',true);
+ if(window.MeupontoOCR?.isAvailable?.()){
+  input.value='';
+  if(earlyNativeResult){const buffered=earlyNativeResult;earlyNativeResult=null;handleRecognizedReceipt(buffered.text,buffered.error,id)}
+  return;
+ }
  try{
-  if(scanURL)URL.revokeObjectURL(scanURL);scanURL=URL.createObjectURL(f);
-  $('scanImage').src=scanURL;$('scanImage').classList.remove('hidden');$('scanReview').classList.remove('hidden');
-  $('scanDate').value=localDate();$('scanTime').value='';$('scanKind').value='entry';$('scanRaw').textContent='';
-  showScanStatus('Preparando leitura...');
-  if(window.MeupontoOCR?.isAvailable?.()){
-   // OCR local do Android: a câmera entrega o mesmo URI ao leitor nativo.
-   showScanStatus('Lendo no celular...');
-   return;
-  }
-  const {text,found}=await readOCR(f);if(imageId!==ocrImageId)return;
-  $('scanRaw').textContent=text||'Não foi possível reconhecer o texto';
-  // A data de hoje é o padrão. A data lida no papel tem prioridade.
-  // Não anulamos uma correção manual feita enquanto o OCR trabalhava.
-  if(found.date&&!scanDateEdited)$('scanDate').value=found.date;
-  if(found.time&& !$('scanTime').value)$('scanTime').value=found.time;
-  $('scanKind').value=guessKind($('scanDate').value,$('scanTime').value);
-  showScanStatus('');
-  if(!found.date)alertUser('Confira a data: o scanner manteve a data de hoje.');
- }catch(err){showScanStatus('Leitura indisponível. Confira os campos manualmente.');$('scanRaw').textContent=String(err?.message||err)}
- finally{e.target.value='';if(!window.MeupontoOCR?.isAvailable?.())scanBusy=false}
+  const {text}=await readOCR(file);
+  handleRecognizedReceipt(text,'',id);
+ }catch(err){handleRecognizedReceipt('',String(err?.message||err),id)}
+ finally{input.value=''}
 }
-function confirmScan(){let date=$('scanDate').value,time=formatInput($('scanTime').value),kind=$('scanKind').value;if(!date||!time){alertUser('Confirme a data e a hora');return}openEdit(date);if($(kind).value&&$(kind).value!==time&&!confirm('Substituir a batida existente desse campo?')){go('scanner');return}$(kind).value=time;previewDay();alertUser('Batida adicionada. Toque em Salvar registro.')}
+function confirmScan(){
+ const date=$('scanDate').value||localDate(),time=formatInput($('scanTime').value);
+ if(!time)return;
+ activeScan=null;openEdit(date);
+ const kind=guessKind(date,time);
+ if($(kind).value&&$(kind).value!==time&&!confirm('Substituir a batida existente desse campo?'))return;
+ $(kind).value=time;previewDay();
+}
+
 function bind(){document.querySelectorAll('.nav').forEach(b=>b.addEventListener('click',()=>{go(b.dataset.page)}));$('headMonth').onclick=()=>go('records');$('allRecords').onclick=()=>go('records');$('homeManual').onclick=()=>openEdit(localDate());
  const closeQuickScan=()=>{$('homeScanMenu').classList.add('hidden');$('homeScanToggle').setAttribute('aria-expanded','false')};
  $('homeScanToggle').onclick=()=>{let isOpen=$('homeScanMenu').classList.toggle('hidden');$('homeScanToggle').setAttribute('aria-expanded',String(!isOpen))};
