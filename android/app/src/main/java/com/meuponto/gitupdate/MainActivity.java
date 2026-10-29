@@ -33,6 +33,7 @@ public class MainActivity extends Activity {
     private static final int REQ_CAMERA = 502;
     private ValueCallback<Uri[]> callback;
     private Uri capturedPhoto;
+    private boolean selectedFileIsImage = false;
     private WebView web;
     private TextRecognizer recognizer;
 
@@ -73,8 +74,22 @@ public class MainActivity extends Activity {
                 if (callback != null) callback.onReceiveValue(null);
                 callback = newCallback;
                 capturedPhoto = null;
+                selectedFileIsImage = false;
+                boolean wantsDocument = false;
+                String[] accepts = params.getAcceptTypes();
+                if (accepts != null) {
+                    for (String accept : accepts) {
+                        if (accept == null) continue;
+                        String mime = accept.toLowerCase(java.util.Locale.ROOT);
+                        if (mime.contains("json") || mime.contains("text/plain") || mime.contains("octet-stream")) {
+                            wantsDocument = true;
+                            break;
+                        }
+                    }
+                }
                 try {
-                    if (params.isCaptureEnabled()) {
+                    if (params.isCaptureEnabled() && !wantsDocument) {
+                        selectedFileIsImage = true;
                         ContentValues values = new ContentValues();
                         values.put(MediaStore.Images.Media.DISPLAY_NAME, "meu_ponto_"+System.currentTimeMillis()+".jpg");
                         values.put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg");
@@ -84,7 +99,16 @@ public class MainActivity extends Activity {
                         cam.putExtra(MediaStore.EXTRA_OUTPUT, capturedPhoto);
                         cam.addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION | Intent.FLAG_GRANT_READ_URI_PERMISSION);
                         startActivityForResult(cam, REQ_CAMERA);
+                    } else if (wantsDocument) {
+                        // O backup JSON deve abrir o seletor de documentos, não a galeria.
+                        selectedFileIsImage = false;
+                        Intent document = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+                        document.addCategory(Intent.CATEGORY_OPENABLE);
+                        document.setType("*/*");
+                        document.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                        startActivityForResult(Intent.createChooser(document,"Selecionar backup JSON"),REQ_PICK);
                     } else {
+                        selectedFileIsImage = true;
                         Intent gallery = new Intent(Intent.ACTION_GET_CONTENT);
                         gallery.setType("image/*");
                         gallery.addCategory(Intent.CATEGORY_OPENABLE);
@@ -170,7 +194,8 @@ public class MainActivity extends Activity {
         callback.onReceiveValue(uri == null ? null : new Uri[]{uri});
         callback = null;
         capturedPhoto = null;
-        if(uri != null) recognizePhoto(uri);
+        if(uri != null && selectedFileIsImage) recognizePhoto(uri);
+        selectedFileIsImage = false;
     }
 
     @Override public void onBackPressed() {
