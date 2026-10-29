@@ -124,6 +124,7 @@ const easter=y=>{let a=y%19,b=Math.floor(y/100),c=y%100,d=Math.floor(b/4),e=b%4,
 function baseHolidays(y){let h={};[['01-01','Ano-Novo'],['04-21','Tiradentes'],['05-01','Dia do Trabalho'],['09-07','Independência'],['10-12','Nossa Senhora Aparecida'],['11-02','Finados'],['11-15','Proclamação da República'],['11-20','Consciência Negra'],['12-25','Natal']].forEach(([d,n])=>h[`${y}-${d}`]=n);let e=easter(y);h[addDays(e,-2)]='Sexta-feira Santa';if(cfg.city.trim().toLowerCase()==='curitiba'){h[addDays(e,60)]='Corpus Christi (Curitiba)';h[`${y}-09-08`]='Nossa Senhora da Luz (Curitiba)'}return h}
 function holidayName(date){const yr=Number(date.slice(0,4));return {...baseHolidays(yr),...(holidayCache[`${yr}_${cfg.uf.toUpperCase()}`]||{})}[date]||''}
 function isRestDay(date){let d=new Date(date+'T12:00:00').getDay();return d===0||d===6||!!holidayName(date)}
+const EXIT_TOLERANCE_MIN=5;
 function calc(date,r){
  const entry=parseTime(r.entry),exit=parseTime(r.exit);
  const l1=parseTime(r.lunchOut),l2=parseTime(r.lunchIn);
@@ -141,11 +142,13 @@ function calc(date,r){
  // Se o atraso é descontado na folha, a entrada contratual das 9h
  // é a referência do banco. Isso evita descontar o mesmo atraso duas vezes.
  const bankMinutes=minutes+latePay;
- const deficit=isRest?0:Math.max(0,+cfg.workday-bankMinutes);
- const extra=isRest?minutes:Math.max(0,bankMinutes-+cfg.workday);
+ // Tolerância simétrica na saída: 5 min não geram débito nem crédito.
+ // No sexto minuto é lançado o período integral (não apenas 1 minuto).
+ const rawBalance=bankMinutes-(+cfg.workday);
+ const countedBalance=isRest?minutes:(Math.abs(rawBalance)<=EXIT_TOLERANCE_MIN?0:rawBalance);
+ const deficit=Math.max(0,-countedBalance);
+ const extra=Math.max(0,countedBalance);
  const credit=Math.round(extra*+cfg.multiplier);
- // Para atraso lançado no banco, a diferença da jornada já contém os
- // minutos não trabalhados. Não aplicamos um segundo débito de chegada.
  const debit=deficit;
  return {minutes,lunchMinutes,bankMinutes,late,lateBank,latePay,
   lateMoney:latePay*+cfg.lateValue,credit,debit,bank:credit-debit,rest:isRest};
@@ -161,7 +164,8 @@ function renderToday(){
  const values=['entry','lunchOut','lunchIn','exit'];
  const names=['Entrada','Almoço','Retorno','Saída'];
  const en=parseTime(r.entry),startLunch=parseTime(r.lunchOut),endLunch=parseTime(r.lunchIn);
- const forecast=en===null?'':fromMinutes(en+Number(cfg.workday)+(startLunch!==null&&endLunch!==null?endLunch-startLunch:startLunch!==null||endLunch!==null?Number(cfg.lunch):0));
+ const payrollLate=en===null||rest||Math.max(0,en-parseTime(cfg.end))<=+cfg.tolerance||r.delay==='bank'?0:Math.max(0,en-parseTime(cfg.end));
+ const forecast=en===null?'':fromMinutes(en+Number(cfg.workday)+(startLunch!==null&&endLunch!==null?endLunch-startLunch:startLunch!==null||endLunch!==null?Number(cfg.lunch):0)-payrollLate);
  const hasAny=values.some(k=>!!r[k]);
  const state=c?'Concluído':hasAny?'Em andamento':hol?'Feriado':rest?'Folga':'Sem registro';
  const times=values.map((k,i)=>{let isForecast=k==='exit'&&!r.exit&&!!forecast;let value=r[k]||(isForecast?forecast:'—');return `<div class="today-slot"><span>${names[i]}</span><b class="${!r[k]?'ghost':''}">${safe(value)}</b></div>`}).join('');
@@ -180,7 +184,9 @@ function renderHome(){renderToday();const m=summaryMonth(localDate().slice(0,7))
 function renderRecords(){let [y,m]=currentMonth.split('-').map(Number);$('monthTitle').textContent=new Date(y,m-1,1).toLocaleDateString('pt-BR',{month:'long',year:'numeric'});let dates=Object.keys(records).filter(d=>d.startsWith(currentMonth)).sort().reverse();$('recordsList').innerHTML=dates.length?dates.map(d=>recordRow(d,records[d])).join(''):'<div class="empty">Não há registros neste mês.</div>';let h={...baseHolidays(y),...(holidayCache[`${y}_${cfg.uf.toUpperCase()}`]||{})};$('holidayNote').innerHTML=Object.entries(h).filter(([d])=>d.startsWith(currentMonth)).map(([d,n])=>`<p class="date-message">✦ ${fmtDate(d)} · ${safe(n)}</p>`).join('')}
 function openEdit(date=localDate()){if(!activeScan)$('editReceiptPanel').classList.add('hidden');editFor=date;$('editDate').value=date;let r=records[date]||{};['entry','lunchOut','lunchIn','exit'].forEach(k=>$(k).value=r[k]||'');$('note').value=r.note||'';document.querySelector(`input[name=delay][value=${r.delay==='bank'?'bank':'pay'}]`).checked=true;$('editTitle').textContent=records[date]?'Editar registro':'Novo registro';$('deleteDay').disabled=!records[date];previewDay();go('edit')}
 function readForm(){let x={};['entry','lunchOut','lunchIn','exit'].forEach(k=>x[k]=formatInput($(k).value));x.note=$('note').value.trim();x.delay=document.querySelector('input[name=delay]:checked').value;return x}
-function previewDay(){let date=$('editDate').value||editFor;let en=parseTime($('entry').value),l1=parseTime($('lunchOut').value),l2=parseTime($('lunchIn').value);$('lunchIn').placeholder=l1===null?'13:00':fromMinutes(l1+Number(cfg.lunch));let rem=+cfg.workday;let forecast=en===null?null:en+rem+(l1!==null&&l2!==null?l2-l1:l1!==null||l2!==null?+cfg.lunch:0);let text=forecast!==null&&forecast<1440?fromMinutes(forecast):'—';$('exit').placeholder=text;$('exitForecast').textContent=forecast!==null?`Saída prevista: ${text}`:'A saída prevista aparecerá aqui';$('lunchForecast').textContent=l1!==null&&l2===null?'Previsão do retorno: '+$('lunchIn').placeholder:'';let late=en===null?0:en-parseTime(cfg.end);$('delaySection').classList.toggle('hidden',late<=+cfg.tolerance);let h=holidayName(date);$('editHoliday').classList.toggle('hidden',!h);$('editHoliday').textContent=h?'✦ Feriado: '+h:'';let r=readForm();let c=calc(date,r);$('dayPreview').textContent=c?`Trabalhadas: ${fmtMin(c.minutes)} · Banco: ${fmtMin(c.bank,true)} · Desconto salarial: ${brl(c.lateMoney)}`:'Preencha entrada e saída para calcular a jornada. Pode salvar batidas parciais.'}
+function previewDay(){let date=$('editDate').value||editFor;let en=parseTime($('entry').value),l1=parseTime($('lunchOut').value),l2=parseTime($('lunchIn').value);$('lunchIn').placeholder=l1===null?'13:00':fromMinutes(l1+Number(cfg.lunch));let rem=+cfg.workday;let payrollLate=en===null||isRestDay(date)?0:Math.max(0,en-parseTime(cfg.end));
+ if(payrollLate<=+cfg.tolerance||document.querySelector('input[name=delay]:checked')?.value==='bank')payrollLate=0;
+ let forecast=en===null?null:en+rem+(l1!==null&&l2!==null?l2-l1:l1!==null||l2!==null?+cfg.lunch:0)-payrollLate;let text=forecast!==null&&forecast<1440?fromMinutes(forecast):'—';$('exit').placeholder=text;$('exitForecast').textContent=forecast!==null?`Saída prevista: ${text}`:'A saída prevista aparecerá aqui';$('lunchForecast').textContent=l1!==null&&l2===null?'Previsão do retorno: '+$('lunchIn').placeholder:'';let late=en===null?0:en-parseTime(cfg.end);$('delaySection').classList.toggle('hidden',late<=+cfg.tolerance);let h=holidayName(date);$('editHoliday').classList.toggle('hidden',!h);$('editHoliday').textContent=h?'✦ Feriado: '+h:'';let r=readForm();let c=calc(date,r);$('dayPreview').textContent=c?`Trabalhadas: ${fmtMin(c.minutes)} · Banco: ${fmtMin(c.bank,true)} · Desconto salarial: ${brl(c.lateMoney)}`:'Preencha entrada e saída para calcular a jornada. Pode salvar batidas parciais.'}
 function saveDay(){if(scanBusy){alertUser('Aguarde a leitura do comprovante');return}let date=$('editDate').value;if(!/^\d{4}-\d{2}-\d{2}$/.test(date)){alertUser('Informe uma data válida');return}for(let k of ['entry','lunchOut','lunchIn','exit']){if($(k).value.trim()&&!formatInput($(k).value)){alertUser('Confira o horário em '+k);return}}let r=readForm();if(!['entry','lunchOut','lunchIn','exit'].some(k=>r[k])){alertUser('Informe pelo menos uma batida');return}let en=parseTime(r.entry),ex=parseTime(r.exit),l1=parseTime(r.lunchOut),l2=parseTime(r.lunchIn);if(en!==null&&ex!==null&&ex<=en){alertUser('Saída deve ser posterior à entrada');return}if(l1!==null&&l2!==null&&l2<=l1){alertUser('Confira o horário do almoço');return}if((l1!==null&&en!==null&&l1<=en)||(l2!==null&&ex!==null&&l2>=ex)){alertUser('Confira a ordem das batidas');return}records[date]=r;save();activeScan=null;alertUser('Registro salvo');go('home')}
 function changeSummaryMonth(delta){
  const [year,month]=selectedSummaryMonth.split('-').map(Number);
