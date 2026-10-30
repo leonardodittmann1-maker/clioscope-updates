@@ -1,0 +1,627 @@
+<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ENADE Elétrica 2026 — Teste local</title><meta name="description" content="Aplicativo offline para estudo"><style>:root{font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;color:#172842;background:#f4f7fb;font-synthesis:none;--surface:#fff;--surface2:#f1f5f9;--border:#dae4ee;--text:#172842;--muted:#6e7e92;--nav:#122441;--accent:#087d78;--soft:#e6f5f1;--shadow:0 8px 30px rgba(13,35,58,.04)}
+*{box-sizing:border-box}body{margin:0}button,input,select,textarea{font:inherit}button{cursor:pointer}a{color:#087d78}button:disabled{opacity:.52;cursor:not-allowed}button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{outline:3px solid #30ae9b;outline-offset:2px}#app{min-height:100vh}.layout{display:grid;grid-template-columns:255px 1fr;min-height:100vh}.sidebar{background:var(--nav);color:#d5e0f0;padding:26px 16px 18px;position:sticky;top:0;height:100vh;display:flex;flex-direction:column;gap:20px;overflow:auto}.brand{display:flex;gap:12px;align-items:center;padding:4px 12px 14px;color:white}.brand-mark{height:42px;width:42px;border-radius:13px;display:grid;place-items:center;background:#1b3b52;color:#63dfc8;font-size:27px}.brand b{font-size:16px;letter-spacing:.1px}.brand small{display:block;font-size:12px;color:#b7c7d7;margin-top:2px}.nav{display:grid;gap:4px}.nav button{border:0;background:none;color:#ced9e9;text-align:left;padding:11px 12px;border-radius:10px;display:flex;gap:11px;align-items:center;width:100%;font-size:13px}.nav button:hover,.nav button.active{background:#26425b;color:#fff}.nav button.active{box-shadow:inset 3px 0 #5ddabf}.nav .num{width:23px;height:23px;border-radius:7px;display:grid;place-items:center;background:#29445a;color:#b7cadc;font-size:11px}.sidebar-bottom{margin-top:auto;border-top:1px solid #30445e;padding:18px 12px 4px;color:#bdccde;font-size:12px;line-height:1.6}.sidebar-bottom b{color:#fff}.main{min-width:0}.topbar{display:flex;align-items:center;justify-content:space-between;padding:20px 38px;background:var(--surface);border-bottom:1px solid var(--border)}.topbar small{display:block;color:var(--muted);font-size:12px}.topbar strong{display:block;font-size:15px}.topright{display:flex;align-items:center;gap:12px;color:var(--muted);font-size:12px}.pill{border-radius:99px;padding:6px 11px;background:var(--soft);color:#0e766f;font-size:11px;font-weight:700}.content{padding:32px 38px 60px;max-width:1440px;margin:auto}.hero{background:linear-gradient(115deg,#112e49,#154b5a 63%,#166b66);border-radius:20px;color:#fff;padding:30px 34px;display:grid;grid-template-columns:1fr auto;gap:25px;align-items:center;margin-bottom:26px;min-height:190px}.hero .eyebrow{color:#83e7ca;letter-spacing:1.6px;text-transform:uppercase;font-size:11px;font-weight:800;margin:0 0 10px}.hero h1{font-size:28px;line-height:1.2;margin:0 0 10px;letter-spacing:-.6px}.hero p{color:#c7deea;font-size:14px;max-width:630px;margin:0}.countdown{border-left:1px solid #5b8894;padding-left:30px;min-width:140px;text-align:center}.countdown strong{font-size:52px;line-height:1}.countdown span{display:block;color:#cfe6eb;font-size:12px;margin-top:7px}.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:1px solid var(--border);border-radius:10px;background:var(--surface);color:var(--text);padding:10px 15px;font-size:13px;font-weight:650;text-decoration:none;transition:.15s}.btn:hover{filter:brightness(.97)}.btn.primary{background:#087d78;color:white;border-color:#087d78}.btn.primary:hover{background:#076d69}.btn.ghost{background:transparent;color:inherit;border-color:currentColor}.btn.sm{padding:7px 10px;font-size:12px}.btn.warn{color:#a0423c;border-color:#ebc3c3}.btn:disabled{filter:none}.button-row{display:flex;flex-wrap:wrap;gap:9px;margin-top:17px}.heading{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;margin:20px 0 15px}.heading h2{font-size:20px;letter-spacing:-.4px;margin:0}.heading p{color:var(--muted);font-size:13px;margin:5px 0 0}.cards{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:15px;margin-bottom:26px}.card{border:1px solid var(--border);background:var(--surface);border-radius:14px;box-shadow:var(--shadow);padding:19px}.stat small{font-size:12px;color:var(--muted);display:block}.stat strong{font-size:28px;display:block;letter-spacing:-.8px;margin:10px 0 5px}.stat span{font-size:11px;color:var(--muted)}.two-col{display:grid;grid-template-columns:1.45fr 1fr;gap:18px}.section-title{font-size:16px;font-weight:800;letter-spacing:-.2px;margin:0 0 12px}.subtle{font-size:13px;color:var(--muted);line-height:1.6}.progress{height:8px;background:var(--surface2);border-radius:99px;overflow:hidden;margin-top:12px}.progress>i{height:100%;background:#0d988a;display:block;border-radius:99px}.area-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.area{width:100%;text-align:left;display:flex;align-items:flex-start;gap:14px;padding:17px;border:1px solid var(--border);background:var(--surface);border-radius:13px;color:var(--text)}.area:hover,.area.active{border-color:#26a59a;background:var(--soft)}.area-icon{height:36px;width:36px;border-radius:10px;background:#e5f0f8;color:#346480;display:grid;place-items:center;font-weight:750;font-size:12px;flex:none}.area b{display:block;font-size:13px;line-height:1.45}.area small{display:block;font-size:11px;color:var(--muted);margin-top:6px}.filterbar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px}.filterbar input,.filterbar select,.field{border:1px solid var(--border);background:var(--surface);border-radius:10px;padding:11px 12px;min-height:42px;color:var(--text);width:auto;max-width:100%}.filterbar input{min-width:220px;flex:1}.tag{display:inline-block;background:var(--surface2);border-radius:7px;color:var(--muted);padding:5px 9px;font-size:11px;font-weight:700}.tag.green{background:var(--soft);color:#097c6b}.tag.amber{background:#fff4dc;color:#96641b}.lesson-card h3,.question-card h3{margin:8px 0;color:var(--text);font-size:17px}.lesson-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}.lesson-grid .card{padding:22px}.lesson-body{max-width:840px;margin:auto}.lesson-body h3{font-size:15px;margin-top:25px}.lesson-body ul,.lesson-body ol{padding-left:23px;line-height:1.75;color:var(--text);font-size:14px}.lesson-body li{margin-bottom:8px}.formula{background:var(--surface2);padding:12px 16px;border-radius:9px;margin:8px 0;font:600 15px ui-monospace,Consolas,monospace;overflow-wrap:anywhere}.muted{color:var(--muted)}.quiz{max-width:850px;margin:auto}.quiz-header{display:flex;justify-content:space-between;gap:16px;align-items:center}.quiz-header h2{margin:5px 0}.options{display:grid;gap:11px;margin:20px 0}.option{display:flex;align-items:center;gap:13px;border:1px solid var(--border);padding:14px;border-radius:11px;background:var(--surface);cursor:pointer;font-size:14px;line-height:1.55}.option:hover{border-color:#31a89c}.option.selected{border-color:#0f8f85;background:var(--soft)}.option.correct{border-color:#4eaf7f;background:#eaf8f0}.option.incorrect{border-color:#cf7a7a;background:#fff1f1}.option input{accent-color:#087d78}.feedback{border-left:4px solid #0c9584;background:var(--soft);padding:17px;border-radius:8px;margin:18px 0;line-height:1.65;font-size:14px}.notice{padding:14px 17px;border-radius:10px;background:var(--surface2);color:var(--text);font-size:13px;line-height:1.55;margin:14px 0}.notice.warning{background:#fff5e4;color:#80561d}.grid5{display:grid;grid-template-columns:repeat(auto-fit,minmax(54px,1fr));gap:9px}.index-btn{padding:10px;border:1px solid var(--border);background:var(--surface);border-radius:9px;color:var(--text)}.index-btn.current{outline:2px solid #0a968c}.index-btn.answered{background:var(--soft)}.index-btn.flagged{border-color:#c88e1b}.meter{display:flex;align-items:center;gap:10px;margin:6px 0;font-size:13px}.meter-label{flex:1;min-width:0}.meter-track{height:9px;background:var(--surface2);border-radius:20px;overflow:hidden;width:43%}.meter-track i{background:#1d9b8e;display:block;height:100%}.table{width:100%;border-collapse:collapse;font-size:13px}.table th,.table td{padding:11px 9px;border-bottom:1px solid var(--border);text-align:left}.table th{font-size:11px;color:var(--muted)}.textarea{width:100%;min-height:260px;border:1px solid var(--border);background:var(--surface);border-radius:11px;padding:16px;color:var(--text);line-height:1.65;resize:vertical}.divider{border:0;border-top:1px solid var(--border);margin:20px 0}.footer{font-size:12px;color:var(--muted);padding-top:30px}.row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}.table-scroll{overflow-x:auto}.empty{padding:26px;text-align:center;background:var(--surface);border:1px dashed var(--border);border-radius:12px;color:var(--muted);font-size:14px;line-height:1.7}.ok{color:#0a8876}.bad{color:#bd5555}.mobile-menu{display:none}.section-accordion{border:1px solid var(--border);border-radius:12px;margin-top:12px;overflow:hidden}.section-accordion summary{cursor:pointer;font-weight:650;padding:14px 16px}.section-accordion>div{padding:0 16px 16px}.foot-links{display:flex;gap:14px;flex-wrap:wrap}.theme-dark{--surface:#182638;--surface2:#213349;--border:#31465c;--text:#eef5fb;--muted:#a9b9ca;--soft:#183e42;--nav:#0b1728;--shadow:none;background:#0e1c2c;color:var(--text)}.theme-dark .area-icon{background:#29435a;color:#ceeaf7}.theme-dark .pill{background:#1d4949;color:#9bf5d8}.theme-dark a{color:#6bddc9}.theme-dark .notice.warning{background:#422f17;color:#f8ce85}.theme-dark .option.correct{background:#1b4738}.theme-dark .option.incorrect{background:#4b2828}.theme-dark .feedback{background:#173d3c}
+@media(max-width:1100px){.cards{grid-template-columns:repeat(2,minmax(0,1fr))}.content{padding:24px}.topbar{padding:18px 24px}.two-col{grid-template-columns:1fr}}
+@media(max-width:760px){.layout{display:block}.sidebar{position:fixed;z-index:20;top:0;left:0;transform:translateX(-104%);width:275px;transition:transform .18s}.sidebar.open{transform:none}.mobile-menu{display:inline-flex}.topbar{position:sticky;top:0;z-index:10;padding:13px 17px}.topright{gap:7px}.topbar strong{font-size:12px}.topbar small{font-size:10px}.pill{font-size:10px;padding:5px 7px}.content{padding:18px 14px 45px}.hero{padding:24px 19px;grid-template-columns:1fr;gap:16px;border-radius:15px}.hero h1{font-size:24px}.hero p{font-size:12px}.countdown{border-left:0;border-top:1px solid #5b8894;padding:13px 0 0;text-align:left;display:flex;align-items:center;gap:12px}.countdown strong{font-size:33px}.cards{gap:9px}.card{padding:15px}.stat strong{font-size:24px}.area-list,.lesson-grid{grid-template-columns:1fr}.heading{align-items:flex-start}.heading h2{font-size:18px}.filterbar{gap:7px}.filterbar input{min-width:100%;}.quiz-header{align-items:flex-start}.button-row .btn{flex:1}.section-title{font-size:15px}}
+</style></head><body><div id="app"></div><script>const initialProgress = () => ({ schema: 1, responses: [], attempts: [], completedLessons: [], bookmarks: [], discursive: {}, minutes: 0, settings: { theme: 'light', session: 45 }, revisionDates: {} });
+const eligible = (q) => ['oficial-gabarito-conferido', 'resolucao-independente-revisada'].includes(q.status);
+const score = (answers, questions) => ({ total: questions.length, answered: questions.filter(q => answers[q.id] !== undefined).length, correct: questions.filter(q => answers[q.id] === q.answer).length });
+const daysUntil = (date, now = new Date()) => Math.max(0, Math.ceil((new Date(`${date}T00:00:00-03:00`).getTime() - now.getTime()) / 86400000));
+function pickAdaptive(questions, responses, count) {
+    const records = new Map();
+    for (const r of responses) {
+        records.set(r.questionId, [...(records.get(r.questionId) || []), r]);
+    }
+    const areaUsed = new Map();
+    const results = [];
+    const candidates = questions.filter(eligible).sort((a, b) => a.id.localeCompare(b.id));
+    while (results.length < count && candidates.length) {
+        let winner = 0, best = -Infinity;
+        for (let i = 0; i < candidates.length; i++) {
+            const q = candidates[i], hist = records.get(q.id) || [], miss = hist.filter(x => !x.correct).length, last = hist[hist.length - 1];
+            const priority = (hist.length === 0 ? 8 : 0) + (last && !last.correct ? 12 : 0) + miss * 2 - hist.length * 1.5 - (areaUsed.get(q.areaId) || 0) * 5 + (q.difficulty === 'Média' ? 1 : 0);
+            if (priority > best) {
+                best = priority;
+                winner = i;
+            }
+        }
+        const q = candidates.splice(winner, 1)[0];
+        results.push(q);
+        areaUsed.set(q.areaId, (areaUsed.get(q.areaId) || 0) + 1);
+    }
+    return results;
+}
+
+const SOURCES = { p164: 'https://www.in.gov.br/en/web/dou/-/portaria-n-164-de-14-de-abril-de-2026-699934764', p154: 'https://www.crub.org.br/portaria-no-154-de-14-04-2026/', exam2023: 'https://download.inep.gov.br/enade/provas_e_gabaritos/2023_PV_engenharia_eletrica.pdf', answers2023: 'https://download.inep.gov.br/enade/provas_e_gabaritos/2023_GB_engenharia_eletrica.pdf', inep: 'https://www.gov.br/inep/pt-br/acesso-a-informacao/perguntas-frequentes/exame-nacional-de-desempenho-dos-estudantes-enade', edital61: 'https://www.in.gov.br/web/dou/-/edital-n-61-de-14-de-maio-de-2026-705977430', edital49: 'https://www.in.gov.br/en/web/dou/-/edital-n-49-de-24-de-abril-de-2026-701698729' };
+const specific = [
+    ['Administração e economia', ['Análise de viabilidade', 'Custos e fluxo de caixa']], ['Ciências do ambiente', ['Impactos da geração', 'Licenciamento ambiental']], ['Ciências naturais aplicadas à Engenharia Elétrica', ['Cálculo e física aplicada', 'Modelagem de fenômenos']], ['Algoritmos e estruturas de dados', ['Algoritmos e complexidade', 'Estruturas de dados']], ['Sinais e sistemas', ['Amostragem e frequência', 'Transformadas e filtros']], ['Circuitos elétricos e eletrônicos', ['Lei de Ohm e Kirchhoff', 'Circuitos em corrente alternada']], ['Conversão de energia', ['Rendimento e balanço energético', 'Conversores eletromecânicos']], ['Eletromagnetismo', ['Fluxo magnético e indução', 'Campos elétricos e magnéticos']], ['Eletrônica de potência', ['Retificadores', 'Chaveamento e inversores']], ['Sistemas digitais', ['Lógica booleana', 'Circuitos sequenciais']], ['Sistemas elétricos de potência', ['Potência trifásica', 'Fluxo de potência e proteção']], ['Eficiência energética e sustentabilidade', ['Rendimento e perdas', 'Gestão de consumo']], ['Instalações elétricas', ['Proteção elétrica', 'Dimensionamento de condutores']], ['Sensores e instrumentação eletrônica', ['Medição, erro e calibração', 'Transdutores']], ['Máquinas elétricas', ['Transformadores ideais', 'Motores e geradores']], ['Materiais elétricos e magnéticos', ['Condutividade e resistividade', 'Materiais magnéticos']], ['Princípios de comunicações', ['Modulação', 'Largura de banda e ruído']], ['Sistemas de controle e automação', ['Malha fechada', 'Estabilidade e resposta']], ['Probabilidade e estatística', ['Probabilidade condicional', 'Média e dispersão']]
+];
+const general = [
+    ['Ética, democracia, cidadania e direitos humanos', ['Ética profissional', 'Direitos humanos']], ['Estado, sociedade e trabalho', ['Trabalho e transformações sociais', 'Políticas públicas']], ['Educação e desenvolvimento humano e social', ['Educação e desigualdades', 'Desenvolvimento social']], ['Mudanças climáticas e questões socioambientais', ['Mitigação e adaptação', 'Riscos climáticos']], ['Equidade nas relações étnico-raciais, geracionais, de classe, de gênero e de sexualidade', ['Equidade e desigualdade', 'Respeito à diversidade']], ['Cultura, arte e comunicação', ['Diversidade cultural', 'Comunicação responsável']], ['Ciência, tecnologia e inovação', ['Ética da inovação', 'Inclusão digital']], ['Processos de globalização e política internacional', ['Cadeias produtivas globais', 'Cooperação internacional']], ['Campo, cidade e qualidade de vida', ['Urbanização e infraestrutura', 'Saneamento']], ['Territórios, sociodiversidade e diversidade cultural', ['Povos e territórios', 'Pluralidade cultural']], ['Acessibilidade e inclusão social', ['Desenho universal', 'Tecnologias assistivas']], ['Saúde e bem-estar', ['Prevenção e cuidado', 'Saúde coletiva']]
+];
+const AREAS = [...specific.map(([title, topics], i) => ({ id: `EE${String(i + 1).padStart(2, '0')}`, title, topics, group: 'especifico', law: 'Portaria Inep nº 164/2026, art. 6º' })), ...general.map(([title, topics], i) => ({ id: `FG${String(i + 1).padStart(2, '0')}`, title, topics, group: 'geral', law: 'Portaria Inep nº 154/2026, art. 6º' }))];
+const lesson = (id, areaId, title, summary, concept, formula, variables, steps, application, mistakes, revision, duration = 18) => ({ id, areaId, title, summary, concept, formula, variables, steps, application, mistakes, revision, duration, version: '1.0', sources: [areaId.startsWith('FG') ? SOURCES.p154 : SOURCES.p164] });
+const LESSONS = [
+    lesson('circuito-ohm', 'EE06', 'Lei de Ohm, potência e circuitos resistivos', 'Aprenda a calcular tensão, corrente, resistência e dissipação, mesmo que tenha esquecido a matéria.', [
+        'Tensão (V) é a diferença de potencial que impulsiona a corrente. Corrente (A) é o fluxo de carga. Resistência (Ω) limita a passagem de corrente.', 'Em resistores ideais, a corrente aumenta com a tensão e diminui quando a resistência cresce.', 'Em série, a mesma corrente percorre os elementos; em paralelo, todos recebem a mesma tensão.', 'A lei dos nós de Kirchhoff diz que a soma das correntes que entram em um nó é igual à soma das que saem.'
+    ], ['V = R × I', 'P = V × I = I² × R', 'R_série = R₁ + R₂', '1/R_paralelo = 1/R₁ + 1/R₂'], ['V: tensão (volt)', 'I: corrente (ampère)', 'R: resistência (ohm)', 'P: potência (watt)'], ['Exemplo: um resistor de 12 Ω ligado a 24 V.', 'Corrente: I = V/R = 24/12 = 2 A.', 'Potência dissipada: P = V × I = 24 × 2 = 48 W.', 'Se for um resistor físico, sua potência nominal precisa ser maior que 48 W, com margem adequada.'], 'Verificar aquecimento em componentes de uma instalação de controle.', ['Confundir watts com watt-hora.', 'Somar resistências em paralelo como se estivessem em série.', 'Esquecer de converter kΩ em Ω.'], 'V=R×I; dois resistores iguais em paralelo têm resistência equivalente igual à metade de cada um.'),
+    lesson('potencia-trifasica', 'EE11', 'Potência ativa, reativa e aparente', 'Entenda as grandezas elétricas de corrente alternada e o fator de potência.', [
+        'Potência ativa (P) realiza trabalho útil e é medida em watts (W).', 'Potência reativa (Q) oscila entre a fonte e os campos elétricos ou magnéticos, sendo medida em var.', 'Potência aparente (S) relaciona tensão e corrente eficazes, sendo medida em VA.', 'O fator de potência é a razão P/S em regime senoidal e indica quanto da potência aparente está associado à potência ativa.'
+    ], ['S = √(P² + Q²)', 'FP = P/S = cos φ', 'P_trifásico = √3 × V_L × I_L × cos φ', 'Q_trifásico = √3 × V_L × I_L × sen φ'], ['V_L: tensão de linha eficaz (V)', 'I_L: corrente de linha eficaz (A)', 'φ: defasagem (graus ou radianos)', 'P: W; Q: var; S: VA'], ['Exemplo: carga trifásica equilibrada em 380 V, 10 A e FP 0,8.', 'P = √3 × 380 × 10 × 0,8.', 'P ≈ 5.265 W ≈ 5,27 kW.', 'S = √3 × 380 × 10 ≈ 6,58 kVA.'], 'Interpretar carregamento de transformadores e consumo de motores.', ['Aplicar a equação trifásica em carga monofásica.', 'Confundir kVA com kW.', 'Usar tensão de fase e corrente de linha sem verificar a ligação.'], 'Potência trifásica equilibrada: P=√3·Vlinha·Ilinha·FP.'),
+    lesson('trafo-ideal', 'EE15', 'Transformadores e relação de transformação', 'Calcule tensão, corrente e potência em um transformador ideal.', [
+        'Um transformador transfere energia entre enrolamentos por indução magnética.', 'No modelo ideal, desprezamos perdas e temos aproximadamente a mesma potência aparente de entrada e de saída.', 'Se a tensão cai pela metade, a corrente disponível duplica para a mesma potência aparente.', 'A frequência permanece igual; o transformador não converte CA em CC.'
+    ], ['V₁/V₂ = N₁/N₂', 'V₁ × I₁ = V₂ × I₂', 'I₁/I₂ = N₂/N₁'], ['V₁, V₂: tensões eficazes (V)', 'N₁, N₂: número de espiras', 'I₁, I₂: correntes eficazes (A)'], ['Exemplo: trafo ideal de 220 para 110 V alimenta uma carga de 1.100 W com FP 1.', 'I₂ = 1.100/110 = 10 A.', 'I₁ = 1.100/220 = 5 A.', 'Relação entre espiras do primário e secundário: 220/110 = 2.'], 'Dimensionamento preliminar de circuitos de alimentação em subestações.', ['Confundir tensão com potência.', 'Aplicar rendimento de 100% a equipamentos reais.', 'Achar que transformador comum funciona com CC constante.'], 'V proporcional às espiras, I inversamente proporcional; potência ideal conservada.'),
+    lesson('nyquist', 'EE05', 'Sinais, amostragem e aliasing', 'Entenda por que a frequência de amostragem é importante em medições digitais.', [
+        'Um sinal analógico varia continuamente no tempo. A amostragem registra seus valores em instantes separados.', 'Para um sinal limitado à frequência máxima fmax, a reconstrução ideal exige taxa de amostragem estritamente maior que 2 fmax.', 'Frequências acima da metade da taxa de amostragem podem aparecer incorretamente no sinal digital: isso é aliasing.', 'Na prática, usa-se filtro anti-aliasing e uma margem de amostragem.'
+    ], ['f_amostragem > 2 × f_max', 'f_Nyquist = f_amostragem/2', 'T_amostragem = 1/f_amostragem'], ['f: frequência (Hz)', 'T: intervalo entre amostras (s)'], ['Exemplo: vibração contém componentes até 500 Hz.', 'Limite teórico: amostragem estritamente acima de 1.000 amostras/s.', 'Em 2.000 amostras/s, o intervalo é 0,0005 s ou 0,5 ms.', 'A implementação real exige filtro para limitar o conteúdo acima da banda útil.'], 'Escolha da taxa de aquisição em sensores de vibração e osciloscópios.', ['Achar que 2×fmax é suficiente sem margem.', 'Confundir taxa de amostragem com resolução em bits.'], 'f_s > 2f_max; filtro anti-aliasing evita interpretação errada das frequências.'),
+    lesson('magnetismo', 'EE08', 'Fluxo magnético e indução eletromagnética', 'Relacione campo, área, fluxo e tensão induzida.', [
+        'O fluxo magnético mede a quantidade de campo magnético que atravessa uma superfície.', 'Se o campo é uniforme, o fluxo depende da intensidade do campo, da área e do ângulo entre o campo e a normal da superfície.', 'Pela lei de Faraday, variação do fluxo concatenado com uma bobina produz tensão induzida.', 'O sinal negativo expressa a lei de Lenz: a tensão induzida se opõe à variação que a produz.'
+    ], ['Φ = B × A × cos θ', 'e = −N × dΦ/dt'], ['Φ: fluxo (weber, Wb)', 'B: densidade de fluxo (tesla, T)', 'A: área (m²)', 'N: número de espiras'], ['Exemplo: campo uniforme de 0,2 T atravessa perpendicularmente uma espira de 0,05 m².', 'Como o campo está alinhado à normal, cos θ = 1.', 'Φ = 0,2 × 0,05 × 1 = 0,01 Wb.', 'Se esse fluxo variar com o tempo, haverá tensão induzida.'], 'Fundamento físico do funcionamento de geradores e transformadores.', ['Usar área em cm² sem converter.', 'Medir θ com o plano em vez da normal, sem ajustar o cosseno.'], 'Fluxo=campo×área×cos(ângulo normal); variação do fluxo induz tensão.'),
+    lesson('controle-malha', 'EE18', 'Controle em malha fechada', 'Aprenda a ideia do erro, realimentação e ganho de um sistema.', [
+        'Em malha aberta, o controlador não recebe a saída medida para corrigir o resultado.', 'Em malha fechada, compara-se a referência r com a saída y: o erro é e = r − y.', 'Para realimentação negativa unitária e blocos lineares, a função de transferência fechada é G/(1+G).', 'A estabilidade não é garantida apenas porque há realimentação: depende da dinâmica do sistema.'
+    ], ['e(t) = r(t) − y(t)', 'T(s) = G(s)/(1 + G(s)H(s))'], ['r: referência', 'y: saída medida', 'e: erro', 'G(s): bloco direto', 'H(s): realimentação'], ['Exemplo: processo proporcional de ganho G = 4 e realimentação unitária H = 1.', 'Ganho de malha fechada = 4/(1+4) = 0,8.', 'Para referência unitária, saída estacionária prevista = 0,8.', 'Erro estacionário = 1 − 0,8 = 0,2.'], 'Controle de velocidade de máquinas e reguladores de tensão.', ['Supor erro nulo para qualquer ganho.', 'Confundir realimentação positiva e negativa.'], 'Em realimentação negativa: T=G/(1+GH), quando o modelo é aplicável.'),
+    lesson('estatistica', 'EE19', 'Probabilidade, média e dispersão', 'Reveja os cálculos básicos usados em medições e análise de falhas.', [
+        'A média aritmética resume o centro de um conjunto de valores.', 'A variância mede o espalhamento em torno da média; o desvio padrão está na unidade original.', 'A probabilidade de dois eventos independentes ocorrerem simultaneamente é o produto de suas probabilidades.', 'Em modelos binomiais, cada tentativa tem dois resultados, mesma probabilidade e independência.'
+    ], ['média = (x₁ + ... + xₙ)/n', 'P(A e B) = P(A) × P(B), se independentes', 'P(X = k) = C(n,k) × pᵏ × (1−p)ⁿ'], ['n: número de observações', 'p: probabilidade de sucesso', 'k: quantidade de sucessos'], ['Exemplo: medições de corrente 8 A, 10 A e 12 A.', 'Média = (8+10+12)/3 = 10 A.', 'Desvios = −2, 0 e +2 A.', 'Variância populacional = (4+0+4)/3 ≈ 2,67 A².'], 'Análise de repetibilidade de sensores e frequência de falhas.', ['Confundir variância amostral (n−1) com populacional (n).', 'Somar probabilidades de eventos independentes simultâneos.'], 'Média soma/n; probabilidades independentes conjuntas multiplicam.'),
+    lesson('instrumentacao', 'EE14', 'Medições, erros e calibração', 'Saiba interpretar leituras de instrumentos e seus limites.', [
+        'Erro absoluto é a diferença entre valor medido e referência.', 'Erro relativo compara a magnitude desse erro com o valor de referência.', 'Calibração estabelece a relação entre valores indicados e referências sob condições especificadas.', 'Resolução é a menor variação detectável; não é sinônimo de exatidão.'
+    ], ['erro absoluto = medição − referência', 'erro relativo (%) = |erro|/|referência| × 100'], ['medição e referência: mesma unidade', 'erro absoluto: unidade da grandeza', 'erro relativo: porcentagem (%)'], ['Exemplo: instrumento mede 102 V e a referência confiável é 100 V.', 'Erro absoluto = 102 − 100 = +2 V.', 'Erro relativo = |2|/100 × 100 = 2%.', 'A correção associada a essa condição é −2 V, sem extrapolar automaticamente para outras faixas.'], 'Inspeções de sensores e comparação de leituras de instrumentos.', ['Confundir precisão com exatidão.', 'Omitir condições e incerteza do procedimento de medição.'], 'Erro percentual = |indicação−referência|/|referência|×100.'),
+    lesson('seguranca', 'EE13', 'Proteção elétrica: disjuntor, fusível e DR', 'Diferencie dispositivos de proteção e seus objetivos.', [
+        'Disjuntores e fusíveis interrompem sobrecorrentes dentro de suas características e condições de aplicação.', 'O dispositivo diferencial residual (DR) detecta desequilíbrio entre correntes que entram e saem do circuito.', 'O DR não substitui proteção contra sobrecarga e curto-circuito.', 'O dimensionamento real depende de normas técnicas vigentes, esquema de aterramento e condições de instalação.'
+    ], ['I_Δ = |I_ida − I_retorno| (conceito simplificado)'], ['I_Δ: corrente diferencial residual (A)'], ['Exemplo: corrente de ida de 10,00 A e retorno de 9,97 A.', 'Diferença: 0,03 A = 30 mA.', 'Um DR com sensibilidade nominal de 30 mA é projetado para atuar na faixa definida em sua norma aplicável.', 'O resultado não significa que o DR atue instantaneamente em toda condição, nem dispensa outras proteções.'], 'Analisar riscos de choques em circuitos de baixa tensão.', ['Tratar DR como substituto do disjuntor.', 'Acreditar que qualquer DR protege contra contato em toda situação.'], 'DR compara ida e retorno; disjuntor protege de sobrecorrentes.'),
+    lesson('clima', 'FG04', 'Mudanças climáticas: mitigação e adaptação', 'Diferencie ações que reduzem emissões das que reduzem vulnerabilidade.', [
+        'Mitigação busca reduzir emissões de gases de efeito estufa ou aumentar sua remoção.', 'Adaptação busca diminuir riscos e danos associados a impactos climáticos atuais ou previstos.', 'A mesma política pode incluir as duas finalidades, mas elas não são sinônimos.', 'Na avaliação de soluções, considere impactos sociais e distribuição desigual de riscos.'
+    ], ['Sem fórmula obrigatória; identifique objetivo, mecanismo e público afetado.'], ['Emissões: podem ser expressas em toneladas de CO₂ equivalente (tCO₂e).'], ['Exemplo: uma cidade instala painéis fotovoltaicos em prédios públicos.', 'Efeito principal: reduzir consumo de energia de outras fontes, podendo mitigar emissões.', 'Outra ação: criar drenagem e alerta de enchentes em bairros vulneráveis.', 'Efeito principal: adaptação ao risco de eventos extremos.'], 'Avaliação de políticas energéticas e planejamento urbano.', ['Dizer que reduzir enchente é sempre mitigação.', 'Ignorar grupos mais expostos a riscos ambientais.'], 'Mitigação reduz causas; adaptação reduz exposição e vulnerabilidade aos efeitos.'),
+    lesson('eletronica-potencia', 'EE09', 'Retificação e conversão de energia', 'Revise o que um retificador faz e o papel do filtro.', [
+        'Um retificador converte uma entrada de corrente alternada em uma saída unidirecional pulsante.', 'A ponte retificadora monofásica de diodos aproveita os dois semiciclos de entrada.', 'Um capacitor de filtro pode reduzir ondulação, dependendo de carga e projeto.', 'O retificador não produz automaticamente uma tensão contínua perfeitamente constante.'
+    ], ['V_pico ≈ √2 × V_rms (senoidal)', 'f_ondulação ≈ 2 × f_rede (ponte completa monofásica)'], ['V_rms: valor eficaz (V)', 'V_pico: valor de pico (V)', 'f: frequência (Hz)'], ['Exemplo: rede senoidal de 60 Hz alimenta uma ponte ideal.', 'A ondulação antes da filtragem ocorre com frequência de aproximadamente 120 Hz.', 'Para 12 V eficazes, pico ideal ≈ 12×√2 = 16,97 V.', 'Quedas em diodos, carga e filtragem alteram a tensão real.'], 'Fontes CC, carregadores e acionamentos industriais.', ['Confundir pico com valor RMS.', 'Achar que o capacitor sempre elimina toda ondulação.'], 'Ponte de onda completa: ondulação 2× frequência da rede; Vpico≈√2 Vrms.')
+];
+const mk = (id, areaId, lessonId, topic, prompt, choices, answer, why, difficulty = 'Fácil', hints = [], calc = '') => ({ id, areaId, lessonId, topic, prompt, choices, answer, why, hints, difficulty, origin: 'autoral', year: 2026, source: 'Questão autoral de treinamento; base conceitual na aula vinculada e na matriz oficial.', status: 'resolucao-independente-revisada', revisionDate: '2026-10-30', calculation: calc });
+const QUESTIONS = [
+    mk('AUT-001', 'EE06', 'circuito-ohm', 'Lei de Ohm', 'Uma resistência de 10 Ω é alimentada com 50 V contínuos. Qual corrente elétrica circula?', ['2 A', '5 A', '10 A', '50 A', '500 A'], 1, 'Pela lei de Ohm, I=V/R=50/10=5 A.', 'Fácil', ['Separe tensão e resistência.', 'Use I=V/R.'], '50/10=5'),
+    mk('AUT-002', 'EE06', 'circuito-ohm', 'Potência', 'Em um resistor de 8 Ω circula uma corrente de 3 A. A potência dissipada é:', ['11 W', '24 W', '36 W', '72 W', '144 W'], 3, 'P=I²R=3²×8=72 W. Não confunda a multiplicação I×R, que dá a tensão.', 'Fácil', ['Use P=I²R.', 'Eleve 3 ao quadrado primeiro.'], '9*8=72'),
+    mk('AUT-003', 'EE06', 'circuito-ohm', 'Resistores', 'Duas resistências de 20 Ω cada são conectadas em paralelo. Qual é a resistência equivalente?', ['5 Ω', '10 Ω', '20 Ω', '40 Ω', '80 Ω'], 1, 'Para resistores iguais em paralelo, R_eq=R/2=10 Ω.', 'Fácil', ['Duas resistências iguais em paralelo.', 'O valor equivalente é metade de uma delas.'], '20/2=10'),
+    mk('AUT-004', 'EE11', 'potencia-trifasica', 'Fator de potência', 'Uma carga consome 6 kW de potência ativa e 10 kVA de potência aparente. Seu fator de potência vale:', ['0,4', '0,6', '0,8', '1,0', '1,6'], 1, 'FP=P/S=6/10=0,6, sem unidade.', 'Fácil', ['Compare kW com kVA.', 'FP=P/S.'], '6/10=0.6'),
+    mk('AUT-005', 'EE11', 'potencia-trifasica', 'Potência aparente', 'Um equipamento apresenta 3 kW de potência ativa e 4 kvar de potência reativa. Qual sua potência aparente?', ['1 kVA', '3 kVA', '4 kVA', '5 kVA', '7 kVA'], 3, 'Pelo triângulo de potências: S=√(3²+4²)=5 kVA.', 'Fácil', ['Triângulo retângulo com catetos 3 e 4.', 'Use Pitágoras.'], 'sqrt(9+16)=5'),
+    mk('AUT-006', 'EE15', 'trafo-ideal', 'Relação de transformação', 'Um transformador ideal de 240/120 V alimenta uma carga de 12 A no secundário. Qual é a corrente no primário?', ['3 A', '6 A', '12 A', '24 A', '48 A'], 1, 'A potência ideal se conserva: 240×I1=120×12. Assim, I1=6 A.', 'Média', ['Iguale as potências aparentes.', '240×I1=120×12.'], '120*12/240=6'),
+    mk('AUT-007', 'EE15', 'trafo-ideal', 'Relação de espiras', 'Se N1=600 espiras, N2=150 e V1=240 V em um transformador ideal, qual é V2?', ['15 V', '30 V', '60 V', '120 V', '960 V'], 2, 'V2=V1×N2/N1=240×150/600=60 V.', 'Fácil', ['A tensão é proporcional ao número de espiras.', 'Calcule 240×(150/600).'], '240*150/600=60'),
+    mk('AUT-008', 'EE05', 'nyquist', 'Amostragem', 'Um sensor registra sinais de até 200 Hz. Qual taxa satisfaz estritamente o critério teórico de Nyquist?', ['100 amostras/s', '200 amostras/s', '300 amostras/s', '400 amostras/s', '500 amostras/s'], 4, 'O critério teórico exige f_s>2×200=400 Hz; entre as opções, somente 500 atende estritamente.', 'Média', ['Dobre a frequência máxima.', 'A condição pede maior do que, não igual.'], '2*200=400; 500>400'),
+    mk('AUT-009', 'EE05', 'nyquist', 'Período de amostragem', 'A taxa de aquisição é 2.000 amostras/s. Qual o intervalo entre amostras?', ['0,05 ms', '0,5 ms', '2 ms', '5 ms', '20 ms'], 1, 'T=1/2000 s=0,0005 s=0,5 ms.', 'Média', ['Use o inverso da taxa.', 'Converta segundos para milissegundos.'], '1/2000*1000=0.5'),
+    mk('AUT-010', 'EE08', 'magnetismo', 'Fluxo magnético', 'Uma área de 0,4 m² é atravessada perpendicularmente por B=0,5 T uniforme. Qual o fluxo magnético?', ['0,05 Wb', '0,1 Wb', '0,2 Wb', '0,9 Wb', '2 Wb'], 2, 'Φ=B×A×cos(0°)=0,5×0,4=0,2 Wb. O ângulo é entre B e a normal da superfície.', 'Fácil', ['O campo é perpendicular ao plano.', 'Use cos(0°)=1.'], '0.5*0.4=0.2'),
+    mk('AUT-011', 'EE18', 'controle-malha', 'Realimentação', 'Em uma malha fechada negativa unitária com ganho direto constante G=9, o ganho fechado vale:', ['0,1', '0,5', '0,9', '1', '9'], 2, 'T=G/(1+GH)=9/(1+9)=0,9 para H=1.', 'Média', ['Considere H=1.', 'T=G/(1+GH).'], '9/10=0.9'),
+    mk('AUT-012', 'EE18', 'controle-malha', 'Erro', 'Um sistema mede y=42 unidades enquanto a referência é r=50. Qual é o erro e=r−y?', ['−92', '−8', '0', '8', '92'], 3, 'Erro e=50−42=8 unidades.', 'Fácil', ['Erro = referência menos saída.'], '50-42=8'),
+    mk('AUT-013', 'EE19', 'estatistica', 'Média', 'As leituras de corrente são 6, 9 e 12 A. Qual é a média aritmética?', ['6 A', '8 A', '9 A', '10 A', '12 A'], 2, 'Média=(6+9+12)/3=27/3=9 A.', 'Fácil', ['Some as três observações e divida por 3.'], '27/3=9'),
+    mk('AUT-014', 'EE19', 'estatistica', 'Probabilidade', 'Dois componentes falham de forma independente, cada um com probabilidade 0,1. Qual é a probabilidade de ambos falharem?', ['0,01', '0,02', '0,10', '0,20', '1,00'], 0, 'Para eventos independentes simultâneos, P=0,1×0,1=0,01 (1%).', 'Média', ['Eventos independentes se multiplicam.'], '0.1*0.1=0.01'),
+    mk('AUT-015', 'EE14', 'instrumentacao', 'Erro de medição', 'Um voltímetro indica 104 V para uma referência de 100 V. Qual o erro relativo em módulo?', ['1%', '2%', '4%', '8%', '104%'], 2, 'Erro relativo = |104−100|/100×100=4%.', 'Fácil', ['Encontre a diferença primeiro.', 'Divida pela referência e multiplique por 100.'], 'abs(104-100)/100*100=4'),
+    mk('AUT-016', 'EE14', 'instrumentacao', 'Calibração', 'Qual afirmação descreve corretamente a resolução de um instrumento?', ['É sempre igual à sua exatidão.', 'É o menor incremento de indicação perceptível.', 'É a diferença entre duas referências nacionais.', 'É a capacidade de corrigir automaticamente qualquer erro.', 'É o maior valor de escala.'], 1, 'Resolução representa a menor variação que produz alteração observável na indicação; não garante exatidão.', 'Fácil', ['Resolução está ligada ao menor passo da indicação.']),
+    mk('AUT-017', 'EE13', 'seguranca', 'Dispositivo DR', 'Qual é a principal função de um dispositivo diferencial residual (DR)?', ['Medir energia consumida.', 'Substituir sempre o disjuntor.', 'Comparar correntes de ida e retorno e atuar segundo a corrente diferencial.', 'Corrigir o fator de potência.', 'Elevar a tensão.'], 2, 'O DR detecta corrente residual por desequilíbrio; não substitui a proteção contra sobrecorrentes.', 'Fácil', ['Considere uma fuga de corrente ao terra.']),
+    mk('AUT-018', 'EE09', 'eletronica-potencia', 'Retificador', 'Uma ponte retificadora de onda completa alimentada por senoide de 60 Hz gera ondulação principal de frequência aproximada:', ['30 Hz', '60 Hz', '90 Hz', '120 Hz', '240 Hz'], 3, 'Na retificação monofásica de onda completa, a ondulação ocorre em 2×60=120 Hz.', 'Média', ['Os semiciclos negativo e positivo contribuem.', 'Duplique 60 Hz.'], '2*60=120'),
+    mk('AUT-019', 'FG04', 'clima', 'Mitigação climática', 'Qual opção representa principalmente uma ação de mitigação de mudanças climáticas?', ['Construir barreira contra enchentes.', 'Criar plano de evacuação por deslizamento.', 'Substituir geração fóssil por fonte renovável de baixa emissão.', 'Elevar a altura de pontes contra cheias.', 'Construir abrigo para ondas de calor.'], 2, 'Mitigação atua nas causas, reduzindo emissões; as demais opções são exemplos mais ligados à adaptação.', 'Fácil', ['Mitigação reduz as emissões.']),
+    mk('AUT-020', 'FG04', 'clima', 'Adaptação climática', 'Qual medida é principalmente uma ação de adaptação climática?', ['Aumentar eficiência de motores para reduzir emissões.', 'Implantar alerta de inundações para comunidades expostas.', 'Substituir carvão por solar.', 'Capturar CO₂ em processo industrial.', 'Reduzir perdas na transmissão para reduzir uso de combustíveis.'], 1, 'Alertas de inundações reduzem vulnerabilidade e danos diante dos impactos; isso caracteriza adaptação.', 'Fácil', ['Ação para lidar com impactos, não reduzir emissões.']),
+    mk('AUT-021', 'EE11', 'potencia-trifasica', 'Trifásico', 'Carga trifásica equilibrada em 400 V (linha), 5 A (linha), FP=1. Qual potência ativa aproximada?', ['1,0 kW', '2,0 kW', '3,46 kW', '5,0 kW', '6,93 kW'], 2, 'P=√3×400×5×1≈3.464 W≈3,46 kW.', 'Média', ['Use √3×Vlinha×Ilinha×FP.'], '1.7320508075688772*400*5/1000≈3.464'),
+    mk('AUT-022', 'EE06', 'circuito-ohm', 'Kirchhoff', 'Em um nó entram correntes de 4 A e 7 A. Saem 6 A e uma corrente desconhecida. Qual é a corrente desconhecida?', ['1 A', '3 A', '5 A', '11 A', '17 A'], 2, 'Lei de Kirchhoff das correntes: 4+7=6+I; I=5 A.', 'Fácil', ['A soma das correntes de entrada deve ser igual à de saída.'], '4+7-6=5')
+];
+// Referência verificável ao item oficial: por direitos de reprodução e necessidade do diagrama,
+// o enunciado completo permanece no caderno original, e a questão não entra em simulados offline.
+QUESTIONS.push({ id: 'INEP-2023-EE-Q10', areaId: 'EE15', lessonId: 'trafo-ideal', topic: 'Autotransformador', prompt: 'QUESTÃO OFICIAL REFERENCIADA — ENADE 2023, questão 10, página 13. Abra o caderno oficial para consultar o esquema e todas as afirmações. Qual alternativa o gabarito definitivo aponta?', choices: ['A — apenas II', 'B — apenas III', 'C — I e II', 'D — I e IV', 'E — III e IV'], answer: 0, why: 'Gabarito definitivo do Inep: alternativa A. Resolução independente orientativa: 10 kVA/460 V≈21,7 A na entrada; 10 kVA/230 V≈43,5 A na carga. No trecho comum do autotransformador, a corrente resulta da diferença das correntes, não da soma 65,2 A, de modo que I é falsa. Consulte o esquema e o contexto no documento antes de estudar a afirmação II.', hints: ['Abra o caderno oficial e identifique os terminais A, B e D.', 'Compare correntes de entrada e saída por S/V.'], difficulty: 'Difícil', origin: 'oficial-referenciada', year: 2023, source: SOURCES.exam2023, page: 13, status: 'oficial-gabarito-conferido', revisionDate: '2026-10-30', needsSource: true });
+// Fontes públicas de suporte conceitual. O texto didático é original e independente.
+const TECHNICAL_SOURCES = {
+    'circuito-ohm': ['https://openstax.org/books/university-physics-volume-2/pages/10-2-resistors-in-series-and-parallel'],
+    'potencia-trifasica': ['https://openstax.org/books/university-physics-volume-2/pages/15-2-simple-ac-circuits'],
+    'trafo-ideal': ['https://openstax.org/books/university-physics-volume-2/pages/15-6-transformers'],
+    'nyquist': ['https://opencw.aprende.org/resources/res-6-007-signals-and-systems-spring-2011/video-lectures/lecture-16-sampling/'],
+    'magnetismo': ['https://openstax.org/books/university-physics-volume-2/pages/13-1-faradays-law'],
+    'estatistica': ['https://openstax.org/books/introductory-statistics-2e/pages/2-7-measures-of-the-spread-of-the-data'],
+    'clima': ['https://www.ipcc.ch/report/ar6/wg2/chapter/annex-ii/'],
+};
+for (const l of LESSONS)
+    l.sources.push(...(TECHNICAL_SOURCES[l.id] || []));
+const DISCURSIVES = [
+    { id: 'DISC-A01', areaId: 'EE11', prompt: 'Questão autoral: uma instalação trifásica com carga indutiva opera com fator de potência baixo. Explique duas consequências técnicas e apresente uma medida possível para correção, incluindo cuidados na aplicação.', rubric: ['Diferenciar potência ativa, reativa e aparente.', 'Relacionar corrente elevada a perdas e carregamento.', 'Citar banco de capacitores ou compensação adequada, com dimensionamento.', 'Alertar para harmônicos, sobretensões e necessidades de estudo técnico.'], model: 'Uma carga com baixo fator de potência pode exigir maior corrente para transmitir a mesma potência ativa, aumentando perdas I²R e o carregamento de cabos e transformadores. Pode-se avaliar compensação de reativos com banco de capacitores dimensionado após medição do perfil de carga. A decisão deve considerar variações de operação, harmônicos e possíveis riscos de ressonância.', source: 'Questão autoral de treinamento; referência temática Portaria nº 164/2026.' },
+    { id: 'DISC-A02', areaId: 'EE14', prompt: 'Questão autoral: um sensor de temperatura usado na supervisão apresenta diferença entre leitura e instrumento de referência. Descreva como investigar a discrepância e documentar o resultado.', rubric: ['Verificar unidade, faixa de operação e pontos de medição.', 'Conferir procedimento de comparação e rastreabilidade da referência.', 'Calcular erro e considerar incerteza e condições do ensaio.', 'Documentar desvio e decisão de correção/manutenção.'], model: 'Primeiro verificaria se as duas leituras usam a mesma escala e foram obtidas no mesmo ponto e condição. Depois compararia os valores com referência calibrada e registraria indicação, referência, erro e incerteza. Verificaria cabeamento, configuração e faixa do sensor. Por fim, indicaria o ajuste ou encaminhamento técnico e documentaria o resultado.', source: 'Questão autoral de treinamento; referência temática Portaria nº 164/2026.' }
+];
+
+
+const KEY = 'enade-progress-v1', DB = 'enade-local';
+let database = null, temporary = null;
+function db() { if (database)
+    return database; database = new Promise((resolve, reject) => { const r = indexedDB.open(DB, 1); r.onupgradeneeded = () => r.result.createObjectStore('data'); r.onsuccess = () => resolve(r.result); r.onerror = () => reject(r.error); }); return database; }
+async function load() {
+    try {
+        const d = await db();
+        const found = await new Promise(res => { const r = d.transaction('data', 'readonly').objectStore('data').get(KEY); r.onsuccess = () => res(r.result || null); r.onerror = () => res(null); });
+        if (found)
+            return found;
+    }
+    catch { }
+    try {
+        const old = localStorage.getItem(KEY);
+        if (old)
+            return JSON.parse(old);
+    }
+    catch { }
+    return temporary || initialProgress();
+}
+async function save(progress) {
+    const snap = structuredClone(progress);
+    temporary = snap;
+    try {
+        localStorage.setItem(KEY, JSON.stringify(snap));
+    }
+    catch { }
+    try {
+        const d = await db();
+        await new Promise((resolve, reject) => { const tx = d.transaction('data', 'readwrite'); tx.objectStore('data').put(snap, KEY); tx.oncomplete = () => resolve(); tx.onerror = () => reject(tx.error); });
+    }
+    catch { }
+}
+function restore(input) {
+    if (!input || typeof input !== 'object' || input.schema !== 1)
+        throw new Error('Formato de backup incompatível.');
+    const x = input;
+    if (!Array.isArray(x.responses) || !Array.isArray(x.attempts) || !Array.isArray(x.completedLessons) || !Array.isArray(x.bookmarks) || !x.settings || typeof x.discursive !== 'object')
+        throw new Error('Backup incompleto.');
+    return x;
+}
+
+
+
+
+const root = document.querySelector('#app');
+let progress = initialProgress();
+let page = 'home', areaId = 'EE06', lessonId = 'circuito-ohm';
+let quizIds = [], quizIndex = 0, quizSelected = null, quizRevealed = false, quizHints = 0, quizStart = Date.now();
+let activeAttempt = null;
+let search = '', groupFilter = 'todos', difficultyFilter = 'todas', selectedDisc = DISCURSIVES[0].id, statsPeriod = 'todos', tutorTopic = 'ohm';
+const navs = [['home', 'Início', '⌂'], ['plan', 'Plano de estudos', '▦'], ['library', 'Biblioteca de conteúdos', '▤'], ['bank', 'Banco de questões', '◫'], ['sim', 'Simulados', '◷'], ['discursive', 'Discursivas', '✎'], ['tutor', 'Tutor de estudos', '?'], ['stats', 'Meu desempenho', '▥'], ['errors', 'Revisão de erros', '↻'], ['settings', 'Configurações e backup', '⚙']];
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c] || c));
+const qById = (id) => QUESTIONS.find(q => q.id === id);
+const area = (id) => AREAS.find(a => a.id === id);
+const lastAttempts = () => progress.attempts.filter(a => a.finishedAt).sort((a, b) => (b.finishedAt || 0) - (a.finishedAt || 0));
+const completed = () => progress.completedLessons.length;
+const periodResponses = () => progress.responses.filter(r => { if (statsPeriod === 'todos')
+    return true; const t = new Date(r.at).getTime(), n = Date.now(); return t >= n - (statsPeriod === 'dia' ? 86400000 : statsPeriod === 'semana' ? 7 * 86400000 : 30 * 86400000); });
+const correctPct = (rs = progress.responses) => rs.length ? Math.round(rs.filter(r => r.correct).length / rs.length * 100) : 0;
+const attemptsActive = () => progress.attempts.find(a => a.id === activeAttempt && !a.finishedAt);
+const fmtSecs = (s) => `${Math.floor(Math.max(0, s) / 3600).toString().padStart(2, '0')}:${Math.floor(Math.max(0, s) % 3600 / 60).toString().padStart(2, '0')}:${Math.max(0, s) % 60 | 0}`;
+function remaining(a) { return Math.max(0, Math.ceil(((a.pauseSince ?? Date.now()) - (a.endsAt - a.duration * 1000)) / 1000)); }
+function secondsLeft(a) { return Math.max(0, Math.ceil((a.endsAt - (a.pauseSince ?? Date.now())) / 1000)); }
+let write = Promise.resolve();
+function persist() { write = write.then(() => save(progress)).catch(e => console.error(e)); }
+function flash(msg) { const box = document.createElement('div'); box.className = 'pill'; box.style.cssText = 'position:fixed;bottom:16px;right:16px;z-index:100;padding:13px;box-shadow:0 8px 30px #0002'; box.textContent = msg; document.body.append(box); setTimeout(() => box.remove(), 2800); }
+function go(next) { page = next; activeAttempt = null; window.scrollTo(0, 0); render(); }
+function put(tag, text, cls = '') { return `<${tag}${cls ? ` class="${cls}"` : ''}>${esc(text)}</${tag}>`; }
+function card(title, body) { return `<section class="card"><h3 class="section-title">${esc(title)}</h3>${body}</section>`; }
+function header(title, desc, side = '') { return `<div class="heading"><div><h2>${esc(title)}</h2><p>${esc(desc)}</p></div>${side}</div>`; }
+const simpleStat = (name, val, sub) => `<div class="card stat"><small>${esc(name)}</small><strong>${esc(val)}</strong><span>${esc(sub)}</span></div>`;
+function home() {
+    const next = LESSONS.find(l => !progress.completedLessons.includes(l.id)) || LESSONS[0], res = progress.responses, wrong = new Set(res.filter(r => !r.correct).map(r => r.questionId));
+    const needs = Array.from(wrong).filter(id => !res.some(r => r.questionId === id && r.correct)).length;
+    const subjects = rankAreas().slice(0, 3);
+    return `<div class="hero"><div><p class="eyebrow">Sua preparação começa aqui</p><h1>Um passo por dia até o ENADE.</h1><p>Engenharia Elétrica, do conceito à prática. Aulas elaboradas e questões identificadas por procedência, com histórico salvo neste dispositivo.</p><div class="button-row"><button class="btn primary" data-action="today">Começar estudo de hoje →</button><button class="btn ghost" data-nav="plan">Ver plano</button></div></div><div class="countdown"><strong>${daysUntil('2026-11-29')}</strong><span>dias até 29/11/2026</span></div></div>
+<div class="cards">${simpleStat('Aulas concluídas', `${completed()}/${LESSONS.length}`, 'conteúdos concluídos')}${simpleStat('Questões respondidas', String(res.length), 'inclui repetidas')}${simpleStat('Taxa de acerto', `${correctPct()}%`, 'sobre respostas registradas')}${simpleStat('Tempo de estudo', `${progress.minutes} min`, 'sessões registradas')}</div>
+<div class="two-col">${card('Seu próximo conteúdo', `<span class="tag green">Sugestão do dia</span><h3>${esc(next.title)}</h3><p class="subtle">${esc(next.summary)}</p><div class="row"><span class="tag">${esc(area(next.areaId).title)}</span><span class="tag">${next.duration} min</span></div><div class="button-row"><button class="btn primary" data-lesson="${next.id}">Abrir aula</button><button class="btn" data-nav="bank">Praticar questões</button></div>`)}${card('Sua revisão', `<p class="subtle">${needs} questões erradas ainda não acertadas novamente. ${res.length ? 'As sugestões refletem suas respostas salvas.' : 'Responda às primeiras questões para obter recomendações de revisão.'}</p>${subjects.length ? subjects.map(x => `<div class="meter"><span class="meter-label">${esc(x.title)}</span><b>${x.pct}%</b></div>`).join('') : '<p class="subtle">Ainda não há desempenho por matéria.</p>'}<div class="button-row"><button class="btn" data-nav="errors">Ver erros</button><button class="btn" data-nav="stats">Ver desempenho</button></div>`)}</div>
+${header('Últimos simulados', 'Seu histórico de avaliações.')} ${lastAttempts().length ? `<div class="card">${lastAttempts().slice(0, 4).map(a => `<div class="meter"><span class="meter-label">${esc(a.kind)} · ${new Date(a.finishedAt).toLocaleDateString('pt-BR')}</span><b>${score(a.choices, a.questionIds.map(qById)).correct}/${a.questionIds.length}</b><button class="btn sm" data-attempt="${a.id}">Revisar</button></div>`).join('')}</div>` : '<div class="empty">Nenhum simulado concluído. Escolha um treino rápido para começar.</div>'}`;
+}
+function rankAreas() { return AREAS.map(a => { const rs = progress.responses.filter(r => qById(r.questionId)?.areaId === a.id); return { title: a.title, id: a.id, count: rs.length, pct: correctPct(rs) }; }).filter(a => a.count).sort((a, b) => a.pct - b.pct || b.count - a.count); }
+function plan() {
+    const slot = progress.settings.session, parts = slot === 30 ? [5, 10, 12, 3] : slot === 45 ? [5, 15, 20, 5] : [10, 20, 25, 5];
+    const learned = LESSONS.filter(l => !progress.completedLessons.includes(l.id));
+    const needed = rankAreas()[0];
+    const lesson = (needed ? learned.find(l => l.areaId === needed.id) : null) || learned[0] || LESSONS[0];
+    return `<div class="hero"><div><p class="eyebrow">Rotina inteligente</p><h1>Seu plano diário de ${slot} minutos</h1><p>Revisão → aula → prática → análise dos erros. A recomendação prioriza lacunas observadas e conteúdos fundamentais, sem inventar frequência de cobrança.</p></div><div class="countdown"><strong>${daysUntil('2026-11-29')}</strong><span>dias até a prova</span></div></div>${header('Escolha o tempo disponível', 'Altere a duração sem perder seu progresso.')}
+<div class="filterbar">${[30, 45, 60].map(n => `<button class="btn ${slot === n ? 'primary' : ''}" data-session="${n}">${n} minutos</button>`).join('')}</div><div class="cards">${['Revisão', 'Aula', 'Questões', 'Análise'].map((l, i) => simpleStat(l, `${parts[i]} min`, ['Retomar conceitos', 'Aprender com exemplos', 'Resolver exercícios', 'Conferir erros'][i])).join('')}</div>
+${card('O que estudar hoje', `<span class="tag green">Plano adaptado ao seu progresso</span><h3>${esc(lesson.title)}</h3><p class="subtle">${esc(lesson.summary)}</p><p class="subtle">Sessões são orientativas. O tempo estudado é registrado quando você conclui uma aula ou sessão de treino.</p><button class="btn primary" data-lesson="${lesson.id}">Começar esta aula</button>`)}
+${header('Prioridades de revisão', 'Baseadas no seu histórico e na matriz oficial.')}${rankAreas().length ? rankAreas().slice(0, 6).map(a => `<div class="card meter"><span class="meter-label">${esc(a.title)}</span><span>${a.count} respostas</span><strong>${a.pct}%</strong><button class="btn sm" data-area="${a.id}">Estudar</button></div>`).join('') : '<div class="notice">Você ainda não respondeu exercícios. Por isso, o plano começa pelos fundamentos e vai se ajustar com seu desempenho.</div>'}`;
+}
+function library() {
+    const q = search.toLowerCase();
+    const filtered = AREAS.filter(a => (groupFilter === 'todos' || a.group === groupFilter) && (`${a.title} ${a.topics.join(' ')}`).toLowerCase().includes(q));
+    const lesson = LESSONS.find(l => l.id === lessonId);
+    const active = area(areaId);
+    return `${header('Biblioteca de conteúdos', 'Matriz completa das portarias de 2026; aulas prontas e pendências distinguíveis.')}
+<div class="filterbar"><input aria-label="Pesquisar matéria" id="search" placeholder="Buscar matéria ou subtema" value="${esc(search)}"><select id="groupFilter" aria-label="Filtrar área"><option value="todos" ${groupFilter === 'todos' ? 'selected' : ''}>Todas as áreas</option><option value="especifico" ${groupFilter === 'especifico' ? 'selected' : ''}>Componente específico</option><option value="geral" ${groupFilter === 'geral' ? 'selected' : ''}>Formação Geral</option></select></div>
+<div class="two-col"><div class="area-list">${filtered.map(a => { const ls = LESSONS.filter(l => l.areaId === a.id); return `<button class="area ${areaId === a.id ? 'active' : ''}" data-area="${a.id}"><span class="area-icon">${a.id}</span><span><b>${esc(a.title)}</b><small>${ls.length ? `${ls.length} aula(s) concluída(s) para estudo` : 'Conteúdo em elaboração'} · ${esc(a.group === 'geral' ? 'Formação Geral' : 'Específico')}</small></span></button>`; }).join('') || '<div class="empty">Nenhuma área encontrada.</div>'}</div>
+<div><div class="card"><span class="tag green">${esc(active.law)}</span><h3>${esc(active.title)}</h3><p class="subtle">Subtemas organizados para estudo:</p><p>${active.topics.map(t => `<span class="tag" style="margin:3px">${esc(t)}</span>`).join('')}</p><hr class="divider"><h4>Aulas disponíveis</h4>${LESSONS.filter(l => l.areaId === active.id).map(l => `<div class="section-accordion"><div style="padding:14px"><b>${esc(l.title)}</b><p class="subtle">${esc(l.summary)}</p><span class="tag ${progress.completedLessons.includes(l.id) ? 'green' : ''}">${progress.completedLessons.includes(l.id) ? 'Concluída' : 'Pronta para estudo'}</span><div class="button-row"><button class="btn primary sm" data-lesson="${l.id}">Estudar</button></div></div></div>`).join('') || '<div class="notice warning">Ainda não há aula integral validada nesta área. A matriz e os subtemas estão cadastrados; nenhuma aula vazia será apresentada como pronta.</div>'}<p class="subtle">${esc(active.law)} · <a href="${active.group === 'geral' ? SOURCES.p154 : SOURCES.p164}" target="_blank" rel="noopener">Consultar portaria</a></p></div></div></div>`;
+}
+function lessonPage() {
+    const l = LESSONS.find(x => x.id === lessonId) || LESSONS[0];
+    const qs = QUESTIONS.filter(q => q.lessonId === l.id && !q.needsSource);
+    const done = progress.completedLessons.includes(l.id);
+    return `<div class="lesson-body"><div class="row"><button class="btn sm" data-nav="library">← Voltar à biblioteca</button><span class="tag">${esc(area(l.areaId).title)}</span></div><div class="heading"><div><h2>${esc(l.title)}</h2><p>${esc(l.summary)}</p></div></div><div class="row"><span class="tag green">Aula completa</span><span class="tag">${l.duration} min</span><span class="tag">Versão ${l.version}</span><span class="tag ${done ? 'green' : ''}">${done ? 'Concluída' : 'Não concluída'}</span></div>
+<section class="card" style="margin-top:18px"><h3 class="section-title">1. Entenda o conceito</h3><ul>${l.concept.map(x => `<li>${esc(x)}</li>`).join('')}</ul><h3>2. Fórmulas importantes</h3>${l.formula.map(x => `<div class="formula">${esc(x)}</div>`).join('')}<h3>3. O que significa cada variável</h3><ul>${l.variables.map(x => `<li>${esc(x)}</li>`).join('')}</ul><h3>4. Exemplo resolvido, passo a passo</h3><ol>${l.steps.map(x => `<li>${esc(x)}</li>`).join('')}</ol><h3>5. Aplicação prática</h3><p class="subtle">${esc(l.application)}</p><h3>6. Erros comuns</h3><ul>${l.mistakes.map(x => `<li>${esc(x)}</li>`).join('')}</ul><h3>7. Revisão rápida</h3><div class="feedback">${esc(l.revision)}</div><h3>8. Questões para praticar</h3><p class="subtle">${qs.length} questões autorais de treinamento vinculadas a este tema, com resolução independente revisada.</p><h3>9. Referências</h3><p class="subtle">${l.sources.map((s, i) => `<a href="${esc(s)}" rel="noopener" target="_blank">${i === 0 ? 'Portaria da matriz curricular' : 'Referência técnica: ' + esc(new URL(s).hostname)}</a>`).join(', ')}. A explicação didática é autoral e não foi aprovada pelo Inep.</p><div class="button-row"><button class="btn primary" data-complete="${l.id}">${done ? 'Marcar como não concluída' : 'Marcar aula como concluída'}</button><button class="btn" data-practice="${l.id}" ${!qs.length ? 'disabled' : ''}>Praticar ${qs.length} questão(ões)</button></div></section></div>`;
+}
+function bank() {
+    const opts = QUESTIONS.filter(q => (groupFilter === 'todos' || area(q.areaId).group === groupFilter) && (difficultyFilter === 'todas' || q.difficulty === difficultyFilter) && (`${q.prompt} ${q.topic} ${area(q.areaId).title}`).toLowerCase().includes(search.toLowerCase()));
+    return `${header('Banco de questões', 'Questões autorais revisadas e referência oficial de 2023, sempre identificadas.')}
+<div class="filterbar"><input id="search" placeholder="Buscar enunciado, área ou assunto" aria-label="Buscar questões" value="${esc(search)}"><select id="groupFilter" aria-label="Tipo"><option value="todos">Todas as áreas</option><option value="especifico" ${groupFilter === 'especifico' ? 'selected' : ''}>Específico</option><option value="geral" ${groupFilter === 'geral' ? 'selected' : ''}>Formação Geral</option></select><select id="difficultyFilter" aria-label="Dificuldade">${['todas', 'Fácil', 'Média', 'Difícil'].map(v => `<option value="${v}" ${difficultyFilter === v ? 'selected' : ''}>${v === 'todas' ? 'Todas as dificuldades' : v}</option>`).join('')}</select></div>
+<div class="notice">${QUESTIONS.filter(q => q.origin === 'autoral').length} questões autorais com resolução revisada · ${QUESTIONS.filter(q => q.origin === 'oficial-referenciada').length} referência ao caderno oficial, cuja consulta externa é necessária. Questões oficiais não são apresentadas como autorais.</div>
+<div class="lesson-grid">${opts.map(q => `<div class="card question-card"><div class="row"><span class="tag ${q.origin === 'autoral' ? 'green' : 'amber'}">${q.origin === 'autoral' ? 'Autoral revisada' : 'Oficial referenciada'}</span><span class="tag">${esc(q.difficulty)}</span></div><h3>${esc(q.topic)}</h3><p class="subtle">${esc(q.prompt.length > 160 ? q.prompt.slice(0, 160) + '…' : q.prompt)}</p><p class="subtle">${esc(area(q.areaId).title)}</p><button class="btn primary sm" data-single="${q.id}">Resolver</button> <button class="btn sm" data-bookmark="${q.id}">${progress.bookmarks.includes(q.id) ? '★ Salva' : '☆ Salvar'}</button></div>`).join('')}</div>`;
+}
+function startLearning(ids) { quizIds = ids; quizIndex = 0; quizSelected = null; quizRevealed = false; quizHints = 0; quizStart = Date.now(); page = 'learn'; render(); }
+function learn() {
+    const q = qById(quizIds[quizIndex]);
+    if (!q)
+        return '<div class="empty">Nenhuma questão selecionada.</div>';
+    const last = progress.responses.filter(r => r.questionId === q.id).at(-1);
+    return `<div class="quiz"><div class="row"><button class="btn sm" data-nav="bank">← Banco de questões</button><span class="tag">${quizIndex + 1} de ${quizIds.length}</span><span class="tag ${q.origin === 'autoral' ? 'green' : 'amber'}">${q.origin === 'autoral' ? 'Questão autoral de treinamento' : 'Referência oficial 2023'}</span></div><div class="heading"><div><h2>${esc(q.topic)}</h2><p>${esc(area(q.areaId).title)} · ${esc(q.difficulty)} · ID ${esc(q.id)}</p></div></div><section class="card"><p style="font-size:16px;line-height:1.7">${esc(q.prompt)}</p>${q.needsSource ? `<div class="notice warning">O enunciado completo e o diagrama não foram republicados. Consulte <a href="${esc(q.source)}" target="_blank" rel="noopener">o caderno original, página ${q.page}</a>, antes de responder. Esta referência exige internet caso o PDF não esteja salvo.</div>` : ''}<div class="options">${q.choices.map((c, i) => `<label class="option ${quizSelected === i ? 'selected' : ''} ${quizRevealed && q.answer === i ? 'correct' : ''} ${quizRevealed && quizSelected === i && i !== q.answer ? 'incorrect' : ''}"><input type="radio" name="learn-choice" value="${i}" ${quizSelected === i ? 'checked' : ''} ${quizRevealed ? 'disabled' : ''}><b>${'ABCDE'[i]}</b><span>${esc(c)}</span></label>`).join('')}</div>
+${!quizRevealed ? `<div class="button-row"><button class="btn" data-action="hint" ${quizHints >= q.hints.length ? 'disabled' : ''}>Pedir dica (${quizHints}/${q.hints.length})</button><button class="btn primary" data-action="submit-learning" ${quizSelected === null ? 'disabled' : ''}>Responder</button><button class="btn" data-action="give-up">Desistir e ver resolução</button></div>${quizHints ? `<div class="notice">${q.hints.slice(0, quizHints).map((h, i) => `${i + 1}. ${esc(h)}`).join('<br>')}</div>` : ''}` : `<div class="feedback"><b>${quizSelected === null ? 'Resolução exibida' : quizSelected === q.answer ? 'Resposta correta!' : 'Resposta incorreta.'}</b><p>${esc(q.why)}</p>${q.calculation ? `<p class="formula">${esc(q.calculation)}</p>` : ''}<p><b>Resposta:</b> ${'ABCDE'[q.answer]} · <b>Status:</b> ${esc(q.status.replaceAll('-', ' '))}</p><p class="subtle">${esc(q.origin === 'autoral' ? 'Resolução independente de questão autoral.' : 'Gabarito oficial conferido; explicação independente, não chancelada pelo Inep.')}</p>${q.lessonId ? `<button class="btn sm" data-lesson="${q.lessonId}">Revisar aula relacionada</button>` : ''}<a class="btn sm" href="${esc(q.origin === 'oficial-referenciada' ? q.source : SOURCES.p164)}" target="_blank" rel="noopener">Consultar referência</a></div><div class="button-row"><button class="btn" data-bookmark="${q.id}">${progress.bookmarks.includes(q.id) ? '★ Remover dos salvos' : '☆ Salvar para revisão'}</button><button class="btn primary" data-action="next-learning">${quizIndex < quizIds.length - 1 ? 'Próxima questão' : 'Voltar ao banco'}</button></div>`}</section>${last ? `<p class="subtle">Última resposta registrada: ${new Date(last.at).toLocaleString('pt-BR')} · ${last.correct ? 'acerto' : 'erro'}</p>` : ''}</div>`;
+}
+function defaultCandidates() { return QUESTIONS.filter(q => eligible(q) && !q.needsSource); }
+function sim() {
+    const available = defaultCandidates().length;
+    return `${header('Simulados', 'Treine em modo avaliação; respostas e cronômetro salvos localmente.')}
+<div class="notice warning">Simulado oficial completo de 2026: 15 questões gerais + 30 específicas + 1 discursiva, 4 horas. <b>Indisponível por enquanto</b>: o banco atual não possui 45 questões objetivas verificadas com a distribuição exigida. O sistema não repetirá nem inventará itens.</div>
+<div class="lesson-grid">${card('Treino rápido', `<p class="subtle">Escolha um tamanho compatível com as ${available} questões autorais prontas. Correção somente após finalizar.</p><div class="button-row">${[5, 10, 15, 20].map(n => `<button class="btn ${n === 5 ? 'primary' : ''}" data-simquick="${n}" ${available < n ? 'disabled' : ''}>${n} questões</button>`).join('')}</div>`)}${card('Simulado adaptativo', `<p class="subtle">Seleção determinística que prioriza questões inéditas para você, erros anteriores e diversidade de áreas. Sem alegações falsas de inteligência artificial.</p><button class="btn primary" data-simadaptive="10" ${available < 10 ? 'disabled' : ''}>Começar 10 questões</button>`)}
+${card('Por área e dificuldade', `<p class="subtle">O modo seleciona apenas questões verificadas. Em áreas sem conteúdo suficiente, avisa a limitação.</p><select id="simArea" class="field" aria-label="Área do simulado">${AREAS.map(a => `<option value="${a.id}" ${a.id === areaId ? 'selected' : ''}>${esc(a.title)}</option>`).join('')}</select><div class="button-row"><button class="btn primary" data-action="sim-area">Iniciar por matéria</button></div>`)}${card('Questões erradas', `<p class="subtle">Reavalie questões que você errou, sem exibir as respostas até encerrar.</p><button class="btn primary" data-action="sim-errors">Rever erros em modo prova</button>`)}</div>
+${header('Histórico de simulados', 'Abra uma tentativa para conferir suas respostas originais.')}${lastAttempts().length ? `<div class="card table-scroll"><table class="table"><thead><tr><th>Tipo</th><th>Data</th><th>Resultado</th><th></th></tr></thead><tbody>${lastAttempts().map(a => { const s = score(a.choices, a.questionIds.map(qById)); return `<tr><td>${esc(a.kind)}</td><td>${new Date(a.finishedAt).toLocaleString('pt-BR')}</td><td>${s.correct}/${s.total} acertos</td><td><button class="btn sm" data-attempt="${a.id}">Revisar</button></td></tr>`; }).join('')}</tbody></table></div>` : '<div class="empty">Nenhum simulado finalizado.</div>'}
+${progress.attempts.filter(a => !a.finishedAt).length ? card('Simulados interrompidos', progress.attempts.filter(a => !a.finishedAt).map(a => `<p class="row">${esc(a.kind)} — ${a.questionIds.length} questões <button class="btn sm" data-resume="${a.id}">Retomar</button><button class="btn sm warn" data-abandon="${a.id}">Descartar</button></p>`).join('')) : ''}`;
+}
+function createAttempt(kind, qs, mode = 'practice', durationMinutes = 45) { if (!qs.length) {
+    flash('Não há questões verificadas para esse filtro.');
+    return;
+} const now = Date.now(); const a = { id: crypto.randomUUID(), kind, questionIds: qs.map(q => q.id), choices: {}, flagged: [], startedAt: now, endsAt: now + durationMinutes * 60000, pausedSeconds: 0, pauseSince: null, duration: durationMinutes * 60, index: 0, mode }; progress.attempts.push(a); activeAttempt = a.id; persist(); page = 'attempt'; render(); }
+function attemptPage() { const a = attemptsActive(); if (!a)
+    return '<div class="notice">Tentativa não encontrada.</div>'; const q = qById(a.questionIds[a.index]); if (!q)
+    return ''; const totalAnswered = Object.keys(a.choices).length; return `<div class="quiz"><div class="quiz-header"><div><button class="btn sm" data-action="leave-attempt">← Sair e salvar</button><h2>${esc(a.kind)}</h2><p class="subtle">Questão ${a.index + 1} de ${a.questionIds.length} · ${totalAnswered} respondidas · ${a.flagged.length} marcadas</p></div><div style="text-align:right"><div class="tag">${a.mode === 'real' ? 'Prova real' : 'Treino'}</div><h2 id="timer" aria-live="off">${fmtSecs(secondsLeft(a))}</h2>${a.mode === 'practice' ? `<button class="btn sm" data-action="pause-attempt">${a.pauseSince ? 'Retomar' : 'Pausar'}</button>` : ''}</div></div><div class="progress"><i style="width:${Math.round(100 * totalAnswered / a.questionIds.length)}%"></i></div><div class="card" style="margin-top:18px"><div class="row"><span class="tag">${esc(area(q.areaId).title)}</span><span class="tag">${esc(q.difficulty)}</span></div><h3 style="font-size:16px;line-height:1.65">${esc(q.prompt)}</h3><div class="options">${q.choices.map((c, i) => `<label class="option ${a.choices[q.id] === i ? 'selected' : ''}"><input type="radio" name="attempt-choice" value="${i}" ${a.choices[q.id] === i ? 'checked' : ''} ${a.pauseSince ? 'disabled' : ''}><b>${'ABCDE'[i]}</b><span>${esc(c)}</span></label>`).join('')}</div><div class="button-row"><button class="btn" data-action="flag">${a.flagged.includes(q.id) ? '★ Desmarcar revisão' : '☆ Marcar para revisão'}</button><button class="btn" data-action="clear-attempt-choice" ${a.choices[q.id] === undefined ? 'disabled' : ''}>Limpar resposta</button></div></div><div class="button-row"><button class="btn" data-action="prev-attempt" ${a.index === 0 ? 'disabled' : ''}>← Anterior</button><button class="btn" data-action="next-attempt" ${a.index === a.questionIds.length - 1 ? 'disabled' : ''}>Próxima →</button><button class="btn primary" data-action="finish-attempt">Finalizar simulado</button></div><div class="heading"><div><h2>Mapa de questões</h2><p>Selecione qualquer questão para navegar.</p></div></div><div class="grid5">${a.questionIds.map((id, i) => `<button class="index-btn ${a.index === i ? 'current' : ''} ${a.choices[id] !== undefined ? 'answered' : ''} ${a.flagged.includes(id) ? 'flagged' : ''}" data-idx="${i}">${i + 1}${a.flagged.includes(id) ? ' ★' : ''}</button>`).join('')}</div><p class="subtle">Não há gabarito durante o simulado. Fechar a página não apaga as respostas; em modo prova real, o relógio continua correndo.</p></div>`; }
+function finishAttempt(force = false) {
+    const a = attemptsActive();
+    if (!a)
+        return;
+    if (!force && !window.confirm(`Finalizar ${a.kind}? Você respondeu ${Object.keys(a.choices).length} de ${a.questionIds.length} questões.`))
+        return;
+    const now = Date.now();
+    a.finishedAt = now;
+    for (const id of a.questionIds) {
+        const q = qById(id), choice = a.choices[id] ?? null;
+        if (choice === null)
+            continue;
+        if (!progress.responses.some(r => r.attemptId === a.id && r.questionId === id))
+            progress.responses.push({ id: crypto.randomUUID(), questionId: id, choice, correct: choice === q.answer, at: new Date(now).toISOString(), seconds: Math.round((now - a.startedAt) / 1000 / a.questionIds.length), attemptId: a.id });
+    }
+    progress.minutes += Math.max(1, Math.round(Math.min(a.duration, (now - a.startedAt) / 1000 - a.pausedSeconds) / 60));
+    persist();
+    activeAttempt = null;
+    page = 'results';
+    resultId = a.id;
+    render();
+}
+let resultId = null;
+function results() { const a = progress.attempts.find(x => x.id === resultId); if (!a)
+    return '<div class="empty">Simulado não encontrado.</div>'; const qs = a.questionIds.map(qById), s = score(a.choices, qs); return `<div class="quiz">${header('Resultado do simulado', `${esc(a.kind)} · ${new Date(a.finishedAt || Date.now()).toLocaleString('pt-BR')}`)}<div class="cards" style="grid-template-columns:repeat(3,1fr)">${simpleStat('Acertos', String(s.correct), `de ${s.total}`)}${simpleStat('Respondidas', String(s.answered), 'questões objetivas')}${simpleStat('Percentual', `${s.total ? Math.round(s.correct / s.total * 100) : 0}%`, 'não é nota oficial')}</div><div class="notice">Este resultado representa somente o percentual de acertos neste treinamento, não a nota do Inep.</div>${qs.map((q, i) => `<div class="card" style="margin-bottom:12px"><div class="row"><span class="tag">${i + 1}. ${esc(q.topic)}</span><span class="tag ${a.choices[q.id] === q.answer ? 'green' : 'amber'}">${a.choices[q.id] === undefined ? 'Não respondida' : a.choices[q.id] === q.answer ? 'Correta' : 'Incorreta'}</span></div><p style="font-size:14px;line-height:1.65">${esc(q.prompt)}</p><p class="subtle"><b>Sua resposta:</b> ${a.choices[q.id] === undefined ? 'em branco' : `${'ABCDE'[a.choices[q.id]]} — ${esc(q.choices[a.choices[q.id]])}`}<br><b>Gabarito:</b> ${'ABCDE'[q.answer]} — ${esc(q.choices[q.answer])}</p><div class="feedback">${esc(q.why)}</div>${q.lessonId ? `<button class="btn sm" data-lesson="${q.lessonId}">Rever aula</button>` : ''}</div>`).join('')}<button class="btn" data-nav="sim">Voltar aos simulados</button></div>`; }
+function discursive() {
+    const d = DISCURSIVES.find(x => x.id === selectedDisc) || DISCURSIVES[0];
+    const draft = progress.discursive[d.id] || '';
+    return `${header('Treinamento de discursivas', 'Salve rascunhos, compare com rubricas e desenvolva argumentação técnica.')}
+<div class="filterbar"><select id="discSelect" aria-label="Questão discursiva">${DISCURSIVES.map(x => `<option value="${x.id}" ${x.id === d.id ? 'selected' : ''}>${esc(x.id)} — ${esc(area(x.areaId).title)}</option>`).join('')}</select></div><div class="two-col"><section class="card"><div class="row"><span class="tag green">Questão autoral</span><span class="tag">${esc(area(d.areaId).title)}</span></div><h3>Enunciado</h3><p class="subtle">${esc(d.prompt)}</p><h3>Sua resposta</h3><textarea id="discText" class="textarea" placeholder="Digite sua resposta. O rascunho é salvo automaticamente.">${esc(draft)}</textarea><p class="subtle" id="discSaved">${draft.length} caracteres · salvamento local automático</p><button class="btn primary" data-action="save-discursive">Salvar rascunho</button></section><section class="card"><h3>Critérios para conferir</h3><p class="subtle">Esta comparação é orientativa, não atribui nota oficial.</p><ul>${d.rubric.map(x => `<li style="margin-bottom:10px">${esc(x)}</li>`).join('')}</ul><details class="section-accordion"><summary>Mostrar modelo de resposta</summary><div><p class="subtle">${esc(d.model)}</p></div></details><h3>Como melhorar sua resposta</h3><p class="subtle">Comece com a conclusão técnica, justifique com conceitos, indique consequências práticas e finalize com limitações. Compare item a item com a rubrica. Não basta repetir palavras-chave.</p></section></div>`;
+}
+const tutors = [{ id: 'ohm', title: 'Lei de Ohm', intro: 'A tensão é o “empurrão”, a corrente é o fluxo e a resistência é a dificuldade de passagem.', tips: ['V = R × I', 'Se V dobra e R fica igual, I também dobra.', 'Para obter I, divida V por R.'], lesson: 'circuito-ohm' }, { id: 'potencia', title: 'Potência em CA', intro: 'kW indica a parte ativa, kVA a aparente; o fator de potência relaciona as duas.', tips: ['FP = P/S', 'P trifásica = √3·Vlinha·Ilinha·FP', 'kW e kVA não são intercambiáveis.'], lesson: 'potencia-trifasica' }, { id: 'transformador', title: 'Transformadores', intro: 'Em um transformador ideal, a tensão acompanha as espiras e a corrente vai no sentido inverso.', tips: ['V1/V2 = N1/N2', 'V1·I1 = V2·I2', 'A frequência permanece a mesma.'], lesson: 'trafo-ideal' }, { id: 'amostragem', title: 'Amostragem', intro: 'A taxa de aquisição precisa representar as variações mais rápidas do sinal.', tips: ['fs > 2fmax', 'T = 1/fs', 'Use filtro anti-aliasing.'], lesson: 'nyquist' }];
+function tutor() {
+    const t = tutors.find(x => x.id === tutorTopic);
+    return `${header('Tutor guiado de estudos', 'Respostas estruturadas com base nas aulas. Não é uma IA generativa.')}
+<div class="two-col"><div class="card"><h3 class="section-title">Sobre o que você quer ajuda?</h3>${tutors.map(x => `<button class="area ${x.id === t.id ? 'active' : ''}" style="margin-bottom:9px" data-tutor="${x.id}"><span class="area-icon">?</span><span><b>${esc(x.title)}</b></span></button>`).join('')}</div><div class="card"><span class="tag green">Tutor por conteúdo</span><h3>${esc(t.title)}</h3><p class="subtle">${esc(t.intro)}</p><h3>Passo a passo e fórmulas</h3><ol>${t.tips.map(t => `<li style="margin-bottom:12px">${esc(t)}</li>`).join('')}</ol><div class="button-row"><button class="btn primary" data-lesson="${t.lesson}">Estudar aula completa</button><button class="btn" data-practice="${t.lesson}">Testar com questões</button></div><hr class="divider"><p class="subtle">Este tutor não inventa respostas ou usa uma API externa. Novos tópicos serão adicionados após revisão do conteúdo.</p></div></div>`;
+}
+function stats() {
+    const rs = periodResponses(), buckets = AREAS.map(a => ({ a, rs: rs.filter(r => qById(r.questionId)?.areaId === a.id) })).filter(x => x.rs.length).sort((x, y) => y.rs.length - x.rs.length);
+    return `${header('Meu desempenho', 'Informações calculadas exclusivamente a partir das respostas registradas.')}<div class="filterbar"><select id="statsPeriod"><option value="todos">Todo o período</option><option value="dia" ${statsPeriod === 'dia' ? 'selected' : ''}>Últimas 24 horas</option><option value="semana" ${statsPeriod === 'semana' ? 'selected' : ''}>Últimos 7 dias</option><option value="mes" ${statsPeriod === 'mes' ? 'selected' : ''}>Últimos 30 dias</option></select></div><div class="cards">${simpleStat('Respostas', String(rs.length), 'inclui repetições')}${simpleStat('Acertos', String(rs.filter(r => r.correct).length), 'respostas corretas')}${simpleStat('Erros', String(rs.filter(r => !r.correct).length), 'respostas incorretas')}${simpleStat('Taxa de acerto', `${correctPct(rs)}%`, 'não é nota do ENADE')}</div>
+<div class="two-col">${card('Resultado por matéria', buckets.length ? buckets.map(x => { const pct = correctPct(x.rs); return `<div class="meter"><span class="meter-label">${esc(x.a.title)}<small style="display:block;color:var(--muted)">${x.rs.length} respostas</small></span><span class="meter-track"><i style="width:${pct}%"></i></span><b>${pct}%</b></div>`; }).join('') : '<p class="subtle">Resolva questões para visualizar seus resultados por área.</p>')}${card('Resumo de estudo', `<p class="subtle"><b>Aulas concluídas:</b> ${completed()}/${LESSONS.length} prontas.</p><p class="subtle"><b>Tempo registrado:</b> ${progress.minutes} minutos.</p><p class="subtle"><b>Simulados encerrados:</b> ${lastAttempts().length}.</p><p class="subtle"><b>Questões salvas:</b> ${progress.bookmarks.length}.</p><p class="subtle">A análise de dificuldade depende do número de tentativas por assunto.</p>`)}</div>
+${header('Histórico de respostas', 'Confira a alternativa marcada em cada tentativa.')}${rs.length ? `<div class="card table-scroll"><table class="table"><thead><tr><th>Data</th><th>Questão</th><th>Marcada</th><th>Gabarito</th><th>Resultado</th><th></th></tr></thead><tbody>${rs.slice().reverse().slice(0, 150).map(r => { const q = qById(r.questionId); return `<tr><td>${new Date(r.at).toLocaleString('pt-BR')}</td><td>${esc(q.topic)}</td><td>${r.choice === null ? '—' : 'ABCDE'[r.choice]}</td><td>${'ABCDE'[q.answer]}</td><td class="${r.correct ? 'ok' : 'bad'}">${r.correct ? 'Acerto' : 'Erro'}</td><td><button class="btn sm" data-single="${q.id}">Rever</button></td></tr>`; }).join('')}</tbody></table></div>` : '<div class="empty">Ainda não há respostas registradas.</div>'}`;
+}
+function errors() {
+    const last = new Map();
+    for (const r of progress.responses)
+        last.set(r.questionId, r.correct);
+    const missed = [...last].filter(([, ok]) => !ok).map(([id]) => qById(id));
+    return `${header('Revisão de erros', 'Questões cujo último registro foi incorreto e questões marcadas para revisão.')}
+<div class="cards">${simpleStat('Erros pendentes', String(missed.length), 'último registro incorreto')}${simpleStat('Questões salvas', String(progress.bookmarks.length), 'marcadas manualmente')}${simpleStat('Total de respostas', String(progress.responses.length), 'histórico completo')}${simpleStat('Taxa de acerto', `${correctPct()}%`, 'geral')}</div>
+${card('Corrigir dificuldades', missed.length ? missed.map(q => `<p class="row"><span class="meter-label">${esc(q.topic)} · ${esc(area(q.areaId).title)}</span><button class="btn sm" data-single="${q.id}">Resolver novamente</button></p>`).join('') : '<p class="subtle">Nenhum erro pendente registrado. Você pode continuar praticando.</p>')}
+${header('Salvas para revisão', 'Marque questões no banco de questões ou após responder.')}${progress.bookmarks.length ? progress.bookmarks.map(id => { const q = qById(id); return `<div class="card meter"><span class="meter-label">${esc(q.topic)}</span><button class="btn sm" data-single="${q.id}">Abrir</button><button class="btn sm" data-bookmark="${q.id}">Remover</button></div>`; }).join('') : '<div class="empty">Você ainda não salvou questões.</div>'}`;
+}
+function settings() {
+    return `${header('Configurações e backup', 'Seus dados ficam no aparelho até que um serviço de sincronização seja configurado.')}
+<div class="two-col">${card('Preferências', `<h4>Aparência</h4><div class="button-row"><button class="btn ${progress.settings.theme === 'light' ? 'primary' : ''}" data-theme="light">☀ Claro</button><button class="btn ${progress.settings.theme === 'dark' ? 'primary' : ''}" data-theme="dark">☾ Escuro</button></div><h4>Tempo de estudo</h4><div class="button-row">${[30, 45, 60].map(n => `<button class="btn ${progress.settings.session === n ? 'primary' : ''}" data-session="${n}">${n} min</button>`).join('')}</div><hr class="divider"><p class="subtle"><b>Armazenamento:</b> IndexedDB e cópia de segurança local no navegador. Não há login ou sincronização entre dispositivos nesta versão.</p>`)}${card('Backup de dados', `<p class="subtle">Exporte um JSON e guarde-o em local seguro. Para transferir seu progresso entre celular e PC nesta versão, importe o mesmo arquivo no outro dispositivo.</p><div class="button-row"><button class="btn primary" data-action="export">Exportar JSON</button><label class="btn" for="restore-file">Importar JSON</label><input type="file" accept="application/json,.json" id="restore-file" hidden></div><hr class="divider"><button class="btn warn" data-action="delete-all">Apagar meus dados</button><p class="subtle">A exclusão é irreversível sem backup. Nenhum dado é enviado para terceiros.</p>`)}
+${card('Fontes oficiais e transparência', `<div class="foot-links"><a href="${SOURCES.p164}" target="_blank" rel="noopener">Portaria 164/2026 — Engenharia Elétrica</a><a href="${SOURCES.p154}" target="_blank" rel="noopener">Portaria 154/2026 — Formação Geral</a><a href="${SOURCES.exam2023}" target="_blank" rel="noopener">Prova ENADE Elétrica 2023</a><a href="${SOURCES.answers2023}" target="_blank" rel="noopener">Gabarito definitivo 2023</a><a href="${SOURCES.inep}" target="_blank" rel="noopener">Perguntas e respostas Inep</a><a href="${SOURCES.edital61}" target="_blank" rel="noopener">Edital 61/2026 — Bacharelados</a><a href="${SOURCES.edital49}" target="_blank" rel="noopener">Edital 49/2026 — Geral</a></div><p class="subtle">Este aplicativo é independente e não é um produto oficial do Inep. As resoluções autorais não foram aprovadas pelo Inep. A estrutura de 2026 não usa o formato da prova de 2023.</p>`)}</div>`;
+}
+function shell(body) { return `<div class="layout"><aside class="sidebar" id="sidebar"><div class="brand"><div class="brand-mark">ϟ</div><div><b>ENADE Elétrica</b><small>Preparação 2026</small></div></div><nav class="nav" aria-label="Menu principal">${navs.map(([id, label, icon]) => `<button data-nav="${id}" class="${page === id ? 'active' : ''}"><span class="num">${icon}</span><span>${label}</span></button>`).join('')}</nav><div class="sidebar-bottom"><b>SEU ESPAÇO DE ESTUDO</b><br>Uso pessoal · Offline após instalação<br>Versão 0.1 · Progresso local</div></aside><main class="main"><div class="topbar"><div class="row"><button class="btn sm mobile-menu" data-action="toggle-menu" aria-label="Abrir menu">☰</button><div><small>PLATAFORMA DE ESTUDOS</small><strong>Engenharia Elétrica · ENADE 2026</strong></div></div><div class="topright"><span class="pill">● Salvo no dispositivo</span><span>${new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}</span></div></div><div class="content">${body}<footer class="footer">Plataforma educacional independente · Diretrizes do Inep 2026 · Conteúdo disponível conforme validação</footer></div></main></div>`; }
+function render() { document.documentElement.classList.toggle('theme-dark', progress.settings.theme === 'dark'); const content = { home, plan, library, lesson: lessonPage, bank, learn, sim, attempt: attemptPage, results, discursive, tutor, stats, errors, settings }; root.innerHTML = shell((content[page] || home)()); updateTimer(); }
+function doLearning(answer) { const q = qById(quizIds[quizIndex]); quizSelected = answer; quizRevealed = true; if (answer !== null) {
+    progress.responses.push({ id: crypto.randomUUID(), questionId: q.id, choice: answer, correct: answer === q.answer, at: new Date().toISOString(), seconds: Math.max(1, Math.round((Date.now() - quizStart) / 1000)), attemptId: 'learn-' + crypto.randomUUID() });
+    persist();
+} render(); }
+function updateTimer() { const a = attemptsActive(); const el = document.getElementById('timer'); if (!a || !el)
+    return; el.textContent = fmtSecs(secondsLeft(a)); if (secondsLeft(a) <= 0) {
+    finishAttempt(true);
+    flash('Tempo encerrado. Simulado finalizado automaticamente.');
+} }
+setInterval(updateTimer, 1000);
+root.addEventListener('click', ev => {
+    const target = ev.target, b = target.closest('[data-nav],[data-action],[data-area],[data-lesson],[data-practice],[data-single],[data-bookmark],[data-complete],[data-session],[data-theme],[data-simquick],[data-simadaptive],[data-attempt],[data-resume],[data-abandon],[data-idx],[data-tutor]');
+    if (!b)
+        return;
+    const d = b.dataset;
+    if (d.nav) {
+        go(d.nav);
+        return;
+    }
+    if (d.area) {
+        areaId = d.area;
+        page = 'library';
+        render();
+        return;
+    }
+    if (d.lesson) {
+        lessonId = d.lesson;
+        areaId = LESSONS.find(l => l.id === d.lesson)?.areaId || areaId;
+        page = 'lesson';
+        window.scrollTo(0, 0);
+        render();
+        return;
+    }
+    if (d.complete) {
+        progress.completedLessons = progress.completedLessons.includes(d.complete) ? progress.completedLessons.filter(id => id !== d.complete) : [...progress.completedLessons, d.complete];
+        if (progress.completedLessons.includes(d.complete)) {
+            progress.minutes += LESSONS.find(l => l.id === d.complete).duration;
+        }
+        persist();
+        render();
+        return;
+    }
+    if (d.practice) {
+        startLearning(QUESTIONS.filter(q => q.lessonId === d.practice && !q.needsSource && eligible(q)).map(q => q.id));
+        return;
+    }
+    if (d.single) {
+        startLearning([d.single]);
+        return;
+    }
+    if (d.bookmark) {
+        progress.bookmarks = progress.bookmarks.includes(d.bookmark) ? progress.bookmarks.filter(id => id !== d.bookmark) : [...progress.bookmarks, d.bookmark];
+        persist();
+        render();
+        return;
+    }
+    if (d.session) {
+        progress.settings.session = Number(d.session);
+        persist();
+        render();
+        return;
+    }
+    if (d.theme) {
+        progress.settings.theme = d.theme;
+        persist();
+        render();
+        return;
+    }
+    if (d.tutor) {
+        tutorTopic = d.tutor;
+        render();
+        return;
+    }
+    if (d.attempt) {
+        resultId = d.attempt;
+        page = 'results';
+        render();
+        return;
+    }
+    if (d.resume) {
+        activeAttempt = d.resume;
+        page = 'attempt';
+        render();
+        return;
+    }
+    if (d.abandon) {
+        if (confirm('Descartar este simulado interrompido?')) {
+            progress.attempts = progress.attempts.filter(a => a.id !== d.abandon);
+            persist();
+            render();
+        }
+        return;
+    }
+    if (d.idx) {
+        const a = attemptsActive();
+        if (a && !a.pauseSince) {
+            a.index = Number(d.idx);
+            persist();
+            render();
+        }
+        return;
+    }
+    if (d.simquick) {
+        const n = Number(d.simquick);
+        createAttempt(`Treino rápido — ${n} questões`, pickAdaptive(defaultCandidates(), progress.responses, n), 'practice', Math.max(15, n * 4));
+        return;
+    }
+    if (d.simadaptive) {
+        createAttempt('Adaptativo — 10 questões', pickAdaptive(defaultCandidates(), progress.responses, 10), 'practice', 40);
+        return;
+    }
+    switch (d.action) {
+        case 'toggle-menu':
+            document.querySelector('#sidebar')?.classList.toggle('open');
+            break;
+        case 'today': {
+            const l = LESSONS.find(x => !progress.completedLessons.includes(x.id)) || LESSONS[0];
+            lessonId = l.id;
+            areaId = l.areaId;
+            page = 'lesson';
+            render();
+            break;
+        }
+        case 'hint':
+            quizHints++;
+            render();
+            break;
+        case 'submit-learning':
+            if (quizSelected !== null)
+                doLearning(quizSelected);
+            break;
+        case 'give-up':
+            doLearning(null);
+            break;
+        case 'next-learning':
+            if (quizIndex < quizIds.length - 1) {
+                quizIndex++;
+                quizSelected = null;
+                quizRevealed = false;
+                quizHints = 0;
+                quizStart = Date.now();
+                render();
+            }
+            else
+                go('bank');
+            break;
+        case 'sim-area': {
+            const n = defaultCandidates().filter(q => q.areaId === areaId);
+            if (n.length)
+                createAttempt(`Matéria: ${area(areaId).title}`, n, 'practice', Math.max(15, n.length * 4));
+            else
+                flash('Ainda não há questões verificadas nesta matéria.');
+            break;
+        }
+        case 'sim-errors': {
+            const last = new Map();
+            for (const r of progress.responses)
+                last.set(r.questionId, r.correct);
+            const qs = defaultCandidates().filter(q => last.get(q.id) === false);
+            if (qs.length)
+                createAttempt('Revisão dos erros', qs, 'practice', Math.max(15, qs.length * 4));
+            else
+                flash('Você ainda não tem questões erradas para revisar.');
+            break;
+        }
+        case 'flag': {
+            const a = attemptsActive();
+            if (a) {
+                const id = a.questionIds[a.index];
+                a.flagged = a.flagged.includes(id) ? a.flagged.filter(x => x !== id) : [...a.flagged, id];
+                persist();
+                render();
+            }
+            break;
+        }
+        case 'clear-attempt-choice': {
+            const a = attemptsActive();
+            if (a) {
+                delete a.choices[a.questionIds[a.index]];
+                persist();
+                render();
+            }
+            break;
+        }
+        case 'prev-attempt':
+        case 'next-attempt': {
+            const a = attemptsActive();
+            if (a && !a.pauseSince) {
+                a.index = Math.max(0, Math.min(a.questionIds.length - 1, a.index + (d.action === 'next-attempt' ? 1 : -1)));
+                persist();
+                render();
+            }
+            break;
+        }
+        case 'leave-attempt':
+            activeAttempt = null;
+            go('sim');
+            break;
+        case 'pause-attempt': {
+            const a = attemptsActive();
+            if (a && a.mode === 'practice') {
+                if (a.pauseSince) {
+                    const delta = Date.now() - a.pauseSince;
+                    a.pausedSeconds += delta / 1000;
+                    a.endsAt += delta;
+                    a.pauseSince = null;
+                }
+                else
+                    a.pauseSince = Date.now();
+                persist();
+                render();
+            }
+            break;
+        }
+        case 'finish-attempt':
+            finishAttempt();
+            break;
+        case 'save-discursive':
+            persist();
+            flash('Rascunho salvo.');
+            break;
+        case 'export': {
+            const json = JSON.stringify(progress, null, 2), blob = new Blob([json], { type: 'application/json' }), url = URL.createObjectURL(blob), link = document.createElement('a');
+            link.href = url;
+            link.download = `enade-backup-${new Date().toISOString().slice(0, 10)}.json`;
+            link.click();
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+            break;
+        }
+        case 'delete-all':
+            if (confirm('Tem certeza que deseja apagar todas as suas respostas, aulas e rascunhos neste dispositivo?')) {
+                progress = initialProgress();
+                persist();
+                go('home');
+                flash('Dados locais apagados.');
+            }
+            break;
+    }
+});
+root.addEventListener('change', ev => { const t = ev.target; if (t.name === 'learn-choice') {
+    quizSelected = Number(t.value);
+    render();
+    return;
+} if (t.name === 'attempt-choice') {
+    const a = attemptsActive();
+    if (a && !a.pauseSince) {
+        a.choices[a.questionIds[a.index]] = Number(t.value);
+        persist();
+        render();
+    }
+    return;
+} if (t.id === 'groupFilter') {
+    groupFilter = t.value;
+    render();
+    return;
+} if (t.id === 'difficultyFilter') {
+    difficultyFilter = t.value;
+    render();
+    return;
+} if (t.id === 'simArea') {
+    areaId = t.value;
+    return;
+} if (t.id === 'discSelect') {
+    selectedDisc = t.value;
+    render();
+    return;
+} if (t.id === 'statsPeriod') {
+    statsPeriod = t.value;
+    render();
+    return;
+} if (t.id === 'restore-file') {
+    const file = t.files?.[0];
+    if (!file)
+        return;
+    file.text().then(s => { const parsed = restore(JSON.parse(s)); if (confirm('Restaurar este backup? O progresso atual será substituído.')) {
+        progress = parsed;
+        persist();
+        go('home');
+        flash('Backup restaurado.');
+    } }).catch(e => alert(`Falha ao restaurar: ${e.message}`));
+    return;
+} });
+root.addEventListener('input', ev => { const t = ev.target; if (t.id === 'search') {
+    const start = t.selectionStart || t.value.length;
+    search = t.value;
+    render();
+    const inp = document.querySelector('#search');
+    inp?.focus();
+    inp?.setSelectionRange(start, start);
+    return;
+} if (t.id === 'discText') {
+    progress.discursive[selectedDisc] = t.value;
+    persist();
+    const label = document.getElementById('discSaved');
+    if (label)
+        label.textContent = `${t.value.length} caracteres · salvo automaticamente`;
+    return;
+} });
+window.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden')
+    persist(); });
+load().then(p => { progress = p; render();  }).catch(() => render());
+</script></body></html>
