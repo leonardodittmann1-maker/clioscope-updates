@@ -1,0 +1,13 @@
+plugins { id 'com.android.application' }
+android {
+    namespace 'br.com.contaclara.app'
+    compileSdk 35
+    defaultConfig {
+        applicationId 'br.com.contaclara.app'
+        minSdk 26
+        targetSdk 34
+        versionCode 1
+        versionName '1.0.0'
+    }
+    buildTypes { release { minifyEnabled false } }
+}
