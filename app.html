@@ -94,7 +94,7 @@ function updateTxOriginLabel(){const avulso=$('txCard').value==='manual';$('txIn
 function defaultSubscriptionDate(category,date){return category==='Assinaturas'&&/^\d{4}-\d{2}-\d{2}$/.test(date||'')?date:''}
 function toggleRenewalFields(){const isSubscription=$('txCategory').value==='Assinaturas';$('subscriptionFields').classList.toggle('hide',!isSubscription);if(isSubscription&&!$('txRenewalDate').value){const date=defaultSubscriptionDate('Assinaturas',$('txDate').value);if(date){$('txRenewalDate').value=date;$('txRenewalActive').checked=true;}}}
 function syncRenewalFromPurchaseDate(){const date=$('txDate').value,renewal=$('txRenewalDate').value;if($('txCategory').value==='Assinaturas'&&(!renewal||renewal===lastTxDateForRenewal))$('txRenewalDate').value=defaultSubscriptionDate('Assinaturas',date);lastTxDateForRenewal=date;}
-function migrateSubscriptionBillingDates(){let changed=0;for(const t of db.transactions){if(t.category==='Assinaturas'&&Number(t.cents)>0&&!t.renewalDate&&/^\d{4}-\d{2}-\d{2}$/.test(t.date||'')){t.renewalDate=t.date;if(t.renewalActive===undefined)t.renewalActive=true;changed++;}}return changed}
+function migrateSubscriptionBillingDates(){let changed=0;for(const t of db.transactions){if(t.category==='Assinaturas'&&Number(t.cents)>0&&!t.renewalDate&&/^\d{4}-\d{2}-\d{2}$/.test(t.date||'')){t.renewalDate=t.date;t.renewalActive=true;changed++;}}return changed}
 function subscriptionForecast(referenceDate=new Date()){
   const y=referenceDate.getFullYear(),m=referenceDate.getMonth()+1,d=referenceDate.getDate();
   const mm=String(m).padStart(2,'0'),prefix=`${y}-${mm}`,lastDay=new Date(y,m,0).getDate();
