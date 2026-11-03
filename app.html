@@ -196,7 +196,7 @@ function autoCategory(text){let s=norm(text);if(!s)return 'Outros';let tests=[
 ['Compras',/SHOPEE|MERCADO LIVRE|MAGALU|SHEIN|TEMU|ALIEXPRESS|RENNER|RIACHUELO|ZARA|AMAZON BR|AMAZON COM BR|LOJA|SHOPPING|VESTUARIO/]
 ];return tests.find(x=>x[1].test(s))?.[0]||'Outros'}
 function norm(s){return String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/[^A-Z0-9]+/g,' ').trim()}
-function duplicateKey(row){const name=norm(row.merchant).replace(/\s*\(BLUEFIT\)\s*$/,'').replace(/\s+PARCELA\s+(\d+)\s*\/\s*(\d+)\s*$/,' PARCELA $1/$2');return [row.cardId,row.invoiceMonth,row.date,name,Math.round(row.cents)].join('|')}
+function duplicateKey(row){const name=norm(row.merchant).replace(/\s*\([^)]{3,30}\)\s*$/,'').replace(/\s+PARCELA\s+(\d+)\s*\/\s*(\d+)\s*$/,' PARCELA $1/$2');return [row.cardId,row.invoiceMonth,row.date,name,Math.round(row.cents)].join('|')}
 function dateFromInput(s,invoiceMonth){let raw=String(s??'').trim();if(!raw)return '';let m;if(m=raw.match(/^(\d{4})[-/]([01]?\d)[-/]([0-3]?\d)/)){return validDate(+m[1],+m[2],+m[3])}if(m=raw.match(/^([0-3]?\d)[/.-]([01]?\d)(?:[/.-](\d{2,4}))?/)){let [yy,mm]=invoiceMonth.split('-').map(Number);let y=m[3]?(m[3].length===2?2000+Number(m[3]):Number(m[3])):yy;if(!m[3]&&Number(m[2])>mm+2)y--;return validDate(y,Number(m[2]),Number(m[1]))}if(/^\d{8,14}/.test(raw)){let y=Number(raw.slice(0,4)),mo=Number(raw.slice(4,6)),d=Number(raw.slice(6,8));return validDate(y,mo,d)}return ''}
 function validDate(y,m,d){const obj=new Date(Date.UTC(y,m-1,d));return obj.getUTCFullYear()===y&&obj.getUTCMonth()+1===m&&obj.getUTCDate()===d?`${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`:''}
 function parseInvoiceAmount(raw){let text=String(raw??'').trim().replace(/[−–—]/g,'-');if(!text)return NaN;let negative=/\b(CR|CREDITO|CRÉDITO|ESTORNO|REEMBOLSO|CREDIT)\b/i.test(text)||/^-/.test(text)||/-\s*$/.test(text);text=text.replace(/\s*(?:CR|DR|C|D)\s*$/i,'').replace(/-\s*$/,'').trim();const cents=toCents(text);return !Number.isFinite(cents)?NaN:negative?-Math.abs(cents):cents}
@@ -227,7 +227,7 @@ function parseNubankPDFText(text,invoiceMonth){const lines=String(text).split(/\
  if(/\bTRANSACOES\b/.test(upper)&&/\bDE\b/.test(upper)){inTransactions=true;seenTransactionHeading=true;continue}
  if(!inTransactions)continue;
  if(/^(PAGAMENTOS E FINANCIAMENTOS|PAGAMENTOS|RESUMO DA FATURA|PROXIMAS FATURAS|LIMITES DISPONIVEIS)/.test(upper)){inTransactions=false;continue}
- const sub=/\bMARIA\s+F\s+S\s+CAMILO\b.*?R\$\s*([\d.]+,\d{2})/i.exec(line);if(sub){purchaseTotal=parseInvoiceAmount(sub[1]);continue}
+ const sub=!items.length&&!Number.isFinite(purchaseTotal)&&!/^\d{1,2}\s+(?:JAN|FEV|MAR|ABR|MAI|JUN|JUL|AGO|SET|OUT|NOV|DEZ)/i.test(line)?/^[^\n]{2,90}?\s+R\$\s*([\d.]+,\d{2})$/i.exec(line):null;if(sub){purchaseTotal=parseInvoiceAmount(sub[1]);continue}
  const row=/^(\d{1,2})\s+(JAN|FEV|MAR|ABR|MAI|JUN|JUL|AGO|SET|OUT|NOV|DEZ)\b\s+(.+?)\s+([−-]?\s*R\$\s*[\d.]+,\d{2})\s*$/i.exec(line);if(!row)continue;
  const day=Number(row[1]),mo=monthNames[row[2].toUpperCase()],year=(mo>expectedMonth+2?expectedYear-1:expectedYear),date=validDate(year,mo,day);
  let merchant=row[3].replace(/^(?:[•·*]{2,6}|\.{3,5}|••••)\s*\d{4}\s*/,'').replace(/^[•·*]+\s*/,'').trim();if(/^\d{4}\s+/.test(merchant))merchant=merchant.replace(/^\d{4}\s+/,'');const cents=parseInvoiceAmount(row[4]);const item=candidate(date,merchant,cents,{category:autoCategory(merchant)});if(item)items.push(item)
