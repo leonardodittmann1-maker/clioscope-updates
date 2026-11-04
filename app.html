@@ -87,6 +87,12 @@
 .sim-date-row strong{font-size:13px}
 .sim-date-row small{font-size:11px;display:block;margin-top:3px}
 @media(max-width:400px){.salary-deduction{grid-template-columns:minmax(0,1.1fr) minmax(0,.67fr) minmax(75px,.87fr) 28px}.salary-deduction input,.salary-deduction select{font-size:12px}}
+.salary-setting-section{margin-top:17px;padding-top:15px;border-top:1px solid var(--line)}
+.salary-setting-section h3{margin-bottom:12px}
+.salary-setting-section .field{margin-top:8px}
+.salary-setting-section select,.salary-setting-section input{width:100%;min-height:43px;background:#fff;border:1px solid var(--line);border-radius:10px;padding:10px 11px}
+.salary-setting-section .hint{margin-top:8px;line-height:1.5}
+.salary-calc-preview{font-weight:750;color:var(--green);margin-top:9px;font-size:13px}
 </style></head><body><div class="app">
 <div class="header"><div class="logo-title"><div class="logo" style="background:linear-gradient(135deg,#da9c86,#875144);color:white;font-size:29px;display:flex;align-items:center;justify-content:center">◷</div><div><h1>Meu Ponto</h1></div></div><button class="head-month" id="headMonth"></button></div>
 <section id="home" class="page active">
@@ -99,7 +105,7 @@
   <span class="salary-left"><span class="salary-emoji">R$</span><span><strong>Salário estimado</strong><small id="salaryMonthLabel">Líquido do mês</small></span></span>
   <span class="salary-right"><strong id="salaryHomeValue">Configurar</strong><span>⌄</span></span>
  </button>
- <div id="salaryHomeDetails" class="hidden"><div class="divider"></div><div id="salaryHomeBreakdown"></div><p class="hint" style="margin-top:8px">Estimativa conforme seu salário e descontos cadastrados. Não inclui férias, 13º, adicionais, impostos não informados ou eventual acerto de banco.</p><button id="salaryHomeConfigure" type="button" class="btn outline" style="margin-top:12px;width:100%">Editar salário e descontos</button></div>
+ <div id="salaryHomeDetails" class="hidden"><div class="divider"></div><div id="salaryHomeBreakdown"></div><p class="hint" style="margin-top:8px">Estimativa baseada nas configurações e na tabela do INSS de 2026. Não inclui IRRF, 13º, férias ou adicionais. O FGTS é mostrado separadamente.</p><button id="salaryHomeConfigure" type="button" class="btn outline" style="margin-top:12px;width:100%">Editar salário e descontos</button></div>
 </div>
 <div class="section-title"><h2>Resumo do dia</h2></div>
 <div class="card today-card" id="todayCard"></div>
@@ -227,13 +233,33 @@
 </section>
 <section id="settings" class="page"><div class="section-title"><h2>Configurações</h2></div><div class="card"><h3>Regras da jornada</h3><div class="two" style="margin-top:15px"><div class="field"><label>Entrada mínima</label><input id="cfgStart" inputmode="numeric"></div><div class="field"><label>Limite flexível</label><input id="cfgEnd" inputmode="numeric"></div><div class="field"><label>Tolerância (min)</label><input id="cfgTolerance" type="number" min="0"></div><div class="field"><label>Jornada diária (min)</label><input id="cfgWorkday" type="number" min="1"></div><div class="field"><label>Almoço padrão (min)</label><input id="cfgLunch" type="number" min="0"></div><div class="field"><label>Multiplicador extra</label><input id="cfgMultiplier" type="number" step="0.1" min="1"></div><div class="field"><label>R$/min atraso salarial</label><input id="cfgLateValue" type="number" step="0.01" min="0"></div><div class="field"><label>R$/min banco negativo</label><input id="cfgBankValue" type="number" step="0.01" min="0" placeholder="A definir"></div></div><div class="divider"></div><h3>Localidade e feriados</h3><div class="two" style="margin-top:15px"><div class="field"><label>UF</label><input id="cfgUF" maxlength="2"></div><div class="field"><label>Cidade</label><input id="cfgCity"></div></div><p class="hint">Feriados nacionais são pré-carregados. O app consulta atualizações quando houver conexão; feriados municipais de Curitiba têm regras locais.</p><button class="btn light" id="refreshHolidays" style="margin:12px 0 8px">Atualizar feriados</button><p class="progress" id="holidayStatus"></p><button id="saveSettings" class="btn" style="margin-top:12px">Salvar configurações</button></div><div class="section-title"><h2>Salário e descontos</h2></div>
 <div class="card" id="salarySettings">
- <p class="date-message">Preencha o salário bruto e os descontos fixos, percentuais ou por dia útil (como o VR). O app considera o calendário do mês, excluindo fins de semana, feriados, férias e emendas/folgas cadastradas, além dos atrasos em folha.</p>
+ <p class="date-message">Cadastre o salário bruto e os descontos de INSS, VR e plano de saúde. O FGTS aparece separadamente como depósito da empresa, sem desconto no líquido.</p>
  <div class="field"><label for="salaryGross">Salário bruto mensal (R$)</label><input id="salaryGross" inputmode="decimal" placeholder="Ex.: 2476,00"></div>
- <div class="section-title"><h3>Descontos mensais</h3></div>
- <div id="salaryDeductionsList"></div>
- <p class="hint" style="margin:9px 0">Para o VR, escolha <strong>R$/dia útil</strong> e informe o valor cobrado por dia. A quantidade é recalculada mensalmente.</p><button id="salaryAddDeduction" type="button" class="btn outline" style="margin-top:9px;width:100%">+ Adicionar desconto</button>
- <button id="salarySave" type="button" class="btn" style="width:100%;margin-top:13px">Salvar salário e descontos</button>
- <p class="hint" style="margin-top:10px">Os cálculos são estimativas pessoais. Não substituem contracheque, INSS, IRRF ou regras de fechamento da empresa.</p>
+ <div class="salary-setting-section">
+  <h3>INSS</h3>
+  <div class="field"><label for="salaryInssMode">Forma de cálculo</label><select id="salaryInssMode">
+   <option value="auto">Automático — tabela progressiva de 2026</option>
+   <option value="manual">Informar desconto do contracheque</option>
+  </select></div>
+  <div class="field hidden" id="salaryInssManualRow"><label for="salaryInssManual">Valor descontado de INSS (R$)</label><input id="salaryInssManual" inputmode="decimal" placeholder="Ex.: 198,00"></div>
+  <p id="salaryInssPreview" class="hint"></p>
+ </div>
+ <div class="salary-setting-section">
+  <h3>FGTS</h3>
+  <p class="date-message">Depósito da empresa: 8% do salário bruto. <strong>Não é descontado do seu pagamento.</strong></p>
+  <p id="salaryFgtsPreview" class="salary-calc-preview">Depósito estimado: —</p>
+ </div>
+ <div class="salary-setting-section">
+  <h3>VR — Vale-refeição</h3>
+  <div class="field"><label for="salaryVrDaily">Desconto por dia útil (R$)</label><input id="salaryVrDaily" inputmode="decimal" placeholder="Ex.: 1,00"></div>
+  <p id="salaryVrPreview" class="hint">O mês será calculado excluindo fins de semana, feriados, férias e emendas/folgas cadastradas.</p>
+ </div>
+ <div class="salary-setting-section">
+  <h3>Plano de saúde</h3>
+  <div class="field"><label for="salaryHealth">Desconto mensal fixo (R$)</label><input id="salaryHealth" inputmode="decimal" placeholder="Ex.: 22,00"></div>
+ </div>
+ <button id="salarySave" type="button" class="btn" style="width:100%;margin-top:14px">Salvar salário e descontos</button>
+ <p class="hint" style="margin-top:10px">Estimativa pessoal: o cálculo automático de INSS usa a tabela de 2026; não inclui IRRF, outras verbas ou adicionais não informados.</p>
 </div>
 <div class="section-title"><h2>Férias e folgas</h2></div>
 <div class="card"><p class="date-message">Defina períodos de férias ou emendas que não devem entrar na meta de quitação do banco.</p><button id="settingsPlanVacation" type="button" class="btn outline" style="width:100%">Planejar férias</button></div>
