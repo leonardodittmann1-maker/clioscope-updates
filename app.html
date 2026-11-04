@@ -908,6 +908,146 @@ function openSalarySettings(){
  go('settings');
  setTimeout(()=>{$('salarySettings').scrollIntoView({block:'start',behavior:'smooth'});$('salaryGross').focus({preventScroll:true})},40);
 }
+
+function isValidPlanDate(value){
+ if(!/^\d{4}-\d{2}-\d{2}$/.test(value||''))return false;
+ const d=new Date(value+'T12:00:00');
+ return !Number.isNaN(d.getTime())&&localDate(d)===value;
+}
+function plannedOff(date){
+ const all=(Array.isArray(plannedPeriods)?plannedPeriods:[]).filter(p=>
+  isValidPlanDate(p.start)&&isValidPlanDate(p.end)&&p.start<=date&&date<=p.end);
+ return all.find(p=>p.type==='vacation')||all[0]||null;
+}
+function renderPlanning(){
+ $('planStart').value||=localDate();
+ $('planEnd').value||=$('planStart').value;
+ const plans=Array.isArray(plannedPeriods)?plannedPeriods.slice().sort((a,b)=>a.start.localeCompare(b.start)):[];
+ $('planList').innerHTML=plans.length?plans.map(p=>
+  '<div class="value-line"><div><strong>'+ (p.type==='vacation'?'🏖 Férias':'📅 Emenda / folga')+'</strong>'
+  +'<p class="date-message">'+safe(fmtDate(p.start))+' até '+safe(fmtDate(p.end))+(p.note?' · '+safe(p.note):'')+'</p></div>'
+  +'<button type="button" class="btn outline" data-plan-delete="'+safe(p.id)+'" style="padding:7px 10px;flex-shrink:0">Excluir</button></div>'
+ ).join(''):'<p class="date-message">Nenhuma data cadastrada.</p>';
+}
+function addPlannedPeriod(){
+ const type=$('planType').value==='bridge'?'bridge':'vacation';
+ const start=$('planStart').value,end=$('planEnd').value;
+ const note=$('planNote').value.trim();
+ if(!isValidPlanDate(start)||!isValidPlanDate(end)||end<start){
+  alertUser('Confira as datas inicial e final');return;
+ }
+ let d=new Date(start+'T12:00:00'),e=new Date(end+'T12:00:00');
+ const length=Math.round((e-d)/86400000)+1;
+ if(length>366){alertUser('Cadastre períodos de até 366 dias');return}
+ if(plannedPeriods.some(p=>p.type===type&&p.start===start&&p.end===end)){
+  alertUser('Este período já foi cadastrado');return;
+ }
+ plannedPeriods.push({id:String(Date.now())+'-'+Math.random().toString(36).slice(2,8),type,start,end,note});
+ save();renderPlanning();alertUser('Período adicionado à simulação');
+ $('planNote').value='';
+}
+function openPlanning(){
+ $('planStart').value||=localDate();$('planEnd').value||=$('planStart').value;
+ go('planning');
+}
+function semesterEndFor(date){
+ const year=date.slice(0,4),month=Number(date.slice(5,7));
+ return year+(month<=6?'-06-30':'-12-31');
+}
+function balanceUntilDate(date){
+ const key=semKey(date),balance={credit:0,debit:0};
+ for(const [d,r] of Object.entries(records)){
+  if(d>date||semKey(d)!==key)continue;
+  const c=calc(d,r);if(!c)continue;
+  balance.credit+=c.credit;balance.debit+=c.debit;
+ }
+ for(const a of adjustments){
+  if(a.date>date||semKey(a.date)!==key)continue;
+  const amount=Number(a.minutes);
+  if(!Number.isFinite(amount))continue;
+  if(amount>=0)balance.credit+=amount;else balance.debit+=-amount;
+ }
+ return balance.credit-balance.debit;
+}
+function calculateBankSimulation(today=localDate()){
+ const end=semesterEndFor(today),balance=balanceUntilDate(today);
+ const unavailable={weekends:0,holidays:0,vacations:0,bridges:0,completed:0},excluded=[],available=[];
+ for(let date=today;date<=end;date=addDays(date,1)){
+  const day=new Date(date+'T12:00:00').getDay();
+  let reason='';
+  if(day===0||day===6){reason='Final de semana';unavailable.weekends++}
+  else if(holidayName(date)){reason='Feriado: '+holidayName(date);unavailable.holidays++}
+  else {
+   const planned=plannedOff(date);
+   if(planned){
+    reason=planned.type==='vacation'?'Férias':'Emenda / folga';
+    if(planned.type==='vacation')unavailable.vacations++;else unavailable.bridges++;
+   }else if(records[date]&&calc(date,records[date])){
+    reason='Dia já registrado';unavailable.completed++;
+   }
+  }
+  if(reason)excluded.push({date,reason});
+  else available.push(date);
+ }
+ const due=Math.max(0,-balance),multiplier=Number(cfg.multiplier)||1.5;
+ const schedule=[],dailyTargets=[],minCredit=Math.max(1,Math.round(6*multiplier));
+ if(due>0&&available.length>0){
+  const targetDays=Math.min(available.length,Math.max(1,Math.floor(due/minCredit)));
+  let remaining=due;
+  for(let i=0;i<targetDays;i++){
+   if(remaining<=0)break;
+   const idx=Math.floor(i*available.length/targetDays);
+   const date=available[idx];
+   const hours=Math.max(6,Math.ceil(remaining/((targetDays-i)*multiplier)));
+   const credit=Math.round(hours*multiplier);
+   schedule.push({date,minutes:hours,credit,workMinutes:Number(cfg.workday)+hours});
+   dailyTargets.push(hours);
+   remaining=Math.max(0,remaining-credit);
+  }
+ }
+ const earned=schedule.reduce((n,r)=>n+r.credit,0),workMinutes=schedule.reduce((n,r)=>n+r.minutes,0);
+ return {today,end,balance,due,available,excluded,unavailable,schedule,
+  workMinutes,earned,projectedBalance:balance+earned,
+  minPerDay:dailyTargets.length?Math.min(...dailyTargets):0,
+  maxPerDay:dailyTargets.length?Math.max(...dailyTargets):0};
+}
+function renderSimulation(){
+ const data=calculateBankSimulation();
+ $('simSemester').textContent=semLabel(semKey(data.today))+' · até '+fmtDate(data.end);
+ $('simCurrentBalance').textContent=fmtMin(data.balance,true);
+ $('simCurrentBalance').style.color=data.balance<0?'#b74e32':'#1768b4';
+ $('simDays').textContent=String(data.available.length);
+ $('simRealExtra').textContent=fmtMin(data.workMinutes);
+ $('simDeadline').textContent='Meta até '+fmtDate(data.end)+'. Considera somente os dias úteis disponíveis a partir de hoje.';
+ $('simTargetDays').textContent=String(data.schedule.length);
+ $('simEarned').textContent=fmtMin(data.earned);
+ $('simFinalBalance').textContent=fmtMin(data.projectedBalance,true);
+ $('simFinalBalance').style.color=data.projectedBalance<0?'#b74e32':'#1768b4';
+ $('simExcluded').textContent=data.unavailable.vacations+' dia(s) de férias, '
+  +data.unavailable.holidays+' feriado(s), '+data.unavailable.bridges+' emenda(s)/folga(s), '
+  +data.unavailable.weekends+' dia(s) de fim de semana e '
+  +data.unavailable.completed+' dia(s) já registrados ficaram fora da divisão.';
+ if(data.balance>=0){
+  $('simStatus').textContent='Seu banco não está negativo. Não há horas a repor neste momento.';
+  $('simDailyExtra').textContent='0min';
+ }else if(!data.available.length){
+  $('simStatus').textContent='Não há dias úteis disponíveis até o fim do semestre. Confira férias e emendas cadastradas.';
+  $('simDailyExtra').textContent='Sem dias';
+ }else{
+  $('simStatus').textContent='Faltam '+fmtMin(data.due)+' de crédito no banco. A meta abaixo distribui a reposição entre os dias úteis sem expediente bloqueado.';
+  $('simDailyExtra').textContent=data.minPerDay===data.maxPerDay?fmtMin(data.maxPerDay):fmtMin(data.minPerDay)+' a '+fmtMin(data.maxPerDay);
+ }
+ const assigned=new Map(data.schedule.map(r=>[r.date,r]));
+ const rows=data.available.map(date=>{
+  const plan=assigned.get(date),weekday=new Date(date+'T12:00:00').toLocaleDateString('pt-BR',{weekday:'short'});
+  return '<div class="sim-date-row"><div><strong>'+safe(fmtDate(date))+' · '+safe(weekday)+'</strong>'
+   +'<small>'+(plan?'Jornada prevista: '+fmtMin(plan.workMinutes):'Jornada normal, sem extra planejada')+'</small></div>'
+   +'<div style="text-align:right"><strong>'+(plan?'+'+fmtMin(plan.minutes):'—')+'</strong>'
+   +(plan?'<small>+'+fmtMin(plan.credit)+' no banco</small>':'')+'</div></div>';
+ });
+ $('simDates').innerHTML=rows.length?'<details><summary style="padding:4px 0 12px;font-weight:750">Ver '+rows.length+' dias disponíveis</summary>'
+  +rows.join('')+'</details>':'<p class="date-message">Nenhum dia útil disponível no período.</p>';
+}
 function bind(){document.querySelectorAll('.nav').forEach(b=>b.addEventListener('click',()=>{go(b.dataset.page)}));$('headMonth').onclick=()=>go('records');$('allRecords').onclick=()=>go('records');$('homeManual').onclick=()=>openEdit(localDate());
  const openSheet=()=>{sheetSetStatus('');$('sheetUndoCard').classList.toggle('hidden',!localStorage.getItem('ponto2_sheet_undo'));go('sheet')};
  $('openSheetRecords').onclick=openSheet;
