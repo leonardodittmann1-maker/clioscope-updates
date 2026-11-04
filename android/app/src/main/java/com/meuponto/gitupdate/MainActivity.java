@@ -21,6 +21,9 @@ import android.webkit.ValueCallback;
 import org.json.JSONObject;
 import org.json.JSONArray;
 import java.io.InputStream;
+import java.io.OutputStream;
+import java.io.FileNotFoundException;
+import android.widget.Toast;
 import java.io.ByteArrayOutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
@@ -34,6 +37,7 @@ import com.google.mlkit.vision.text.Text;
 public class MainActivity extends Activity {
     private static final String HOME = "https://meuponto.app.local/";
     private static final String REMOTE = "https://raw.githubusercontent.com/leonardodittmann1-maker/clioscope-updates/meu-ponto-app/app.html";
+    private static final String LAST_GOOD_FILE = "meuponto-last-good.html";
     private static final int REQ_PICK = 501;
     private static final int REQ_CAMERA = 502;
     private ValueCallback<Uri[]> callback;
@@ -67,7 +71,7 @@ public class MainActivity extends Activity {
             @Override public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
                 Uri target = request.getUrl();
                 if ("meuponto.app.local".equals(target.getHost()) && "/refresh".equals(target.getPath())) {
-                    loadApplication();
+                    loadApplication(true);
                     return true;
                 }
                 if ("http".equals(target.getScheme()) || "https".equals(target.getScheme())) {
@@ -134,7 +138,7 @@ public class MainActivity extends Activity {
             }
         });
         setContentView(web);
-        loadApplication();
+        loadApplication(false);
     }
 
     private static String readText(InputStream input) throws Exception {
@@ -148,28 +152,88 @@ public class MainActivity extends Activity {
         }
     }
 
-    private void loadApplication() {
+    private String readCachedInterface() {
+        try { return readText(openFileInput(LAST_GOOD_FILE)); }
+        catch (Exception ignored) { return null; }
+    }
+
+    private void saveCachedInterface(String html) {
+        try (OutputStream out = openFileOutput(LAST_GOOD_FILE, MODE_PRIVATE)) {
+            out.write(html.getBytes(StandardCharsets.UTF_8));
+        } catch (Exception ignored) {}
+    }
+
+    private void showUpdateMessage(String message) {
+        runOnUiThread(() -> Toast.makeText(MainActivity.this, message, Toast.LENGTH_LONG).show());
+    }
+
+    private void loadApplication(boolean manualRefresh) {
+        if (manualRefresh) showUpdateMessage("Verificando atualização no GitHub...");
         new Thread(() -> {
             String html = null;
-            HttpURLConnection connection = null;
-            try {
-                URL url = new URL(REMOTE+"?at="+System.currentTimeMillis());
-                connection = (HttpURLConnection)url.openConnection();
-                connection.setConnectTimeout(4500);
-                connection.setReadTimeout(4500);
-                connection.setRequestProperty("Cache-Control","no-cache");
-                if (connection.getResponseCode() != 200) throw new Exception("Sem versão online");
-                html = readText(connection.getInputStream());
-                if (!html.contains("ponto2_records") || !html.contains("__nativeOCRCallback")) throw new Exception("Conteúdo inválido");
-            } catch (Exception ignored) {}
-            finally { if (connection != null) connection.disconnect(); }
-            if (html == null) {
-                try { html = readText(getAssets().open("offline.html")); } catch (Exception ignored) {}
+            String error = "";
+            boolean changed = false;
+            // Uma tentativa com 4,5 segundos podia fazer o app voltar silenciosamente
+            // para o HTML antigo incluído no APK. Agora repetimos e preservamos a última
+            // interface válida, inclusive quando não houver conexão.
+            for (int attempt = 0; attempt < 2 && html == null; attempt++) {
+                HttpURLConnection connection = null;
+                try {
+                    URL url = new URL(REMOTE + "?v=" + System.currentTimeMillis() + "&r=" + attempt);
+                    connection = (HttpURLConnection) url.openConnection();
+                    connection.setConnectTimeout(10000);
+                    connection.setReadTimeout(14000);
+                    connection.setUseCaches(false);
+                    connection.setRequestProperty("Cache-Control", "no-cache, no-store");
+                    connection.setRequestProperty("Pragma", "no-cache");
+                    if (connection.getResponseCode() != 200) {
+                        throw new IllegalStateException("HTTP " + connection.getResponseCode());
+                    }
+                    String candidate = readText(connection.getInputStream());
+                    if (!candidate.contains("ponto2_records") ||
+                        !candidate.contains("__nativeOCRCallback") ||
+                        !candidate.contains("</html>")) {
+                        throw new IllegalStateException("Arquivo incompleto ou inválido");
+                    }
+                    html = candidate;
+                } catch (Exception e) {
+                    error = e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage();
+                } finally {
+                    if (connection != null) connection.disconnect();
+                }
             }
+
+            if (html != null) {
+                String previous = readCachedInterface();
+                changed = previous == null || !previous.equals(html);
+                saveCachedInterface(html);
+            } else if (!manualRefresh) {
+                // Primeira abertura offline: usa a última versão baixada, não a antiga.
+                html = readCachedInterface();
+                if (html == null) {
+                    try { html = readText(getAssets().open("offline.html")); }
+                    catch (Exception ignored) {}
+                }
+            }
+
             final String result = html;
+            final boolean newContent = changed;
+            final String failure = error;
             runOnUiThread(() -> {
-                if (result != null && web != null)
-                    web.loadDataWithBaseURL(HOME,result,"text/html","UTF-8",null);
+                if (result == null) {
+                    if (manualRefresh) {
+                        Toast.makeText(MainActivity.this,
+                            "Não consegui baixar a atualização (" + failure + "). Versão atual mantida.",
+                            Toast.LENGTH_LONG).show();
+                    }
+                    return;
+                }
+                if (web != null) web.loadDataWithBaseURL(HOME, result, "text/html", "UTF-8", null);
+                if (manualRefresh) {
+                    Toast.makeText(MainActivity.this,
+                        newContent ? "Interface atualizada com sucesso." : "Interface conferida: versão mais recente carregada.",
+                        Toast.LENGTH_LONG).show();
+                }
             });
         }).start();
     }
