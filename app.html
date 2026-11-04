@@ -941,6 +941,30 @@ function sheetParseOCR(payload){
  anchors.sort((a,b)=>a.y-b.y||a.date.localeCompare(b.date));
  const unique=[];for(const a of anchors)if(!unique.some(v=>v.date===a.date&&Math.abs(v.y-a.y)<25))unique.push(a);
  if(!unique.length)return geometric&&String(payload?.text||"").trim()?sheetParseOCR({text:payload.text,lines:[]}):[];
+ // Recupera datas que o OCR perdeu, usando a posição das linhas vizinhas
+ // do MESMO mês. Nunca atribui confiança alta às datas reconstruídas.
+ if(geometric&&unique.length>=3){
+  const sorted=unique.slice().sort((a,b)=>a.date.localeCompare(b.date));
+  const inferred=[];
+  for(let i=0;i<sorted.length-1;i++){
+   const a=sorted[i],b=sorted[i+1];
+   if(a.date.slice(0,7)!==b.date.slice(0,7))continue;
+   const gap=Number(b.date.slice(8))-Number(a.date.slice(8));
+   if(gap<2||gap>5||b.y<=a.y)continue;
+   const step=(b.y-a.y)/gap;
+   const avgHeight=Math.max(8,lines.reduce((t,l)=>t+(l.h||0),0)/Math.max(1,lines.length));
+   if(step<avgHeight*.58||step>avgHeight*5.5)continue;
+   for(let n=1;n<gap;n++){
+    const date=a.date.slice(0,8)+String(Number(a.date.slice(8))+n).padStart(2,'0');
+    if(!unique.some(v=>v.date===date)){
+     inferred.push({date,x:a.x+(b.x-a.x)*n/gap,width:(a.width+b.width)/2,
+      y:a.y+step*n,inferred:true});
+    }
+   }
+  }
+  unique.push(...inferred);
+  unique.sort((a,b)=>a.y-b.y);
+ }
  const dateX=unique.reduce((n,a)=>n+a.x,0)/unique.length;
  const dateWidth=unique.reduce((n,a)=>n+a.width,0)/unique.length;
  let exitColumn=NaN;
@@ -960,6 +984,7 @@ function sheetParseOCR(payload){
   const after=i+1<unique.length?(a.y+unique[i+1].y)/2:a.y+(a.y-(unique[i-1]?.y??a.y-30))/2;
   const rowLines=lines.filter(l=>l.y+(l.h||0)/2>=before&&l.y+(l.h||0)/2<after);
   const parsed=sheetInterpretRow(a,rowLines,exitColumn);
+  if(a.inferred){parsed.confidence='revisar';parsed.dateInferred=true;}
   const existed=result.findIndex(x=>x.date===parsed.date);
   if(existed<0)result.push(parsed);
   else if(parsed.valid&&!result[existed].valid)result[existed]=parsed;
@@ -1117,6 +1142,7 @@ function sheetRowStatus(row){
  const blankConflicts=SHEET_KEYS.some(k=>Boolean(old[k])&&!row[k]);
  const diff=sheetRowDiff(row).length>0;
  if(row.missingFromOCR)return {label:'Não reconhecida',className:'review'};
+ if(row.dateInferred)return {label:'Data recuperada',className:'review'};
  if(!row.hasPunches&&!row.valid)return {label:'Sem batidas',className:'neutral'};
  if(!row.valid)return {label:'Confira horários',className:'review'};
  if(blankConflicts)return {label:'Revisar campos vazios',className:'review'};
@@ -1168,6 +1194,7 @@ function sheetRenderReview(){
        +'<button type="button" data-sheet-alternative="'+ai+'">Usar leitura '+(ai+2)+'</button></div>').join('')
      +'<p class="hint">Confira com a foto original antes de usar qualquer uma das leituras.</p></div>':'')
    +(r.missingFromOCR?'<p class="sheet-info sheet-warning">Esta data não apareceu no reconhecimento. Mantenha o app ou digite as batidas corretas consultando a folha.</p>':'')
+   +(r.dateInferred?'<p class="sheet-info sheet-warning">O dia foi recuperado pela posição entre duas datas. Confirme os horários com a folha antes de escolher Usar folha.</p>':'')
    +(erased?'<p class="sheet-info sheet-warning">A folha está sem um horário salvo no app. Escolher a folha apagará essa batida do registro.</p>':'')
    +(!r.valid?'<p class="sheet-info sheet-warning">A leitura da folha está incompleta. Corrija entrada e saída; se houve almoço, preencha também saída e retorno. O app será mantido até a leitura ficar válida.</p>':'')
    +'<div class="sheet-choice-group" role="group" aria-label="Escolha qual registro manter em '+safe(fmtDate(r.date))+'">'
