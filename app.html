@@ -508,6 +508,238 @@ function confirmScan(){
  $(kind).value=time;previewDay();
 }
 
+
+const SHEET_KEYS=['entry','lunchOut','lunchIn','exit'];
+const SHEET_LABELS=['Entrada','Almoço','Retorno','Saída'];
+let sheetModePending=false,sheetBusy=false,sheetEarly=null,sheetRowsState=[],sheetLastText='';
+const sheetNorm=text=>String(text||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase();
+function sheetFindDates(text){
+ const dates=[],rx=/(\d{1,2})\s*[\/.\-]\s*(\d{1,2})\s*[\/.\-]\s*(20\d{2})/g;
+ let m;
+ while((m=rx.exec(String(text||'')))){
+  const day=Number(m[1]),month=Number(m[2]),year=Number(m[3]);
+  const d=new Date(year,month-1,day);
+  if(d.getFullYear()!==year||d.getMonth()!==month-1||d.getDate()!==day)continue;
+  dates.push({date:year+'-'+String(month).padStart(2,'0')+'-'+String(day).padStart(2,'0'),index:m.index,len:m[0].length});
+ }
+ return dates;
+}
+function sheetTokens(line){
+ const text=String(line.text||''),tokens=[];
+ const rx=/(^|[^0-9])([0-2]?\d)\s*[:.]\s*([0-5]\d)(?!\d)/g;
+ let m;
+ while((m=rx.exec(text))){
+  const h=Number(m[2]),mi=Number(m[3]);
+  if(h>23)continue;
+  const idx=m.index+m[1].length;
+  tokens.push({time:String(h).padStart(2,'0')+':'+String(mi).padStart(2,'0'),
+   x:line.x+(idx+m[0].length/2)*line.w/Math.max(1,text.length)});
+ }
+ return tokens;
+}
+function sheetApproxTokenX(line,idx,len){
+ return line.x+(idx+len/2)*line.w/Math.max(1,String(line.text).length);
+}
+function sheetInterpretRow(anchor,rowLines,exitColumn){
+ const joined=rowLines.slice().sort((a,b)=>a.x-b.x).map(x=>x.text).join(' ');
+ const clean=sheetNorm(joined);
+ const reasonMatch=clean.match(/ATESTADO(?:\s+MEDICO)?|EM\s+VIAGEM|SERVICO\s+EXTERNO|DECLARACOES?\s+DIVERSAS|COMPENSACAO(?:\s+BANCO\s+DE\s+HORAS)?|FERIADO|FOLGA|ATRASO/);
+ const reason=reasonMatch?reasonMatch[0].replace(/\s+/g,' ').trim():'';
+ const width=Math.max(30,anchor.width),exitX=Number.isFinite(exitColumn)?exitColumn:anchor.x+width*6.2;
+ const candidates=rowLines.flatMap(sheetTokens).filter(t=>t.time!=='00:00').sort((a,b)=>a.x-b.x);
+ let left=candidates.filter(t=>t.x>anchor.x+width*1.12&&t.x<exitX-width*.78);
+ let exits=candidates.filter(t=>t.x>=exitX-width*.76&&t.x<=exitX+width*.75);
+ // Em alguns OCRs a linha toda é reconhecida num único bloco e o
+ // posicionamento estimado do último horário fica impreciso.
+ if(exits.length===0&&left.length>=4)exits=[left.pop()];
+ let entry=left[0]?.time||'',lunchOut='',lunchIn='',exit=exits[0]?.time||'';
+ if(left.length>=3){lunchOut=left[1].time;lunchIn=left[2].time}
+ const fallback=!rowLines.some(l=>l.w>0);
+ if(!exit&&fallback){
+  const positive=candidates.map(t=>t.time);
+  if(positive.length===4){[entry,lunchOut,lunchIn,exit]=positive}
+  else if(positive.length===2){[entry,exit]=positive}
+ }
+ let valid=Boolean(entry&&exit&&parseTime(entry)!==null&&parseTime(exit)>parseTime(entry));
+ if(lunchOut||lunchIn)valid=valid&&Boolean(lunchOut&&lunchIn&&parseTime(lunchOut)>parseTime(entry)&&parseTime(lunchIn)>parseTime(lunchOut)&&parseTime(exit)>parseTime(lunchIn));
+ const uncertain=(left.length===2||exits.length!==1||fallback);
+ const hasPunches=Boolean(entry||lunchOut||lunchIn||exit);
+ return {date:anchor.date,entry,lunchOut,lunchIn,exit,reason,valid,
+  confidence:valid&&!uncertain?'alta':'revisar',checked:false,hasPunches,source:joined};
+}
+function sheetParseOCR(payload){
+ let lines=Array.isArray(payload?.lines)?payload.lines.map(l=>({text:String(l.text||''),x:Number(l.x)||0,
+  y:Number(l.y)||0,w:Number(l.w)||0,h:Number(l.h)||0})).filter(l=>l.text.trim()):[];
+ const geometric=lines.length>0;
+ if(!geometric){
+  lines=String(payload?.text||'').split(/\r?\n/).map((text,i)=>({text,x:0,y:i*25,w:0,h:18})).filter(l=>l.text.trim());
+ }
+ const anchors=[];
+ for(const line of lines)for(const d of sheetFindDates(line.text)){
+  anchors.push({...d,x:sheetApproxTokenX(line,d.index,d.len)-Math.max(25,(line.w||0)*d.len/Math.max(1,line.text.length))/2,
+   width:Math.max(25,(line.w||0)*d.len/Math.max(1,line.text.length)),y:line.y+(line.h||12)/2});
+ }
+ anchors.sort((a,b)=>a.y-b.y||a.date.localeCompare(b.date));
+ const unique=[];for(const a of anchors)if(!unique.some(v=>v.date===a.date&&Math.abs(v.y-a.y)<25))unique.push(a);
+ if(!unique.length)return [];
+ const dateX=unique.reduce((n,a)=>n+a.x,0)/unique.length;
+ const dateWidth=unique.reduce((n,a)=>n+a.width,0)/unique.length;
+ let exitColumn=NaN;
+ const header=lines.filter(l=>l.y<unique[0].y&&/\bSA[IÍ]DA\b/i.test(l.text)).sort((a,b)=>b.y-a.y)[0];
+ if(header){
+  const match=/SA[IÍ]DA/i.exec(header.text);
+  if(match)exitColumn=sheetApproxTokenX(header,match.index,match[0].length);
+ }
+ if(!Number.isFinite(exitColumn))exitColumn=dateX+dateWidth*6.2;
+ const result=[];
+ for(let i=0;i<unique.length;i++){
+  const a=unique[i],before=i?((unique[i-1].y+a.y)/2):a.y-(unique[1]?.y-a.y||30)/2;
+  const after=i+1<unique.length?(a.y+unique[i+1].y)/2:a.y+(a.y-(unique[i-1]?.y??a.y-30))/2;
+  const rowLines=lines.filter(l=>l.y+(l.h||0)/2>=before&&l.y+(l.h||0)/2<after);
+  const parsed=sheetInterpretRow(a,rowLines,exitColumn);
+  const existed=result.findIndex(x=>x.date===parsed.date);
+  if(existed<0)result.push(parsed);
+  else if(parsed.valid&&!result[existed].valid)result[existed]=parsed;
+ }
+ return result.sort((a,b)=>a.date.localeCompare(b.date));
+}
+function sheetSetStatus(message){
+ $('sheetStatus').textContent=message||'';
+ $('sheetStatus').classList.toggle('hidden',!message);
+}
+function sheetSetMode(mode){
+ try{window.MeupontoOCR?.setMode?.(mode)}catch(e){}
+}
+function sheetStart(inputId){
+ if(sheetBusy){alertUser('A leitura da folha ainda está em andamento');return}
+ sheetModePending=true;sheetEarly=null;
+ sheetSetMode('sheet');
+ $(inputId).click();
+}
+async function sheetFileSelected(e){
+ const input=e.target,file=input.files?.[0];if(!file)return;
+ if(sheetBusy){alertUser('Aguarde a leitura anterior');input.value='';return}
+ sheetBusy=true;sheetRowsState=[];
+ $('sheetResults').classList.add('hidden');
+ sheetSetStatus('Reconhecendo os dias e horários da folha...');
+ if(sheetEarly){
+  const result=sheetEarly;sheetEarly=null;
+  sheetReceive(result.payload,result.error);
+ }else if(!window.MeupontoOCR?.isAvailable?.()){
+  try{
+   const worker=await warmOCR();
+   const result=await worker.recognize(file);
+   sheetReceive({text:result.data?.text||'',lines:[]},'');
+  }catch(err){sheetReceive({text:'',lines:[]},'Falha no leitor: '+String(err?.message||err))}
+ }
+ input.value='';
+}
+function sheetReceive(payload,error){
+ if(!sheetModePending){return}
+ if(!sheetBusy){sheetEarly={payload,error};return}
+ sheetModePending=false;sheetBusy=false;sheetEarly=null;
+ try{
+  const obj=typeof payload==='string'?JSON.parse(payload):payload||{};
+  sheetLastText=obj.text||'';
+  sheetRowsState=sheetParseOCR(obj);
+  $('sheetRaw').textContent=sheetLastText||'Nenhum texto retornado pelo leitor.';
+  if(!sheetRowsState.length){
+   $('sheetResults').classList.add('hidden');
+   sheetSetStatus('Não consegui identificar as datas. Fotografe a folha inteira, sem reflexos, ou tente outra orientação.'+(error?' '+error:''));
+   return;
+  }
+  for(const row of sheetRowsState){
+   const old=records[row.date];
+   row.checked=row.valid&&row.confidence==='alta'&&SHEET_KEYS.some(k=>(old?.[k]||'')!==(row[k]||''));
+  }
+  sheetSetStatus(error?'Leitura parcial: '+error:'Leitura concluída. Confira os horários antes de aplicar.');
+  sheetRenderReview();
+ }catch(err){
+  $('sheetResults').classList.add('hidden');
+  sheetSetStatus('Não foi possível interpretar a folha. '+String(err?.message||err));
+ }
+}
+window.__nativeSheetOCRCallback=function(payload,error){sheetReceive(payload,error)};
+const previousReceiptOcrCallback=window.__nativeOCRCallback;
+window.__nativeOCRCallback=function(text,error){
+ if(sheetModePending){sheetReceive({text,lines:[]},error);return}
+ previousReceiptOcrCallback(text,error);
+};
+function sheetRowDiff(row){
+ const old=records[row.date]||{};
+ return SHEET_KEYS.filter(k=>(old[k]||'')!==(row[k]||''));
+}
+function sheetRenderReview(){
+ $('sheetResults').classList.remove('hidden');
+ const valid=sheetRowsState.filter(r=>r.valid),changed=valid.filter(r=>sheetRowDiff(r).length),uncertain=sheetRowsState.filter(r=>r.confidence!=='alta');
+ $('sheetCount').textContent=sheetRowsState.length+' dias';
+ $('sheetSummary').textContent=valid.length+' dias com batidas completas; '+changed.length+' com diferenças; '+uncertain.length+' para revisão.';
+ $('sheetRows').innerHTML=sheetRowsState.map((r,i)=>{
+  const diff=sheetRowDiff(r),old=records[r.date],tag=!r.hasPunches?'Sem batidas':!r.valid?'Leitura incerta':diff.length?'Diferente':'Conferido';
+  const cls=!r.valid?'review':diff.length?'changed':'ok';
+  const oldLine=old?SHEET_KEYS.map(k=>old[k]||'—').join(' / '):'Sem registro no app';
+  return '<div class="card sheet-row" data-sheet-index="'+i+'">'
+   +'<div class="sheet-line"><label><input data-sheet-select type="checkbox" '+(r.checked?'checked ':'')+(!r.valid?'disabled ':'')+'/>'
+   +safe(fmtDate(r.date))+'</label><span class="sheet-tag '+cls+'">'+tag+'</span></div>'
+   +(r.valid||r.hasPunches?'<div class="sheet-fields">'+SHEET_KEYS.map((k,j)=>'<label>'+SHEET_LABELS[j]+'<input data-sheet-field="'+k+'" inputmode="numeric" maxlength="5" placeholder="—" value="'+safe(r[k]||'')+'"></label>').join('')+'</div>':'')
+   +'<p class="sheet-info">No app: '+safe(oldLine)+'</p>'
+   +(r.reason?'<p class="sheet-note">Na folha: '+safe(r.reason)+'</p>':'')
+   +(!r.valid&&r.hasPunches?'<p class="sheet-info">Confira os horários ou fotografe novamente. Este dia não será atualizado sem validação.</p>':'')
+   +'</div>';
+ }).join('');
+ sheetUpdateSelected();
+}
+function sheetUpdateSelected(){
+ const count=sheetRowsState.filter(r=>r.checked&&r.valid&&sheetRowDiff(r).length).length;
+ $('sheetSelected').textContent=count+' '+(count===1?'dia selecionado':'dias selecionados')+' para atualização.';
+ $('sheetApply').disabled=count===0||sheetBusy;
+}
+function sheetReviewChanged(e){
+ const card=e.target.closest('[data-sheet-index]');if(!card)return;
+ const row=sheetRowsState[Number(card.dataset.sheetIndex)];if(!row)return;
+ if(e.target.hasAttribute('data-sheet-select')){row.checked=e.target.checked;sheetUpdateSelected();return}
+ const key=e.target.dataset.sheetField;if(!SHEET_KEYS.includes(key))return;
+ row[key]=formatInput(e.target.value);e.target.value=row[key]||'';
+ const a=parseTime(row.entry),b=parseTime(row.lunchOut),c=parseTime(row.lunchIn),d=parseTime(row.exit);
+ row.valid=a!==null&&d!==null&&a<d&&((b===null&&c===null)||(b!==null&&c!==null&&a<b&&b<c&&c<d));
+ row.confidence=row.valid?'alta':'revisar';
+ if(!row.valid)row.checked=false;
+ sheetRenderReview();
+}
+function sheetApplyChanges(){
+ const chosen=sheetRowsState.filter(r=>r.checked&&r.valid&&sheetRowDiff(r).length);
+ if(!chosen.length){alertUser('Marque dias com diferenças para atualizar');return}
+ if(!confirm('Atualizar '+chosen.length+' dia(s) conforme a folha? Os registros anteriores ficarão disponíveis em Desfazer.'))return;
+ const before=JSON.stringify({date:new Date().toISOString(),records});
+ try{localStorage.setItem('ponto2_sheet_undo',before)}catch(e){alertUser('Espaço insuficiente para guardar a cópia; exporte um backup.');return}
+ let applied=0;
+ for(const row of chosen){
+  const existing=records[row.date]||{};
+  const next={...existing};
+  for(const k of SHEET_KEYS)next[k]=row[k]||'';
+  if(!next.delay)next.delay='pay';
+  if(row.reason&&!/^(ATRASO|FOLGA|FERIADO)$/.test(row.reason)){
+   const note='Folha de ponto: '+row.reason;
+   if(!(next.note||'').includes(note))next.note=[next.note,note].filter(Boolean).join(' | ');
+  }
+  if(!calc(row.date,next))continue;
+  records[row.date]=next;applied++;
+ }
+ save();renderHome();sheetRenderReview();
+ $('sheetUndoCard').classList.remove('hidden');
+ sheetSetStatus(applied+' dia(s) atualizados. Você pode desfazer a conferência, se necessário.');
+ alertUser(applied+' dia(s) atualizados');
+}
+function sheetUndoLast(){
+ let data;try{data=JSON.parse(localStorage.getItem('ponto2_sheet_undo')||'null')}catch{}
+ if(!data?.records){alertUser('Não há conferência para desfazer');return}
+ if(!confirm('Restaurar os registros anteriores à última conferência?'))return;
+ records=data.records;save();localStorage.removeItem('ponto2_sheet_undo');
+ sheetRowsState.forEach(r=>{r.checked=false});sheetRenderReview();
+ $('sheetUndoCard').classList.add('hidden');
+ sheetSetStatus('Última conferência desfeita.');
+ alertUser('Registros anteriores restaurados');
+}
 function bind(){document.querySelectorAll('.nav').forEach(b=>b.addEventListener('click',()=>{go(b.dataset.page)}));$('headMonth').onclick=()=>go('records');$('allRecords').onclick=()=>go('records');$('homeManual').onclick=()=>openEdit(localDate());
  const closeQuickScan=()=>{$('homeScanMenu').classList.add('hidden');$('homeScanToggle').setAttribute('aria-expanded','false')};
  $('homeScanToggle').onclick=()=>{let isOpen=$('homeScanMenu').classList.toggle('hidden');$('homeScanToggle').setAttribute('aria-expanded',String(!isOpen))};
