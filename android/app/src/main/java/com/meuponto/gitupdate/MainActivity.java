@@ -5,6 +5,9 @@ import android.os.Bundle;
 import android.content.Intent;
 import android.content.ContentValues;
 import android.graphics.Color;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.graphics.Rect;
 import android.net.Uri;
 import android.provider.MediaStore;
 import android.view.View;
@@ -16,6 +19,7 @@ import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.webkit.ValueCallback;
 import org.json.JSONObject;
+import org.json.JSONArray;
 import java.io.InputStream;
 import java.io.ByteArrayOutputStream;
 import java.net.HttpURLConnection;
@@ -25,6 +29,7 @@ import com.google.mlkit.vision.common.InputImage;
 import com.google.mlkit.vision.text.TextRecognition;
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions;
 import com.google.mlkit.vision.text.TextRecognizer;
+import com.google.mlkit.vision.text.Text;
 
 public class MainActivity extends Activity {
     private static final String HOME = "https://meuponto.app.local/";
@@ -34,11 +39,15 @@ public class MainActivity extends Activity {
     private ValueCallback<Uri[]> callback;
     private Uri capturedPhoto;
     private boolean selectedFileIsImage = false;
+    private boolean selectedFileIsSheet = false;
+    private volatile String nextOcrMode = "receipt";
     private WebView web;
     private TextRecognizer recognizer;
 
     public final class NativeOCR {
         @JavascriptInterface public boolean isAvailable() { return true; }
+        @JavascriptInterface public void setMode(String mode) { nextOcrMode = "sheet".equals(mode) ? "sheet" : "receipt"; }
+        @JavascriptInterface public boolean supportsSheet() { return true; }
     }
 
     @Override public void onCreate(Bundle savedInstanceState) {
@@ -75,6 +84,8 @@ public class MainActivity extends Activity {
                 callback = newCallback;
                 capturedPhoto = null;
                 selectedFileIsImage = false;
+                selectedFileIsSheet = "sheet".equals(nextOcrMode);
+                nextOcrMode = "receipt";
                 boolean wantsDocument = false;
                 String[] accepts = params.getAcceptTypes();
                 if (accepts != null) {
@@ -170,7 +181,75 @@ public class MainActivity extends Activity {
         runOnUiThread(() -> { if(web != null) web.evaluateJavascript(js,null); });
     }
 
-    private void recognizePhoto(Uri uri) {
+
+    private void showSheetResult(Text result, String error) {
+        JSONObject payload=new JSONObject();
+        try {
+            payload.put("text",result == null ? "" : result.getText());
+            JSONArray lines=new JSONArray();
+            if(result != null)for(Text.TextBlock block:result.getTextBlocks())for(Text.Line line:block.getLines()){
+                Rect r=line.getBoundingBox();
+                if(r == null)continue;
+                JSONObject obj=new JSONObject();
+                obj.put("text",line.getText());
+                obj.put("x",r.left);obj.put("y",r.top);
+                obj.put("w",r.width());obj.put("h",r.height());
+                lines.put(obj);
+            }
+            payload.put("lines",lines);
+        }catch(Exception ignored){}
+        final String js="window.__nativeSheetOCRCallback && window.__nativeSheetOCRCallback("
+             +JSONObject.quote(payload.toString())+","+JSONObject.quote(error==null?"":error)+");";
+        runOnUiThread(()->{if(web!=null)web.evaluateJavascript(js,null);});
+    }
+    private int countSheetDates(String value){
+        java.util.regex.Matcher m=java.util.regex.Pattern.compile(
+            "(?<![0-9])(?:0?[1-9]|[12][0-9]|3[01])[/.-](?:0?[1-9]|1[0-2])[/.-]20[0-9]{2}(?![0-9])"
+        ).matcher(value==null?"":value);
+        int n=0;while(m.find())n++;return n;
+    }
+    private void trySheetRotation(Bitmap bitmap,int[] angles,int index,Text best,int bestScore){
+        if(index>=angles.length||bestScore>=7){
+            showSheetResult(best,bestScore<2?"Poucas datas reconhecidas: confira o enquadramento da folha.":"");
+            bitmap.recycle();return;
+        }
+        try{
+            recognizer.process(InputImage.fromBitmap(bitmap,angles[index]))
+                .addOnSuccessListener(result->{
+                    int score=countSheetDates(result.getText());
+                    trySheetRotation(bitmap,angles,index+1,score>bestScore?result:best,Math.max(bestScore,score));
+                }).addOnFailureListener(error->trySheetRotation(bitmap,angles,index+1,best,bestScore));
+        }catch(Exception error){trySheetRotation(bitmap,angles,index+1,best,bestScore);}
+    }
+    private void recognizeSheet(Uri uri){
+        new Thread(()->{
+            try{
+                InputImage image=InputImage.fromFilePath(getApplicationContext(),uri);
+                recognizer.process(image).addOnSuccessListener(result->{
+                    int score=countSheetDates(result.getText());
+                    if(score>=5){showSheetResult(result,"");return;}
+                    try{
+                        BitmapFactory.Options opts=new BitmapFactory.Options();
+                        opts.inJustDecodeBounds=true;
+                        try(InputStream in=getContentResolver().openInputStream(uri)){
+                            BitmapFactory.decodeStream(in,null,opts);
+                        }
+                        int biggest=Math.max(opts.outWidth,opts.outHeight),sample=1;
+                        while(biggest/sample>3800)sample*=2;
+                        opts.inJustDecodeBounds=false;opts.inSampleSize=sample;
+                        Bitmap bmp;
+                        try(InputStream in=getContentResolver().openInputStream(uri)){
+                            bmp=BitmapFactory.decodeStream(in,null,opts);
+                        }
+                        if(bmp==null){showSheetResult(result,"Não foi possível girar a imagem.");return;}
+                        trySheetRotation(bmp,new int[]{90,270,180},0,result,score);
+                    }catch(Exception e){showSheetResult(result,"Leitura incompleta: "+e.getMessage());}
+                }).addOnFailureListener(err->showSheetResult(null,"Falha no OCR: "+err.getMessage()));
+            }catch(Exception e){showSheetResult(null,"Não foi possível abrir a folha: "+e.getMessage());}
+        }).start();
+    }
+    private void recognizePhoto(Uri uri, boolean sheet) {
+        if(sheet){recognizeSheet(uri);return;}
         new Thread(() -> {
             try {
                 InputImage image = InputImage.fromFilePath(getApplicationContext(),uri);
@@ -194,8 +273,9 @@ public class MainActivity extends Activity {
         callback.onReceiveValue(uri == null ? null : new Uri[]{uri});
         callback = null;
         capturedPhoto = null;
-        if(uri != null && selectedFileIsImage) recognizePhoto(uri);
+        if(uri != null && selectedFileIsImage) recognizePhoto(uri,selectedFileIsSheet);
         selectedFileIsImage = false;
+        selectedFileIsSheet = false;
     }
 
     @Override public void onBackPressed() {
