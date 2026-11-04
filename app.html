@@ -828,6 +828,86 @@ function sheetUndoLast(){
  sheetSetStatus('Última conferência desfeita.');
  alertUser('Registros anteriores restaurados');
 }
+
+function parseMoneyText(value){
+ let text=String(value??'').trim().replace(/R\$\s*/gi,'').replace(/\s/g,'');
+ if(!text)return NaN;
+ if(text.includes(',')&&text.includes('.'))text=text.replace(/\./g,'').replace(',','.');
+ else if(text.includes(','))text=text.replace(',','.');
+ else if(/^\d{1,3}\.\d{3}$/.test(text))text=text.replace('.','');
+ return /^-?\d+(?:\.\d+)?$/.test(text)?Number(text):NaN;
+}
+function formatMoneyInput(value){
+ const n=Number(value);
+ return Number.isFinite(n)&&value!==''&&value!==null?n.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}):'';
+}
+function salaryTotals(gross,items){
+ let fixed=0,percent=0,breakdown=[];
+ for(const item of items||[]){
+  const amount=Number(item.amount),isPercent=item.unit==='percent';
+  if(!Number.isFinite(amount)||amount<0||isPercent&&amount>100)continue;
+  const cost=isPercent?gross*amount/100:amount;
+  if(isPercent)percent+=cost;else fixed+=cost;
+  breakdown.push({name:String(item.name||'Desconto'),cost});
+ }
+ return {fixed,percent,breakdown};
+}
+function readSalaryDraft(){
+ const grossRaw=$('salaryGross').value;
+ const gross=grossRaw.trim()===''?'':parseMoneyText(grossRaw);
+ const deductions=[...$('salaryDeductionsList').querySelectorAll('[data-salary-id]')].map(row=>{
+  const name=row.querySelector('[data-salary-name]')?.value?.trim()||'';
+  const unit=row.querySelector('[data-salary-unit]')?.value==='percent'?'percent':'fixed';
+  const raw=row.querySelector('[data-salary-amount]')?.value||'';
+  return {id:row.dataset.salaryId,name,unit,amount:raw.trim()===''?'':parseMoneyText(raw)};
+ });
+ return {gross,deductions};
+}
+function renderSalarySettings(){
+ $('salaryGross').value=formatMoneyInput(salaryConfig?.gross??'');
+ const rows=Array.isArray(salaryConfig?.deductions)?salaryConfig.deductions:[];
+ $('salaryDeductionsList').innerHTML=rows.length?rows.map(row=>
+  '<div class="salary-deduction" data-salary-id="'+safe(row.id)+'">'
+  +'<input data-salary-name aria-label="Nome do desconto" placeholder="Ex.: INSS" value="'+safe(row.name)+'">'
+  +'<input data-salary-amount aria-label="Valor do desconto" inputmode="decimal" placeholder="Valor" value="'+safe(row.amount===' '?'':row.amount??'')+'">'
+  +'<select data-salary-unit aria-label="Tipo de desconto"><option value="fixed"'+(row.unit==='percent'?'':' selected')+'>R$</option><option value="percent"'+(row.unit==='percent'?' selected':'')+'>%</option></select>'
+  +'<button type="button" class="deduction-delete" data-salary-remove="'+safe(row.id)+'" aria-label="Excluir desconto">×</button></div>'
+ ).join(''):'<p class="hint">Nenhum desconto cadastrado.</p>';
+}
+function saveSalaryConfig(){
+ const draft=readSalaryDraft();
+ if(draft.gross!==''&&(!Number.isFinite(draft.gross)||draft.gross<0)){alertUser('Confira o salário bruto');return}
+ for(const item of draft.deductions)if(!item.name||item.amount===''||!Number.isFinite(item.amount)||item.amount<0||(item.unit==='percent'&&item.amount>100)){
+  alertUser('Informe nome, valor e unidade válidos para cada desconto');return;
+ }
+ salaryConfig=draft;save();renderSalaryHome();alertUser('Salário e descontos salvos');
+}
+function renderSalaryHome(){
+ const gross=Number(salaryConfig?.gross);
+ const valid=salaryConfig?.gross!==''&&Number.isFinite(gross)&&gross>0;
+ const period=localDate().slice(0,7);
+ $('salaryMonthLabel').textContent=new Date(period+'-01T12:00:00').toLocaleDateString('pt-BR',{month:'long',year:'numeric'});
+ if(!valid){
+  $('salaryHomeValue').textContent='Configurar';
+  $('salaryHomeBreakdown').innerHTML='<p class="hint">Informe seu salário bruto e descontos em Mais → Salário e descontos.</p>';
+  return;
+ }
+ const summary=salaryTotals(gross,salaryConfig.deductions);
+ const late=summaryMonth(period).lateMoney;
+ const total=summary.fixed+summary.percent+late;
+ const net=gross-total;
+ $('salaryHomeValue').textContent=brl(net);
+ $('salaryHomeBreakdown').innerHTML='<div class="salary-home-rows">'
+  +'<div class="value-line"><span>Salário bruto</span><b>'+brl(gross)+'</b></div>'
+  +summary.breakdown.map(item=>'<div class="value-line"><span>'+safe(item.name)+'</span><b>−'+brl(item.cost)+'</b></div>').join('')
+  +'<div class="value-line"><span>Atrasos em folha no mês</span><b>−'+brl(late)+'</b></div>'
+  +'<div class="value-line"><span>Total líquido estimado</span><b>'+brl(net)+'</b></div>'
+  +'</div>';
+}
+function openSalarySettings(){
+ go('settings');
+ setTimeout(()=>{$('salarySettings').scrollIntoView({block:'start',behavior:'smooth'});$('salaryGross').focus({preventScroll:true})},40);
+}
 function bind(){document.querySelectorAll('.nav').forEach(b=>b.addEventListener('click',()=>{go(b.dataset.page)}));$('headMonth').onclick=()=>go('records');$('allRecords').onclick=()=>go('records');$('homeManual').onclick=()=>openEdit(localDate());
  const openSheet=()=>{sheetSetStatus('');$('sheetUndoCard').classList.toggle('hidden',!localStorage.getItem('ponto2_sheet_undo'));go('sheet')};
  $('openSheetRecords').onclick=openSheet;
