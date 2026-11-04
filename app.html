@@ -173,6 +173,11 @@
 .home-month-label input{width:29px;min-width:29px;height:23px;border:0;background:transparent;color:transparent;padding:0;font-size:10px;cursor:pointer;min-height:0}
 .home-month-label input::-webkit-calendar-picker-indicator{width:19px;height:19px;opacity:.8;margin:0;padding:0;cursor:pointer}
 @media(max-width:360px){.home-month-controls{gap:2px}.home-month-arrow{min-width:22px;padding:2px 3px}.home-month-label{padding:5px}.home-month-label span{font-size:10px}}
+.salary-annual-card{padding:13px 15px;border-color:#e6d2c6;background:#fffcfa}
+.salary-annual-title{font-size:12px;font-weight:800;color:#91503d;margin-bottom:8px}
+.salary-annual-card .value-line{font-size:12px;padding:8px 0;gap:8px}
+.salary-annual-card .value-line b{font-size:13px;white-space:nowrap}
+.salary-annual-card .hint{font-size:11px;line-height:1.5;margin-top:8px}
 </style></head><body><div class="app">
 <div class="header"><div class="logo-title"><div class="logo" style="background:linear-gradient(135deg,#da9c86,#875144);color:white;font-size:29px;display:flex;align-items:center;justify-content:center">◷</div><div><h1>Meu Ponto</h1></div></div><div class="home-month-controls">
  <button id="homePrevMonth" class="home-month-arrow" type="button" aria-label="Mês anterior">‹</button>
@@ -189,7 +194,10 @@
   <span class="salary-left"><span class="salary-emoji">R$</span><span><strong>Salário estimado</strong><small id="salaryMonthLabel">Líquido do mês</small></span></span>
   <span class="salary-right"><strong id="salaryHomeValue">Configurar</strong><span>⌄</span></span>
  </button>
- <div id="salaryHomeDetails" class="hidden"><div class="divider"></div><div id="salaryHomeBreakdown"></div><p class="hint" style="margin-top:8px">Estimativa baseada nas configurações e na tabela do INSS de 2026. Não inclui IRRF, 13º, férias ou adicionais. O FGTS é mostrado separadamente.</p><button id="salaryHomeConfigure" type="button" class="btn outline" style="margin-top:12px;width:100%">Editar salário e descontos</button></div>
+ <div id="salaryHomeDetails" class="hidden"><div class="divider"></div><div id="salaryHomeBreakdown"></div><p class="hint" style="margin-top:8px">Estimativa calculada com o salário informado atualmente e referência tributária de 2026. O adiantamento de férias não deve ser somado novamente ao salário mensal.</p><button id="salaryHomeConfigure" type="button" class="btn outline" style="margin-top:12px;width:100%">Editar salário e descontos</button></div>
+</div>
+<div id="salaryAnnualCard" class="card salary-annual-card hidden">
+ <div class="salary-annual-title">Pagamentos extras do mês</div><div id="salaryAnnualContent"></div>
 </div>
 <div class="section-title"><h2>Resumo de hoje</h2></div>
 <div class="card today-card" id="todayCard"></div>
@@ -350,8 +358,24 @@
   <h3>Plano de saúde</h3>
   <div class="field"><label for="salaryHealth">Desconto mensal fixo (R$)</label><input id="salaryHealth" inputmode="decimal" placeholder="Ex.: 22,00"></div>
  </div>
+ <div class="salary-setting-section">
+  <h3>13º salário e férias</h3>
+  <p class="date-message">13º integral, dividido em duas parcelas. A segunda considera INSS e eventual IRRF sobre o 13º.</p>
+  <div class="field"><label for="salary13FirstMonth">Mês da primeira parcela do 13º</label>
+   <select id="salary13FirstMonth"><option value="11">Novembro (padrão)</option><option value="02">Fevereiro</option><option value="03">Março</option><option value="04">Abril</option><option value="05">Maio</option><option value="06">Junho</option><option value="07">Julho</option><option value="08">Agosto</option><option value="09">Setembro</option><option value="10">Outubro</option></select>
+  </div><p class="hint">Segunda parcela em dezembro. O terço constitucional será calculado com base nos períodos de férias cadastrados.</p>
+ </div>
+ <details class="salary-setting-section" id="salaryOtherSettings">
+  <summary style="font-weight:750;cursor:pointer">Outros benefícios e descontos (opcionais)</summary>
+  <p class="hint">Preencha apenas os que aparecerem no seu contracheque.</p>
+  <div class="field"><label for="salaryTransit">Vale-transporte (desconto mensal, R$)</label><input id="salaryTransit" inputmode="decimal" placeholder="Opcional"></div>
+  <div class="field"><label for="salaryAdditional">Adicional ou gratificação tributável mensal (R$)</label><input id="salaryAdditional" inputmode="decimal" placeholder="Opcional"></div>
+  <div class="field"><label for="salaryOtherDeduction">Outros descontos / coparticipações (R$)</label><input id="salaryOtherDeduction" inputmode="decimal" placeholder="Opcional"></div>
+  <div class="field"><label for="salaryReimbursement">Reembolsos e créditos não tributáveis (R$)</label><input id="salaryReimbursement" inputmode="decimal" placeholder="Opcional"></div>
+  <p class="hint">O IRRF é estimado pela tabela de 2026. Para outros anos, confirme a tabela vigente. Adicionais tributáveis podem alterar INSS, FGTS e IRRF.</p>
+ </details>
  <button id="salarySave" type="button" class="btn" style="width:100%;margin-top:14px">Salvar salário e descontos</button>
- <p class="hint" style="margin-top:10px">Estimativa pessoal: o cálculo automático de INSS usa a tabela de 2026; não inclui IRRF, outras verbas ou adicionais não informados.</p>
+ <p class="hint" style="margin-top:10px">Valores estimados. O pagamento de férias pode ser antecipado e compensado na folha; não some o adiantamento duas vezes.</p>
 </div>
 <div class="section-title"><h2>Férias e folgas</h2></div>
 <div class="card"><p class="date-message">Defina períodos de férias ou emendas que não devem entrar na meta de quitação do banco.</p><button id="settingsPlanVacation" type="button" class="btn outline" style="width:100%">Planejar férias</button></div>
