@@ -741,12 +741,25 @@ function sheetUndoLast(){
  alertUser('Registros anteriores restaurados');
 }
 function bind(){document.querySelectorAll('.nav').forEach(b=>b.addEventListener('click',()=>{go(b.dataset.page)}));$('headMonth').onclick=()=>go('records');$('allRecords').onclick=()=>go('records');$('homeManual').onclick=()=>openEdit(localDate());
+ const openSheet=()=>{sheetSetStatus('');$('sheetUndoCard').classList.toggle('hidden',!localStorage.getItem('ponto2_sheet_undo'));go('sheet')};
+ $('openSheetRecords').onclick=openSheet;
+ $('openSheetSettings').onclick=openSheet;
+ $('backSheet').onclick=()=>{sheetModePending=false;sheetBusy=false;sheetSetMode('receipt');go('records')};
+ $('sheetCamera').onclick=()=>sheetStart('sheetFileCamera');
+ $('sheetGallery').onclick=()=>sheetStart('sheetFileGallery');
+ $('sheetFileCamera').onchange=sheetFileSelected;
+ $('sheetFileGallery').onchange=sheetFileSelected;
+ $('sheetRows').onchange=sheetReviewChanged;
+ $('sheetSelectDiff').onclick=()=>{sheetRowsState.forEach(r=>r.checked=r.valid&&r.confidence==='alta'&&sheetRowDiff(r).length>0);sheetRenderReview()};
+ $('sheetUnselectAll').onclick=()=>{sheetRowsState.forEach(r=>r.checked=false);sheetRenderReview()};
+ $('sheetApply').onclick=sheetApplyChanges;
+ $('sheetUndo').onclick=sheetUndoLast;
  const closeQuickScan=()=>{$('homeScanMenu').classList.add('hidden');$('homeScanToggle').setAttribute('aria-expanded','false')};
  $('homeScanToggle').onclick=()=>{let isOpen=$('homeScanMenu').classList.toggle('hidden');$('homeScanToggle').setAttribute('aria-expanded',String(!isOpen))};
- $('homeCamera').onclick=()=>{closeQuickScan();if(startScan())$('fileCamera').click()};
- $('homeGallery').onclick=()=>{closeQuickScan();if(startScan())$('fileGallery').click()};
+ $('homeCamera').onclick=()=>{closeQuickScan();sheetModePending=false;sheetSetMode('receipt');if(startScan())$('fileCamera').click()};
+ $('homeGallery').onclick=()=>{closeQuickScan();sheetModePending=false;sheetSetMode('receipt');if(startScan())$('fileGallery').click()};
  document.addEventListener('click',e=>{if(!e.target.closest('#homeScanAnchor'))closeQuickScan()});
- $('backEdit').onclick=()=>{scanBusy=false;activeScan=null;go('home')};$('backScanner').onclick=()=>go('home');$('takePhoto').onclick=()=>{$('fileCamera').click()};$('pickPhoto').onclick=()=>{$('fileGallery').click()};$('fileCamera').onchange=handleImage;$('fileGallery').onchange=handleImage;$('confirmScan').onclick=confirmScan;$('editReceiptKind').onchange=()=>{if(!useDetectedTime($('editReceiptKind').value,true))showEditReceipt('Escolha onde colocar o horário do comprovante')};$('scanDate').onchange=()=>{scanDateEdited=true;$('scanKind').value=guessKind($('scanDate').value,$('scanTime').value)};$('scanTime').oninput=()=>{$('scanKind').value=guessKind($('scanDate').value,$('scanTime').value)};for(let k of ['entry','lunchOut','lunchIn','exit']){$(k).addEventListener('input',previewDay);$(k).addEventListener('blur',()=>{if($(k).value)$(k).value=formatInput($(k).value)||$(k).value;previewDay()})}$('editDate').onchange=()=>{
+ $('backEdit').onclick=()=>{scanBusy=false;activeScan=null;go('home')};$('backScanner').onclick=()=>go('home');$('takePhoto').onclick=()=>{sheetModePending=false;sheetSetMode('receipt');$('fileCamera').click()};$('pickPhoto').onclick=()=>{sheetModePending=false;sheetSetMode('receipt');$('fileGallery').click()};$('fileCamera').onchange=handleImage;$('fileGallery').onchange=handleImage;$('confirmScan').onclick=confirmScan;$('editReceiptKind').onchange=()=>{if(!useDetectedTime($('editReceiptKind').value,true))showEditReceipt('Escolha onde colocar o horário do comprovante')};$('scanDate').onchange=()=>{scanDateEdited=true;$('scanKind').value=guessKind($('scanDate').value,$('scanTime').value)};$('scanTime').oninput=()=>{$('scanKind').value=guessKind($('scanDate').value,$('scanTime').value)};for(let k of ['entry','lunchOut','lunchIn','exit']){$(k).addEventListener('input',previewDay);$(k).addEventListener('blur',()=>{if($(k).value)$(k).value=formatInput($(k).value)||$(k).value;previewDay()})}$('editDate').onchange=()=>{
  if(activeScan&&page==='edit'){
   activeScan.userDateChanged=true;
   activeScan.applied=null;
