@@ -1071,15 +1071,99 @@ function plannedOff(date){
   isValidPlanDate(p.start)&&isValidPlanDate(p.end)&&p.start<=date&&date<=p.end);
  return all.find(p=>p.type==='vacation')||all[0]||null;
 }
+
+function daysBetweenDates(start,end){
+ if(!isValidPlanDate(start)||!isValidPlanDate(end))return NaN;
+ const toUTC=v=>Date.UTC(Number(v.slice(0,4)),Number(v.slice(5,7))-1,Number(v.slice(8,10)));
+ return Math.round((toUTC(end)-toUTC(start))/86400000);
+}
+function periodTotalDays(start,end){
+ const diff=daysBetweenDates(start,end);
+ return Number.isFinite(diff)&&diff>=0?diff+1:0;
+}
+function vacationPlans(){
+ return (Array.isArray(plannedPeriods)?plannedPeriods:[])
+   .filter(p=>p.type==='vacation'&&periodTotalDays(p.start,p.end)>0)
+   .slice().sort((a,b)=>a.start.localeCompare(b.start)||a.end.localeCompare(b.end));
+}
+function totalVacationCalendarDays(periods){
+ const ranges=periods.map(p=>({start:p.start,end:p.end}))
+  .sort((a,b)=>a.start.localeCompare(b.start)||a.end.localeCompare(b.end));
+ let total=0,latestEnd='';
+ for(const p of ranges){
+  if(!latestEnd||p.start>latestEnd){
+   total+=periodTotalDays(p.start,p.end);
+   latestEnd=p.end;
+  }else if(p.end>latestEnd){
+   total+=daysBetweenDates(latestEnd,p.end);
+   latestEnd=p.end;
+  }
+ }
+ return total;
+}
+function updatePlanningDuration(){
+ const start=$('planStart').value,end=$('planEnd').value;
+ const days=periodTotalDays(start,end);
+ const label=$('planType').value==='vacation'?'de férias':'de emenda / folga';
+ const el=$('planDuration');
+ el.classList.toggle('invalid',!days);
+ el.textContent=days?days+' '+(days===1?'dia corrido':'dias corridos')+' '+label+' · inclui a data inicial e final':
+   'Confira as datas inicial e final para calcular a duração.';
+}
+function renderVacationHome(){
+ const el=$('homeVacationCard'),periods=vacationPlans();
+ el.classList.toggle('hidden',periods.length===0);
+ if(!periods.length)return;
+ const today=localDate();
+ const active=periods.find(p=>p.start<=today&&today<=p.end);
+ const upcoming=periods.find(p=>p.start>today);
+ const current=active||upcoming||periods[periods.length-1];
+ const duration=periodTotalDays(current.start,current.end);
+ const unique=totalVacationCalendarDays(periods);
+ let status='',note='';
+ if(active){
+  const left=periodTotalDays(today,current.end);
+  status='Em férias';
+  note=(left===1?'Último dia de férias':'Faltam '+left+' dias corridos, contando hoje')+' · ';
+ }else if(upcoming){
+  const remaining=daysBetweenDates(today,current.start);
+  status='Programadas';
+  note='Começa em '+remaining+' '+(remaining===1?'dia':'dias')+' · ';
+ }else{
+  status='Concluídas';
+  note='Último período cadastrado · ';
+ }
+ note+=periods.length===1?'1 período de férias cadastrado':periods.length+' períodos de férias cadastrados ('+unique+' dias corridos no total, sem duplicar sobreposições)';
+ $('homeVacationStatus').textContent=status;
+ $('homeVacationDays').textContent=duration+' '+(duration===1?'dia':'dias');
+ $('homeVacationPeriod').textContent=fmtDate(current.start)+' até '+fmtDate(current.end);
+ $('homeVacationNote').textContent=note;
+}
 function renderPlanning(){
  $('planStart').value||=localDate();
  $('planEnd').value||=$('planStart').value;
- const plans=Array.isArray(plannedPeriods)?plannedPeriods.slice().sort((a,b)=>a.start.localeCompare(b.start)):[];
- $('planList').innerHTML=plans.length?plans.map(p=>
-  '<div class="value-line"><div><strong>'+ (p.type==='vacation'?'🏖 Férias':'📅 Emenda / folga')+'</strong>'
-  +'<p class="date-message">'+safe(fmtDate(p.start))+' até '+safe(fmtDate(p.end))+(p.note?' · '+safe(p.note):'')+'</p></div>'
-  +'<button type="button" class="btn outline" data-plan-delete="'+safe(p.id)+'" style="padding:7px 10px;flex-shrink:0">Excluir</button></div>'
- ).join(''):'<p class="date-message">Nenhuma data cadastrada.</p>';
+ const plans=(Array.isArray(plannedPeriods)?plannedPeriods:[]).slice()
+  .filter(p=>periodTotalDays(p.start,p.end)>0)
+  .sort((a,b)=>a.start.localeCompare(b.start));
+ const vacations=vacationPlans(),days=totalVacationCalendarDays(vacations);
+ const summary=$('planSummary');
+ summary.classList.toggle('hidden',plans.length===0);
+ summary.textContent=plans.length
+  ?vacations.length+' '+(vacations.length===1?'período de férias':'períodos de férias')
+    +' · '+days+' '+(days===1?'dia corrido de férias':'dias corridos de férias')
+    +' · '+plans.filter(p=>p.type==='bridge').length+' emenda(s)/folga(s)'
+  :'';
+ $('planList').innerHTML=plans.length?plans.map(p=>{
+  const duration=periodTotalDays(p.start,p.end);
+  return '<div class="planning-item">'
+   +'<div class="planning-item-main">'
+   +'<strong class="planning-item-title">'+(p.type==='vacation'?'🏖 Férias':'📅 Emenda / folga')+'</strong>'
+   +'<p class="planning-item-dates">'+safe(fmtDate(p.start))+' até '+safe(fmtDate(p.end))+'</p>'
+   +'<p class="planning-item-days">'+duration+' '+(duration===1?'dia corrido':'dias corridos')+'</p>'
+   +(p.note?'<p class="planning-item-note">'+safe(p.note)+'</p>':'')
+   +'</div><button type="button" class="planning-remove" data-plan-delete="'+safe(p.id)+'" aria-label="Excluir período de '+safe(fmtDate(p.start))+' a '+safe(fmtDate(p.end))+'">Excluir</button></div>';
+ }).join(''):'<p class="date-message">Nenhum período cadastrado.</p>';
+ updatePlanningDuration();
 }
 function addPlannedPeriod(){
  const type=$('planType').value==='bridge'?'bridge':'vacation';
@@ -1088,8 +1172,7 @@ function addPlannedPeriod(){
  if(!isValidPlanDate(start)||!isValidPlanDate(end)||end<start){
   alertUser('Confira as datas inicial e final');return;
  }
- let d=new Date(start+'T12:00:00'),e=new Date(end+'T12:00:00');
- const length=Math.round((e-d)/86400000)+1;
+ const length=periodTotalDays(start,end);
  if(length>366){alertUser('Cadastre períodos de até 366 dias');return}
  if(plannedPeriods.some(p=>p.type===type&&p.start===start&&p.end===end)){
   alertUser('Este período já foi cadastrado');return;
@@ -1214,11 +1297,14 @@ function bind(){
   $(id).addEventListener(id==='salaryInssMode'?'change':'input',salaryPreviewDraft);
  }
  $('homePlanVacation').onclick=openPlanning;
+ $('homeVacationDetails').onclick=openPlanning;
  $('settingsPlanVacation').onclick=openPlanning;
  $('simPlanVacation').onclick=openPlanning;
  $('simOpenPlanning').onclick=openPlanning;
  $('backPlanning').onclick=()=>go(planReturnPage);
- $('planStart').onchange=()=>{if(!$('planEnd').value||$('planEnd').value<$('planStart').value)$('planEnd').value=$('planStart').value};
+ $('planStart').onchange=()=>{if(!$('planEnd').value||$('planEnd').value<$('planStart').value)$('planEnd').value=$('planStart').value;updatePlanningDuration()};
+ $('planEnd').onchange=updatePlanningDuration;
+ $('planType').onchange=updatePlanningDuration;
  $('planAdd').onclick=addPlannedPeriod;
  $('planList').onclick=e=>{
   const btn=e.target.closest('[data-plan-delete]');if(!btn)return;
