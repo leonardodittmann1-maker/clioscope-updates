@@ -165,8 +165,20 @@
  height:22px;
  margin:0 auto;
 }
+
+.home-month-controls{display:flex;align-items:center;gap:3px;min-width:0;flex-shrink:0}
+.home-month-arrow{border:1px solid var(--line);background:#fff;color:#8d5d4d;border-radius:10px;min-height:34px;min-width:25px;padding:2px 5px;font-weight:800;font-size:19px}
+.home-month-label{display:flex;align-items:center;gap:2px;background:#fff;border:1px solid var(--line);border-radius:20px;padding:7px 8px;min-width:0;max-width:150px}
+.home-month-label span{font-size:11px;color:#7a7069;text-transform:lowercase;white-space:nowrap}
+.home-month-label input{width:29px;min-width:29px;height:23px;border:0;background:transparent;color:transparent;padding:0;font-size:10px;cursor:pointer;min-height:0}
+.home-month-label input::-webkit-calendar-picker-indicator{width:19px;height:19px;opacity:.8;margin:0;padding:0;cursor:pointer}
+@media(max-width:360px){.home-month-controls{gap:2px}.home-month-arrow{min-width:22px;padding:2px 3px}.home-month-label{padding:5px}.home-month-label span{font-size:10px}}
 </style></head><body><div class="app">
-<div class="header"><div class="logo-title"><div class="logo" style="background:linear-gradient(135deg,#da9c86,#875144);color:white;font-size:29px;display:flex;align-items:center;justify-content:center">◷</div><div><h1>Meu Ponto</h1></div></div><button class="head-month" id="headMonth"></button></div>
+<div class="header"><div class="logo-title"><div class="logo" style="background:linear-gradient(135deg,#da9c86,#875144);color:white;font-size:29px;display:flex;align-items:center;justify-content:center">◷</div><div><h1>Meu Ponto</h1></div></div><div class="home-month-controls">
+ <button id="homePrevMonth" class="home-month-arrow" type="button" aria-label="Mês anterior">‹</button>
+ <label class="home-month-label" title="Selecionar mês e ano"><span id="headMonth">Mês</span><input id="homeMonthPicker" type="month" aria-label="Escolher mês e ano"></label>
+ <button id="homeNextMonth" class="home-month-arrow" type="button" aria-label="Mês seguinte">›</button>
+</div></div>
 <section id="home" class="page active">
 <div class="statgrid">
 <div class="stat blue"><div class="stathead">◷ Banco de horas</div><div class="value" id="bankStat">+0h 00m</div><div class="subtitle">Saldo do semestre</div></div>
@@ -179,7 +191,7 @@
  </button>
  <div id="salaryHomeDetails" class="hidden"><div class="divider"></div><div id="salaryHomeBreakdown"></div><p class="hint" style="margin-top:8px">Estimativa baseada nas configurações e na tabela do INSS de 2026. Não inclui IRRF, 13º, férias ou adicionais. O FGTS é mostrado separadamente.</p><button id="salaryHomeConfigure" type="button" class="btn outline" style="margin-top:12px;width:100%">Editar salário e descontos</button></div>
 </div>
-<div class="section-title"><h2>Resumo do dia</h2></div>
+<div class="section-title"><h2>Resumo de hoje</h2></div>
 <div class="card today-card" id="todayCard"></div>
 <div class="section-title"><h2>Registrar ponto</h2></div>
 <div class="shortcut-row">
@@ -362,7 +374,7 @@ const load=(key,fallback)=>{try{return JSON.parse(localStorage.getItem(key))??fa
   return updated;
  };
  let plannedPeriods=load('ponto2_plannedPeriods',[]),salaryConfig=normalizeSalaryConfig(load('ponto2_salaryConfig',{gross:'',deductions:[]})),planReturnPage='simulation';
- let cfg=normalizeSettings(load('ponto2_cfg',{})),records=load('ponto2_records',{}),adjustments=load('ponto2_adjustments',[]),holidayCache=load('ponto2_holidays',{}),currentMonth=localDate().slice(0,7),selectedSummaryMonth=localDate().slice(0,7),editFor=localDate(),page='home',scanURL=null,scanBusy=false;let toastTimeout;
+ let cfg=normalizeSettings(load('ponto2_cfg',{})),records=load('ponto2_records',{}),adjustments=load('ponto2_adjustments',[]),holidayCache=load('ponto2_holidays',{}),currentMonth=localDate().slice(0,7),homeMonth=load('ponto2_homeMonth',localDate().slice(0,7)),selectedSummaryMonth=localDate().slice(0,7),editFor=localDate(),page='home',scanURL=null,scanBusy=false;let toastTimeout;
 const save=()=>{localStorage.setItem('ponto2_cfg',JSON.stringify(cfg));localStorage.setItem('ponto2_records',JSON.stringify(records));localStorage.setItem('ponto2_adjustments',JSON.stringify(adjustments));localStorage.setItem('ponto2_holidays',JSON.stringify(holidayCache));localStorage.setItem('ponto2_plannedPeriods',JSON.stringify(plannedPeriods));localStorage.setItem('ponto2_salaryConfig',JSON.stringify(salaryConfig));};
 const alertUser=t=>{let v=$('toast');v.textContent=t;v.classList.add('show');clearTimeout(toastTimeout);toastTimeout=setTimeout(()=>v.classList.remove('show'),3200)};
 const parseTime=t=>{let m=/^(\d{1,2}):(\d{2})$/.exec((t||'').trim());if(!m)return null;let a=+m[1],b=+m[2];return a<24&&b<60?a*60+b:null};
@@ -436,7 +448,26 @@ function renderToday(){
  }
  $('todayCard').innerHTML=`<div class="today-heading"><small>${safe(weekday)}</small><span class="today-state ${c?'done':''}">${state}</span></div><div class="today-times">${times}</div><div class="today-foot ${hasAny?'':'empty'}">${detail}</div>`;
 }
-function renderHome(){renderToday();renderSalaryHome();renderVacationHome();const m=summaryMonth(localDate().slice(0,7)),sem=summarySem(semKey(localDate()));$('bankStat').textContent=fmtMin(sem.balance,true);$('bankStat').style.fontSize=sem.balance>9999?'20px':'';$('lateStat').textContent=brl(m.lateMoney);$('lateMinutes').textContent=`${m.lateMinutes} min em folha`;$('headMonth').textContent=new Date(localDate()+'T12:00:00').toLocaleDateString('pt-BR',{month:'short',year:'numeric'}).replace('.','');let dates=Object.keys(records).filter(d=>d.startsWith(localDate().slice(0,7))).sort().reverse().slice(0,5);$('homeRecords').innerHTML=dates.length?dates.map(d=>recordRow(d,records[d])).join(''):'<div class="empty">Ainda não há registros neste mês.</div>'}
+function changeHomeMonth(delta){
+ const [y,m]=homeMonth.split('-').map(Number);
+ homeMonth=localDate(new Date(y,m-1+delta,1)).slice(0,7);
+ localStorage.setItem('ponto2_homeMonth',JSON.stringify(homeMonth));
+ renderHome();
+}
+function renderHome(){
+ if(!/^\d{4}-(0[1-9]|1[0-2])$/.test(homeMonth))homeMonth=localDate().slice(0,7);
+ renderToday();renderSalaryHome();renderVacationHome();
+ const monthly=summaryMonth(homeMonth),sem=summarySem(semKey(homeMonth+'-01'),homeMonth);
+ $('bankStat').textContent=fmtMin(sem.balance,true);
+ $('bankStat').style.fontSize=Math.abs(sem.balance)>9999?'20px':'';
+ $('lateStat').textContent=brl(monthly.lateMoney);
+ $('lateMinutes').textContent=monthly.lateMinutes+' min em folha';
+ const [y,m]=homeMonth.split('-').map(Number);
+ $('headMonth').textContent=new Date(y,m-1,1).toLocaleDateString('pt-BR',{month:'short',year:'numeric'}).replace('.','');
+ $('homeMonthPicker').value=homeMonth;
+ const dates=Object.keys(records).filter(d=>d.startsWith(homeMonth)).sort().reverse().slice(0,5);
+ $('homeRecords').innerHTML=dates.length?dates.map(d=>recordRow(d,records[d])).join(''):'<div class="empty">Ainda não há registros no mês selecionado.</div>';
+}
 function renderRecords(){let [y,m]=currentMonth.split('-').map(Number);$('monthTitle').textContent=new Date(y,m-1,1).toLocaleDateString('pt-BR',{month:'long',year:'numeric'});let dates=Object.keys(records).filter(d=>d.startsWith(currentMonth)).sort().reverse();$('recordsList').innerHTML=dates.length?dates.map(d=>recordRow(d,records[d])).join(''):'<div class="empty">Não há registros neste mês.</div>';let h={...baseHolidays(y),...(holidayCache[`${y}_${cfg.uf.toUpperCase()}`]||{})};$('holidayNote').innerHTML=Object.entries(h).filter(([d])=>d.startsWith(currentMonth)).map(([d,n])=>`<p class="date-message">✦ ${fmtDate(d)} · ${safe(n)}</p>`).join('')}
 function openEdit(date=localDate()){if(!activeScan)$('editReceiptPanel').classList.add('hidden');editFor=date;$('editDate').value=date;let r=records[date]||{};['entry','lunchOut','lunchIn','exit'].forEach(k=>$(k).value=r[k]||'');$('note').value=r.note||'';document.querySelector(`input[name=delay][value=${r.delay==='bank'?'bank':'pay'}]`).checked=true;$('editTitle').textContent=records[date]?'Editar registro':'Novo registro';$('deleteDay').disabled=!records[date];previewDay();go('edit')}
 function readForm(){let x={};['entry','lunchOut','lunchIn','exit'].forEach(k=>x[k]=formatInput($(k).value));x.note=$('note').value.trim();x.delay=document.querySelector('input[name=delay]:checked').value;return x}
@@ -1354,7 +1385,10 @@ function bind(){
   plannedPeriods=plannedPeriods.filter(p=>p.id!==item.id);
   save();renderPlanning();alertUser('Período excluído');
  };
- document.querySelectorAll('.nav').forEach(b=>b.addEventListener('click',()=>{go(b.dataset.page)}));$('headMonth').onclick=()=>go('records');$('allRecords').onclick=()=>go('records');$('homeManual').onclick=()=>openEdit(localDate());
+ document.querySelectorAll('.nav').forEach(b=>b.addEventListener('click',()=>{go(b.dataset.page)}));$('homePrevMonth').onclick=()=>changeHomeMonth(-1);
+ $('homeNextMonth').onclick=()=>changeHomeMonth(1);
+ $('homeMonthPicker').onchange=()=>{const month=$('homeMonthPicker').value;if(/^\d{4}-(0[1-9]|1[0-2])$/.test(month)){homeMonth=month;localStorage.setItem('ponto2_homeMonth',JSON.stringify(homeMonth));renderHome()}};
+ $('allRecords').onclick=()=>{currentMonth=homeMonth;go('records')};$('homeManual').onclick=()=>openEdit(localDate());
  const openSheet=()=>{sheetSetStatus('');$('sheetUndoCard').classList.toggle('hidden',!localStorage.getItem('ponto2_sheet_undo'));go('sheet')};
  $('openSheetRecords').onclick=openSheet;
  $('openSheetSettings').onclick=openSheet;
