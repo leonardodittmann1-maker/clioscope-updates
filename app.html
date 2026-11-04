@@ -850,7 +850,7 @@ function sheetParseOCR(payload){
  }
  anchors.sort((a,b)=>a.y-b.y||a.date.localeCompare(b.date));
  const unique=[];for(const a of anchors)if(!unique.some(v=>v.date===a.date&&Math.abs(v.y-a.y)<25))unique.push(a);
- if(!unique.length)return [];
+ if(!unique.length)return geometric&&String(payload?.text||"").trim()?sheetParseOCR({text:payload.text,lines:[]}):[];
  const dateX=unique.reduce((n,a)=>n+a.x,0)/unique.length;
  const dateWidth=unique.reduce((n,a)=>n+a.width,0)/unique.length;
  let exitColumn=NaN;
