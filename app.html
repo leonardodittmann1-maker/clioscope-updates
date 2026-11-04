@@ -211,6 +211,7 @@
  .home-month-label span{font-size:9px}
  .home-month-label input{width:16px;min-width:16px}
 }
+.sheet-tag.neutral{background:#f3f0ed;color:#77716a}
 </style></head><body><div class="app">
 <div class="header"><div class="logo-title"><div class="logo" style="background:linear-gradient(135deg,#da9c86,#875144);color:white;font-size:29px;display:flex;align-items:center;justify-content:center">◷</div><div><h1>Meu Ponto</h1></div></div><div class="home-month-controls">
  <button id="homePrevMonth" class="home-month-arrow" type="button" aria-label="Mês anterior">‹</button>
@@ -277,7 +278,7 @@
     <div class="section-title" style="margin:0 0 8px"><h3>Conferência por dia</h3><span id="sheetCount" class="sheet-count"></span></div>
     <p id="sheetSummary" class="date-message"></p>
     <div class="btnline" style="margin-top:12px">
-      <button id="sheetSelectDiff" type="button" class="btn outline">Selecionar leituras confiáveis</button>
+      <button id="sheetSelectDiff" type="button" class="btn outline">Selecionar confiáveis</button>
       <button id="sheetUnselectAll" type="button" class="btn outline">Desmarcar tudo</button>
     </div>
     <p class="hint" style="margin:10px 0">Nenhum dia é selecionado automaticamente. Confira as quatro batidas de cada data, corrija o que o leitor não identificou e marque somente os dias desejados. Folgas e atestados sem batidas não serão importados.</p>
@@ -957,7 +958,7 @@ function sheetReceive(payload,error){
    const old=records[row.date];
    row.checked=false;
   }
-  sheetSetStatus(error?'Leitura parcial: '+error:'Leitura concluída. Confira os horários antes de aplicar.');
+  sheetSetStatus(error?'Leitura parcial: '+error:sheetRowsState.length+' datas reconhecidas. Compare a quantidade com a folha original; nenhum dia está selecionado.');
   sheetRenderReview();
  }catch(err){
   $('sheetResults').classList.add('hidden');
@@ -979,7 +980,7 @@ function sheetRowStatus(row){
  const old=records[row.date]||{};
  const blankConflicts=SHEET_KEYS.some(k=>Boolean(old[k])&&!row[k]);
  const diff=sheetRowDiff(row).length>0;
- if(!row.hasPunches&&!row.valid)return {label:'Sem batidas',className:'review'};
+ if(!row.hasPunches&&!row.valid)return {label:'Sem batidas',className:'neutral'};
  if(!row.valid)return {label:'Confira horários',className:'review'};
  if(blankConflicts)return {label:'Revisar campos vazios',className:'review'};
  if(!diff)return {label:'Sem diferença',className:'ok'};
@@ -989,9 +990,10 @@ function sheetRowStatus(row){
 function sheetUpdateSummary(){
  const valid=sheetRowsState.filter(r=>r.valid),changed=valid.filter(r=>sheetRowDiff(r).length);
  const uncertain=sheetRowsState.filter(r=>sheetRowStatus(r).className==='review');
+ const noPunch=sheetRowsState.filter(r=>!r.hasPunches);
  $('sheetCount').textContent=sheetRowsState.length+' dias';
  $('sheetSummary').textContent=valid.length+' dias com batidas válidas; '+changed.length
-  +' com diferenças; '+uncertain.length+' precisam de revisão.';
+  +' com diferenças; '+uncertain.length+' precisam de revisão; '+noPunch.length+' sem batidas.';
 }
 function sheetRenderReview(){
  $('sheetResults').classList.remove('hidden');
@@ -1248,6 +1250,7 @@ function thirteenthProjection(gross,config,ym){
  const totalInss=inssProgressive2026(gross);
  const tax13=estimateIrrf2026(gross,totalInss);
  const second=moneyRound(Math.max(0,gross-half-totalInss-tax13));
+ if(Number(ym.slice(0,4))<2026)return null;
  if(ym.slice(5,7)===firstMonth)return {kind:'first',amount:half,base:gross};
  if(ym.slice(5,7)==='12')return {kind:'second',amount:second,base:gross,inss:totalInss,irrf:tax13};
  return null;
@@ -1314,8 +1317,8 @@ function renderSalaryHome(){
  if(thirteenth?.kind==='first')annual.push(line('13º — 1ª parcela (adiantamento)',thirteenth.amount,'+'));
  if(thirteenth?.kind==='second'){
   annual.push(line('13º — 2ª parcela, líquida estimada',thirteenth.amount,'+'));
-  annual.push(line('INSS calculado no 13º integral',thirteenth.inss,'−'));
-  if(thirteenth.irrf)annual.push(line('IRRF do 13º',thirteenth.irrf,'−'));
+  annual.push(line('INSS do 13º (já abatido na parcela)',thirteenth.inss));
+  if(thirteenth.irrf)annual.push(line('IRRF do 13º (já abatido na parcela)',thirteenth.irrf));
  }
  for(const v of vacation){
   annual.push('<div class="salary-annual-period"><strong>Férias: '+safe(fmtDate(v.start))+' até '+safe(fmtDate(v.end))+'</strong>'
