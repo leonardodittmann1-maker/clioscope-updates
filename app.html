@@ -844,14 +844,29 @@ function sheetFindDates(text){
 function sheetTokens(line){
  const text=String(line.text||''),tokens=[];
  const rx=/(^|[^0-9])([0-2]?\d)\s*[:.]\s*([0-5]\d)(?!\d)/g;
- let m;
- while((m=rx.exec(text))){
-  const h=Number(m[2]),mi=Number(m[3]);
-  if(h>23)continue;
-  const idx=m.index+m[1].length;
-  tokens.push({time:String(h).padStart(2,'0')+':'+String(mi).padStart(2,'0'),
-   x:line.x+(idx+m[0].length/2)*line.w/Math.max(1,text.length)});
+ const extract=(source,startX,width,fromWords)=>{
+  let m;
+  rx.lastIndex=0;
+  while((m=rx.exec(String(source||'')))){
+   const h=Number(m[2]),mi=Number(m[3]);
+   if(h>23)continue;
+   const idx=m.index+m[1].length;
+   const center=startX+(idx+(m[0].length-m[1].length)/2)*width/Math.max(1,String(source).length);
+   tokens.push({time:String(h).padStart(2,'0')+':'+String(mi).padStart(2,'0'),
+    x:center,fromWords});
+  }
+ };
+ // No OCR novo, cada palavra vem com a própria posição na imagem.
+ // Evita distribuir todos os horários igualmente ao longo de uma linha
+ // que contenha colunas muito distantes.
+ if(Array.isArray(line.words)&&line.words.length){
+  for(const word of line.words){
+   if(!word||!word.text)continue;
+   extract(word.text,Number(word.x)||0,Number(word.w)||0,true);
+  }
  }
+ if(tokens.length)return tokens;
+ extract(text,Number(line.x)||0,Number(line.w)||0,false);
  return tokens;
 }
 function sheetApproxTokenX(line,idx,len){
@@ -864,8 +879,8 @@ function sheetInterpretRow(anchor,rowLines,exitColumn){
  const reason=reasonMatch?reasonMatch[0].replace(/\s+/g,' ').trim():'';
  const width=Math.max(30,anchor.width),exitX=Number.isFinite(exitColumn)?exitColumn:anchor.x+width*6.2;
  const candidates=rowLines.flatMap(sheetTokens).filter(t=>t.time!=='00:00').sort((a,b)=>a.x-b.x);
- let left=candidates.filter(t=>t.x>anchor.x+width*1.12&&t.x<exitX-width*.78);
- let exits=candidates.filter(t=>t.x>=exitX-width*.76&&t.x<=exitX+width*.75);
+ let left=candidates.filter(t=>t.x>anchor.x+width*.86&&t.x<exitX-width*.60);
+ let exits=candidates.filter(t=>t.x>=exitX-width*.60&&t.x<=exitX+width*.66);
  // Em alguns OCRs a linha toda é reconhecida num único bloco e o
  // posicionamento estimado do último horário fica impreciso.
  if(exits.length===0&&left.length>=4)exits=[left.pop()];
@@ -886,22 +901,36 @@ function sheetInterpretRow(anchor,rowLines,exitColumn){
  }
  let valid=Boolean(entry&&exit&&parseTime(entry)!==null&&parseTime(exit)>parseTime(entry));
  if(lunchOut||lunchIn)valid=valid&&Boolean(lunchOut&&lunchIn&&parseTime(lunchOut)>parseTime(entry)&&parseTime(lunchIn)>parseTime(lunchOut)&&parseTime(exit)>parseTime(lunchIn));
- const uncertain=(left.length===2||exits.length!==1||fallback||usedFallback);
+ const uncertain=(left.length===2||exits.length!==1||fallback||usedFallback||
+  (left.length>3)|| (exits.length>1));
  const hasPunches=Boolean(entry||lunchOut||lunchIn||exit);
  return {date:anchor.date,entry,lunchOut,lunchIn,exit,reason,valid,
   confidence:valid&&!uncertain?'alta':'revisar',checked:false,hasPunches,source:joined};
 }
 function sheetParseOCR(payload){
  let lines=Array.isArray(payload?.lines)?payload.lines.map(l=>({text:String(l.text||''),x:Number(l.x)||0,
-  y:Number(l.y)||0,w:Number(l.w)||0,h:Number(l.h)||0})).filter(l=>l.text.trim()):[];
+  y:Number(l.y)||0,w:Number(l.w)||0,h:Number(l.h)||0,
+  words:Array.isArray(l.words)?l.words.map(w=>({text:String(w.text||''),x:Number(w.x)||0,
+   y:Number(w.y)||0,w:Number(w.w)||0,h:Number(w.h)||0})):[]})).filter(l=>l.text.trim()):[];
  const geometric=lines.length>0;
  if(!geometric){
   lines=String(payload?.text||'').split(/\r?\n/).map((text,i)=>({text,x:0,y:i*25,w:0,h:18})).filter(l=>l.text.trim());
  }
  const anchors=[];
- for(const line of lines)for(const d of sheetFindDates(line.text)){
-  anchors.push({...d,x:sheetApproxTokenX(line,d.index,d.len)-Math.max(25,(line.w||0)*d.len/Math.max(1,line.text.length))/2,
-   width:Math.max(25,(line.w||0)*d.len/Math.max(1,line.text.length)),y:line.y+(line.h||12)/2});
+ for(const line of lines){
+  const wordAnchors=[];
+  if(Array.isArray(line.words))for(const word of line.words||[]){
+   for(const d of sheetFindDates(word.text)){
+    wordAnchors.push({...d,x:word.x+(d.index/Math.max(1,word.text.length))*word.w,
+     width:Math.max(20,(d.len/Math.max(1,word.text.length))*word.w),
+     y:word.y+(word.h||line.h||12)/2});
+   }
+  }
+  if(wordAnchors.length){anchors.push(...wordAnchors);continue}
+  for(const d of sheetFindDates(line.text)){
+   anchors.push({...d,x:sheetApproxTokenX(line,d.index,d.len)-Math.max(25,(line.w||0)*d.len/Math.max(1,line.text.length))/2,
+    width:Math.max(25,(line.w||0)*d.len/Math.max(1,line.text.length)),y:line.y+(line.h||12)/2});
+  }
  }
  anchors.sort((a,b)=>a.y-b.y||a.date.localeCompare(b.date));
  const unique=[];for(const a of anchors)if(!unique.some(v=>v.date===a.date&&Math.abs(v.y-a.y)<25))unique.push(a);
@@ -911,8 +940,12 @@ function sheetParseOCR(payload){
  let exitColumn=NaN;
  const header=lines.filter(l=>l.y<unique[0].y&&/\bSA[IÍ]DA\b/i.test(l.text)).sort((a,b)=>b.y-a.y)[0];
  if(header){
-  const match=/SA[IÍ]DA/i.exec(header.text);
-  if(match)exitColumn=sheetApproxTokenX(header,match.index,match[0].length);
+  const word=header.words?.find(w=>/SA[IÍ]DA/i.test(w.text));
+  if(word)exitColumn=word.x+word.w/2;
+  else {
+   const match=/SA[IÍ]DA/i.exec(header.text);
+   if(match)exitColumn=sheetApproxTokenX(header,match.index,match[0].length);
+  }
  }
  if(!Number.isFinite(exitColumn))exitColumn=dateX+dateWidth*6.2;
  const result=[];
@@ -942,6 +975,62 @@ function sheetParseOCR(payload){
  }
  return result.sort((a,b)=>a.date.localeCompare(b.date));
 }
+
+function sheetRowQuality(row){
+ if(!row)return -1;
+ let score=(row.valid?100:0)+(row.confidence==='alta'?20:0);
+ score+=SHEET_KEYS.reduce((n,k)=>n+(row[k]?5:0),0);
+ if(row.hasPunches)score+=5;
+ return score;
+}
+function sheetCombineReadings(payload){
+ const variants=[payload,...(Array.isArray(payload?.variants)?payload.variants:[])];
+ const buckets=new Map();
+ for(const [variantIndex,variant] of variants.entries()){
+  const parsed=sheetParseOCR(variant);
+  for(const row of parsed){
+   if(!buckets.has(row.date))buckets.set(row.date,[]);
+   buckets.get(row.date).push({...row,reading:variantIndex});
+  }
+ }
+ let merged=[];
+ for(const [date,versions] of buckets.entries()){
+  versions.sort((a,b)=>sheetRowQuality(b)-sheetRowQuality(a));
+  const best={...versions[0],choice:'app'};
+  const conflicting=versions.filter(v=>v.valid&&best.valid&&
+   SHEET_KEYS.some(k=>(v[k]||'')!==(best[k]||'')));
+  // Se os reconhecimentos ampliado e original não concordam,
+  // os dois ficam disponíveis para conferência manual.
+  best.alternatives=conflicting.length?conflicting.map(v=>({
+   entry:v.entry,lunchOut:v.lunchOut,lunchIn:v.lunchIn,exit:v.exit,reading:v.reading
+  })):[];
+  if(best.alternatives.length)best.confidence='revisar';
+  merged.push(best);
+ }
+ // Um espelho mensal inteiro deve ter praticamente todas as datas.
+ // Apresenta os dias não reconhecidos para impedir importação incompleta
+ // sem o conhecimento do usuário.
+ const ymCount=new Map();
+ for(const row of merged){const ym=row.date.slice(0,7);ymCount.set(ym,(ymCount.get(ym)||0)+1)}
+ const mainMonth=[...ymCount.entries()].sort((a,b)=>b[1]-a[1])[0];
+ let expected=0,recognized=0;
+ if(mainMonth&&mainMonth[1]>=7){
+  const ym=mainMonth[0],[year,month]=ym.split('-').map(Number);
+  expected=new Date(year,month,0).getDate();
+  recognized=mainMonth[1];
+  const already=new Set(merged.map(x=>x.date));
+  for(let day=1;day<=expected;day++){
+   const date=ym+'-'+String(day).padStart(2,'0');
+   if(already.has(date))continue;
+   merged.push({date,entry:'',lunchOut:'',lunchIn:'',exit:'',
+    reason:'Data não reconhecida na foto',valid:false,hasPunches:false,
+    confidence:'revisar',choice:'app',missingFromOCR:true,alternatives:[]});
+  }
+ }
+ merged.sort((a,b)=>a.date.localeCompare(b.date));
+ return {rows:merged,expected,recognized,variants:variants.length};
+}
+
 function sheetSetStatus(message){
  $('sheetStatus').textContent=message||'';
  $('sheetStatus').classList.toggle('hidden',!message);
@@ -980,18 +1069,23 @@ function sheetReceive(payload,error){
  try{
   const obj=typeof payload==='string'?JSON.parse(payload):payload||{};
   sheetLastText=obj.text||'';
-  sheetRowsState=sheetParseOCR(obj);
+  const combined=sheetCombineReadings(obj);
+  sheetRowsState=combined.rows;
   $('sheetRaw').textContent=sheetLastText||'Nenhum texto retornado pelo leitor.';
   if(!sheetRowsState.length){
    $('sheetResults').classList.add('hidden');
    sheetSetStatus('Não consegui identificar as datas. Fotografe a folha inteira, sem reflexos, ou tente outra orientação.'+(error?' '+error:''));
    return;
   }
-  for(const row of sheetRowsState){
-   const old=records[row.date];
-   row.choice="app";
-  }
-  sheetSetStatus(error?'Leitura parcial: '+error:sheetRowsState.length+' datas reconhecidas. Compare a quantidade com a folha original; nenhum dia está selecionado.');
+  for(const row of sheetRowsState)row.choice='app';
+  const coverage=combined.expected
+   ?combined.recognized+' de '+combined.expected+' datas reconhecidas em '+sheetRowsState[0].date.slice(0,7)+'. '
+   :sheetRowsState.length+' datas identificadas. ';
+  sheetSetStatus((error?'Leitura parcial: '+error+' · ':'')+coverage+
+   (combined.expected&&combined.recognized<combined.expected
+   ?'Os dias ausentes estão sinalizados para revisão. ':'')+
+   (combined.variants>1?'Usei duas leituras da foto. ':'')+
+   'Nenhum dia será importado sem sua escolha.');
   sheetRenderReview();
  }catch(err){
   $('sheetResults').classList.add('hidden');
@@ -999,6 +1093,9 @@ function sheetReceive(payload,error){
  }
 }
 window.__nativeSheetOCRCallback=function(payload,error){sheetReceive(payload,error)};
+window.__nativeSheetOCRProgress=function(message){
+ if(sheetModePending)sheetSetStatus(message);
+};
 const previousReceiptOcrCallback=window.__nativeOCRCallback;
 window.__nativeOCRCallback=function(text,error){
  if(sheetModePending){sheetReceive({text,lines:[]},error);return}
