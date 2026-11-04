@@ -212,6 +212,12 @@
  .home-month-label input{width:16px;min-width:16px}
 }
 .sheet-tag.neutral{background:#f3f0ed;color:#77716a}
+
+.salary-total-forecast{border-top:1px solid var(--line);margin-top:12px;padding-top:10px}
+.salary-total-forecast .value-line:last-child{color:#187152;font-weight:850;background:#edf7f1;border-radius:9px;padding:11px 10px;margin-top:5px}
+.salary-total-forecast .value-line:last-child b{font-size:16px}
+.salary-home-rows .value-line span{min-width:0;overflow-wrap:anywhere}
+.salary-annual-period{line-height:1.5}
 </style></head><body><div class="app">
 <div class="header"><div class="logo-title"><div class="logo" style="background:linear-gradient(135deg,#da9c86,#875144);color:white;font-size:29px;display:flex;align-items:center;justify-content:center">◷</div><div><h1>Meu Ponto</h1></div></div><div class="home-month-controls">
  <button id="homePrevMonth" class="home-month-arrow" type="button" aria-label="Mês anterior">‹</button>
@@ -1179,7 +1185,7 @@ function salaryDraftFromInputs(){
  const numeric=id=>{const v=$(id).value.trim();return v===''?'':parseMoneyText(v)};
  return {gross:numeric('salaryGross'),inssMode:$('salaryInssMode').value==='manual'?'manual':'auto',
   inssManual:numeric('salaryInssManual'),vrPerDay:numeric('salaryVrDaily'),
-  healthPlan:numeric('salaryHealth'),first13Month:$('salary13FirstMonth').value||'11',monthlyGross:salaryConfig?.monthlyGross||{},
+  healthPlan:numeric('salaryHealth'),first13Month:$('salary13FirstMonth').value||'11',
   transit:numeric('salaryTransit'),additional:numeric('salaryAdditional'),
   otherDeduction:numeric('salaryOtherDeduction'),reimbursement:numeric('salaryReimbursement'),
   legacyVrFixed:''};
@@ -1262,85 +1268,157 @@ function thirteenthProjection(gross,config,ym){
  if(ym.slice(5,7)==='12')return {kind:'second',amount:second,base:gross,inss:totalInss,irrf:tax13};
  return null;
 }
+
+function dateIsPaymentBusinessDay(date){
+ const dow=new Date(date+'T12:00:00').getDay();
+ return dow!==0&&dow!==6&&!holidayName(date);
+}
+function advanceToLastPaymentDay(date){
+ // Depósitos por banco antecipados quando prazo cair em sábado, domingo ou feriado.
+ let d=date,limit=0;
+ while(!dateIsPaymentBusinessDay(d)&&limit++<10)d=addDays(d,-1);
+ return d;
+}
+function salaryPaymentLimit(ym){
+ // Salário da competência: 5º dia útil do mês seguinte.
+ // O sábado entra na contagem legal, mas a disponibilidade bancária
+ // é antecipada para a última data com expediente bancário.
+ const year=Number(ym.slice(0,4)),month=Number(ym.slice(5,7));
+ const first=localDate(new Date(year,month,1));
+ let date=first,count=0;
+ for(let i=0;i<12;i++){
+  const weekday=new Date(date+'T12:00:00').getDay();
+  if(weekday!==0&&!holidayName(date)){
+   count++;
+   if(count===5)return advanceToLastPaymentDay(date);
+  }
+  date=addDays(date,1);
+ }
+ return date;
+}
+function vacationDaysInMonth(ym){
+ // O período é persistente: a mesma reserva afeta qualquer competência
+ // em que exista férias, mesmo que tenha começado no mês anterior.
+ const [year,month]=ym.split('-').map(Number);
+ const count=new Date(year,month,0).getDate();
+ const periods=vacationPlans();
+ let days=0;
+ for(let day=1;day<=count;day++){
+  const date=ym+'-'+String(day).padStart(2,'0');
+  if(periods.some(p=>p.start<=date&&date<=p.end))days++;
+ }
+ // Meses integralmente cobertos por férias não podem deixar remuneração
+ // residual apenas por terem 28, 29 ou 31 dias.
+ return {calendarDays:days,chargeDays:days===count?30:Math.min(30,days)};
+}
+function thirteenthPaymentLimit(ym,kind){
+ const year=ym.slice(0,4);
+ if(kind==='second')return advanceToLastPaymentDay(year+'-12-20');
+ // A primeira parcela pode ser adiantada no mês escolhido.
+ // Em novembro seu prazo legal é 30/11; nos demais meses, último dia útil
+ // é uma data de planejamento, não garantia de depósito pela empresa.
+ const y=Number(year),m=Number(ym.slice(5,7));
+ return advanceToLastPaymentDay(localDate(new Date(y,m,0)));
+}
 function vacationPaymentProjections(gross,ym){
- return vacationPlans().filter(p=>addDays(p.start,-2).slice(0,7)===ym).map(p=>{
+ return vacationPlans().map(p=>{
   const days=periodTotalDays(p.start,p.end);
-  const regular=moneyRound(gross*days/30);
-  const third=moneyRound(regular/3);
-  return {start:p.start,end:p.end,days,payDate:addDays(p.start,-2),
-    regular,third,total:moneyRound(regular+third)};
- });
+  const regular=moneyRound(gross*days/30),third=moneyRound(regular/3);
+  const total=moneyRound(regular+third);
+  const inssEstimate=inssProgressive2026(total);
+  const irrfEstimate=estimateIrrf2026(total,inssEstimate);
+  const payDate=advanceToLastPaymentDay(addDays(p.start,-2));
+  return {start:p.start,end:p.end,days,payDate,regular,third,total,
+    inssEstimate,irrfEstimate,
+    netEstimate:moneyRound(Math.max(0,total-inssEstimate-irrfEstimate))};
+ }).filter(p=>p.payDate.slice(0,7)===ym);
+}
+function salaryForecastForMonth(ym){
+ const gross=Number(salaryConfig?.gross);
+ const valid=salaryConfig?.gross!==''&&Number.isFinite(gross)&&gross>0;
+ if(!valid)return null;
+ const vacationDays=vacationDaysInMonth(ym);
+ const vacationAbatement=moneyRound(gross*vacationDays.chargeDays/30);
+ const regularGross=moneyRound(Math.max(0,gross-vacationAbatement));
+ const additional=optionalMoney(salaryConfig,'additional');
+ const payrollGross=moneyRound(regularGross+additional);
+ const totals=salaryTotals(payrollGross,salaryConfig,ym);
+ const late=summaryMonth(ym).lateMoney;
+ const transit=optionalMoney(salaryConfig,'transit');
+ const other=optionalMoney(salaryConfig,'otherDeduction');
+ const reimb=optionalMoney(salaryConfig,'reimbursement');
+ const irrf=estimateIrrf2026(payrollGross,totals.inss);
+ const netMonthly=moneyRound(payrollGross-totals.deductions-late-transit-other-irrf+reimb);
+ const thirteenth=thirteenthProjection(gross,salaryConfig,ym);
+ const vacation=vacationPaymentProjections(gross,ym);
+ const thirteenthCash=thirteenth?.amount||0;
+ const vacationCash=moneyRound(vacation.reduce((sum,p)=>sum+p.netEstimate,0));
+ const totalExpected=moneyRound(netMonthly+thirteenthCash+vacationCash);
+ return {gross,vacationDays,vacationAbatement,regularGross,payrollGross,totals,late,transit,
+  other,reimb,irrf,netMonthly,thirteenth,vacation,thirteenthCash,vacationCash,totalExpected,
+  salaryDeadline:salaryPaymentLimit(ym)};
 }
 function renderSalaryHome(){
  const period=homeMonth;
- const specific=salaryConfig?.monthlyGross?.[period];
- const gross=Number(specific??salaryConfig?.gross);
- const valid=(specific??salaryConfig?.gross)!==''&&Number.isFinite(gross)&&gross>0;
  const [y,m]=period.split('-').map(Number);
- $('salaryMonthLabel').textContent=new Date(y,m-1,1).toLocaleDateString('pt-BR',{month:'long',year:'numeric'})+' · líquido do mês';
+ $('salaryMonthLabel').textContent=new Date(y,m-1,1)
+  .toLocaleDateString('pt-BR',{month:'long',year:'numeric'})+' · total previsto';
  const annualCard=$('salaryAnnualCard');
  annualCard.classList.add('hidden');
  $('salaryAnnualContent').innerHTML='';
- if(!valid){
+ const p=salaryForecastForMonth(period);
+ if(!p){
   $('salaryHomeValue').textContent='Configurar';
   $('salaryHomeBreakdown').innerHTML='<p class="hint">Informe o salário bruto em Mais → Salário e descontos.</p>';
   return;
  }
- const additional=optionalMoney(salaryConfig,'additional');
- const taxableGross=gross+additional;
- const totals=salaryTotals(taxableGross,salaryConfig,period);
- const late=summaryMonth(period).lateMoney;
- const transit=optionalMoney(salaryConfig,'transit');
- const other=optionalMoney(salaryConfig,'otherDeduction');
- const reimb=optionalMoney(salaryConfig,'reimbursement');
- const irrf=estimateIrrf2026(taxableGross,totals.inss);
- const net=moneyRound(taxableGross-totals.deductions-late-transit-other-irrf+reimb);
- $('salaryHomeValue').textContent=brl(net);
+ $('salaryHomeValue').textContent=brl(p.totalExpected);
  const line=(label,value,sign='')=>'<div class="value-line"><span>'+label+'</span><b>'+sign+brl(value)+'</b></div>';
  $('salaryHomeBreakdown').innerHTML='<div class="salary-home-rows">'
-  +line('Salário bruto mensal',gross)
-  +(additional?line('Adicionais tributáveis',additional,'+'):'')
-  +line('INSS'+(totals.inssMode==='auto'?' (progressivo 2026)':' (informado)'),totals.inss,'−')
-  +line('IRRF estimado (referência 2026)',irrf,'−')
-  +line('VR ('+totals.days+' dias × '+brl(totals.vrRate)+')',totals.vr,'−')
-  +line('Plano de saúde',totals.health,'−')
-  +(transit?line('Vale-transporte',transit,'−'):'')
-  +(other?line('Outros descontos',other,'−'):'')
-  +(reimb?line('Reembolsos e créditos',reimb,'+'):'')
-  +line('Atrasos em folha',late,'−')
-  +line('Total líquido mensal estimado',net)
-  +line('FGTS — depósito da empresa (não descontado)',totals.fgts)
-  +'</div>'
-  +'<details class="salary-month-override"><summary>Definir salário bruto deste mês</summary>'
-  +'<p class="hint">'+(specific!=null?'Este mês usa um salário específico.':'Sem salário específico: usamos o bruto informado nas configurações.')+'</p>'
-  +'<div class="salary-override-row"><input id="salaryMonthlyGross" aria-label="Salário bruto de '+safe(period)+'" inputmode="decimal" placeholder="Salário do mês" value="'+safe(specific==null?'':formatMoneyInput(specific))+'">'
-  +'<button type="button" data-save-salary-month>Salvar mês</button></div>'
-  +(specific!=null?'<button type="button" class="salary-month-reset" data-reset-salary-month>Voltar ao salário padrão</button>':'')
-  +'</details>';
- const thirteenthBase=Number(salaryConfig?.monthlyGross?.[period.slice(0,4)+'-12']??salaryConfig?.gross);
- const thirteenth=thirteenthProjection(thirteenthBase,salaryConfig,period);
- const vacation=vacationPaymentProjections(gross,period);
+  +line('Salário bruto mensal de referência',p.gross)
+  +(p.vacationDays.calendarDays
+   ?line('Férias já antecipadas ('+p.vacationDays.calendarDays+' dias neste mês)',p.vacationAbatement,'−'):'')
+  +(p.payrollGross!==p.regularGross?line('Adicionais tributáveis',p.payrollGross-p.regularGross,'+'):'')
+  +line('Salário-base considerado nesta folha',p.payrollGross)
+  +line('INSS'+(p.totals.inssMode==='auto'?' (estimado)':' (informado)'),p.totals.inss,'−')
+  +line('IRRF estimado',p.irrf,'−')
+  +line('VR ('+p.totals.days+' dias × '+brl(p.totals.vrRate)+')',p.totals.vr,'−')
+  +line('Plano de saúde',p.totals.health,'−')
+  +(p.transit?line('Vale-transporte',p.transit,'−'):'')
+  +(p.other?line('Outros descontos',p.other,'−'):'')
+  +(p.reimb?line('Reembolsos e créditos',p.reimb,'+'):'')
+  +line('Atrasos em folha',p.late,'−')
+  +line('Salário líquido ajustado (até '+fmtDate(p.salaryDeadline)+')',p.netMonthly)
+  +line('FGTS — depósito da empresa (não descontado)',p.totals.fgts)
+  +'</div>';
  const annual=[];
- if(thirteenth?.kind==='first')annual.push(line('13º — 1ª parcela (adiantamento)',thirteenth.amount,'+'));
- if(thirteenth?.kind==='second'){
-  annual.push(line('13º — 2ª parcela, líquida estimada',thirteenth.amount,'+'));
-  annual.push(line('INSS do 13º (já abatido na parcela)',thirteenth.inss));
-  if(thirteenth.irrf)annual.push(line('IRRF do 13º (já abatido na parcela)',thirteenth.irrf));
+ if(p.thirteenth?.kind==='first'){
+  annual.push(line('13º — 1ª parcela, até '+fmtDate(thirteenthPaymentLimit(period,'first')),p.thirteenth.amount,'+'));
+ }else if(p.thirteenth?.kind==='second'){
+  annual.push(line('13º — 2ª parcela, até '+fmtDate(thirteenthPaymentLimit(period,'second')),p.thirteenth.amount,'+'));
+  annual.push(line('INSS do 13º (já descontado na parcela)',p.thirteenth.inss));
+  if(p.thirteenth.irrf)annual.push(line('IRRF do 13º (já descontado na parcela)',p.thirteenth.irrf));
  }
- for(const v of vacation){
+ for(const v of p.vacation){
   annual.push('<div class="salary-annual-period"><strong>Férias: '+safe(fmtDate(v.start))+' até '+safe(fmtDate(v.end))+'</strong>'
-   +'<span>'+v.days+' dias corridos · pagamento até '+safe(fmtDate(v.payDate))+'</span></div>');
-  annual.push(line('Adiantamento da remuneração de férias (bruto)',v.regular));
+   +'<span>'+v.days+' dias corridos · depósito previsto até '+safe(fmtDate(v.payDate))+'</span></div>');
+  annual.push(line('Remuneração antecipada de férias (bruto)',v.regular));
   annual.push(line('1/3 constitucional das férias (bruto)',v.third,'+'));
-  annual.push(line('Total antecipado bruto, incluindo 1/3',v.total));
+  annual.push(line('Descontos estimados no adiantamento (INSS + IRRF)',v.inssEstimate+v.irrfEstimate,'−'));
+  annual.push(line('Adiantamento líquido estimado (até '+fmtDate(v.payDate)+')',v.netEstimate,'+'));
  }
  if(annual.length){
   annualCard.classList.remove('hidden');
   $('salaryAnnualContent').innerHTML=annual.join('')
-   +'<p class="hint">'+(vacation.length
-    ?'O adiantamento de férias já contém parte do salário do período: não o some integralmente ao salário mensal. INSS, IRRF, descontos e compensações de férias no holerite podem alterar o valor líquido.'
-    :'Valores de 13º separados do salário mensal; a segunda parcela já desconta o INSS e o IRRF estimados.')+'</p>';
+   +'<p class="hint">Extras incluídos no total previsto: '+brl(p.thirteenthCash+p.vacationCash)+
+    '. O adiantamento de férias aparece uma vez, no mês do depósito. As folhas dos meses de férias são reduzidas automaticamente, mesmo quando o período começa no mês anterior. O líquido efetivo depende das retenções e dos ajustes do holerite.</p>';
  }
+ $('salaryHomeBreakdown').innerHTML+='<div class="salary-total-forecast">'
+  +line('Salário líquido ajustado',p.netMonthly)
+  +(p.thirteenthCash?line('13º previsto neste mês',p.thirteenthCash,'+'):'')
+  +(p.vacationCash?line('Adiantamento líquido de férias previsto',p.vacationCash,'+'):'')
+  +line('Total estimado (salário + extras)',p.totalExpected)
+  +'</div>';
 }
 function openSalarySettings(){
  go('settings');
@@ -1578,19 +1656,7 @@ function bind(){
   else $('salaryHomeDetails').classList.toggle('hidden');
  };
  $('salaryHomeConfigure').onclick=openSalarySettings;
- $('salaryHomeDetails').onclick=e=>{
-  if(e.target.closest('[data-save-salary-month]')){
-   const value=$('salaryMonthlyGross')?.value?.trim()||'';
-   const gross=parseMoneyText(value);
-   if(!value||!Number.isFinite(gross)||gross<=0){alertUser('Informe um salário bruto válido para o mês');return}
-   salaryConfig.monthlyGross=salaryConfig.monthlyGross||{};
-   salaryConfig.monthlyGross[homeMonth]=gross;save();renderHome();return;
-  }
-  if(e.target.closest('[data-reset-salary-month]')){
-   if(salaryConfig.monthlyGross)delete salaryConfig.monthlyGross[homeMonth];
-   save();renderHome();
-  }
- };
+
  $('salarySave').onclick=saveSalaryConfig;
  for(const id of ['salaryGross','salaryInssMode','salaryInssManual','salaryVrDaily','salaryHealth','salary13FirstMonth','salaryTransit','salaryAdditional','salaryOtherDeduction','salaryReimbursement']){
   $(id).addEventListener(id==='salaryInssMode'?'change':'input',salaryPreviewDraft);
