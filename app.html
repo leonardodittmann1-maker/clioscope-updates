@@ -568,33 +568,73 @@ function baseHolidays(y){let h={};[['01-01','Ano-Novo'],['04-21','Tiradentes'],[
 function holidayName(date){const yr=Number(date.slice(0,4));return {...baseHolidays(yr),...(holidayCache[`${yr}_${cfg.uf.toUpperCase()}`]||{})}[date]||''}
 function isRestDay(date){let d=new Date(date+'T12:00:00').getDay();return d===0||d===6||!!holidayName(date)}
 const EXIT_TOLERANCE_MIN=5;
+function extraBreaksAnalysis(r,entry=null,exit=null,lunchStart=null,lunchReturn=null){
+ const items=Array.isArray(r?.extraBreaks)?r.extraBreaks:[];
+ if(items.length>20)return {valid:false,minutes:0,open:false,error:'Limite de 20 intervalos por dia.'};
+ const periods=[];
+ let open=false,minutes=0;
+ for(let i=0;i<items.length;i++){
+  const item=items[i]||{},outRaw=String(item.out||'').trim(),backRaw=String(item.back||'').trim();
+  if(!outRaw&&!backRaw)continue;
+  const start=parseTime(outRaw),end=backRaw?parseTime(backRaw):null;
+  const name='Intervalo '+(i+1);
+  if(start===null||backRaw&&end===null)return {valid:false,error:name+': confira os horários.',minutes,open};
+  if(end!==null&&end<=start)return {valid:false,error:name+': o retorno deve ser depois da saída.',minutes,open};
+  if(entry!==null&&start<entry)return {valid:false,error:name+': a saída é anterior à entrada.',minutes,open};
+  if(exit!==null&&start>=exit)return {valid:false,error:name+': começa depois da saída final.',minutes,open};
+  if(exit!==null&&end!==null&&end>exit)return {valid:false,error:name+': termina depois da saída final.',minutes,open};
+  if(lunchStart!==null&&lunchReturn!==null&&start<lunchReturn&&(end===null||end>lunchStart))
+   return {valid:false,error:name+': coincide com o almoço. Registre cada pausa somente uma vez.',minutes,open};
+  if(end===null)open=true;
+  else minutes+=end-start;
+  periods.push({start,end,name});
+ }
+ periods.sort((a,b)=>a.start-b.start);
+ for(let i=1;i<periods.length;i++){
+  if(periods[i-1].end===null||periods[i].start<periods[i-1].end)
+   return {valid:false,error:'Os intervalos adicionais estão sobrepostos ou fora de ordem.',minutes,open};
+ }
+ return {valid:true,minutes,open,error:'',count:periods.length};
+}
+function lateTreatmentMinutes(date,r,entry){
+ const isRest=isRestDay(date),late=Math.max(0,entry-parseTime(cfg.end));
+ const lateEligible=!isRest&&late>Number(cfg.tolerance);
+ const pay=lateEligible&&r.delay!=='bank'&&r.delay!=='abono'?late:0;
+ const abono=lateEligible&&r.delay==='abono'?late:0;
+ const bank=!isRest&&late>0&&!pay&&!abono?late:0;
+ return {late,pay,abono,bank};
+}
 function calc(date,r){
  const entry=parseTime(r.entry),exit=parseTime(r.exit);
  const l1=parseTime(r.lunchOut),l2=parseTime(r.lunchIn);
  if(entry===null||exit===null||exit<=entry)return null;
- // Horários de almoço vazios significam jornada sem pausa.
- // Se apenas uma batida de almoço estiver preenchida, o dia ainda está incompleto.
+ // Almoço ausente: sem pausa. Almoço incompleto: registro parcial.
  if((l1===null)!==(l2===null))return null;
  if(l1!==null&&!(entry<=l1&&l1<l2&&l2<=exit))return null;
+ const extra=extraBreaksAnalysis(r,entry,exit,l1,l2);
+ if(!extra.valid||extra.open)return null;
  const lunchMinutes=l1===null?0:l2-l1;
- const minutes=exit-entry-lunchMinutes;
+ const minutes=exit-entry-lunchMinutes-extra.minutes;
  if(minutes<0)return null;
- const isRest=isRestDay(date),late=Math.max(0,entry-parseTime(cfg.end));
- const latePay=!isRest&&late>+cfg.tolerance&&r.delay!=='bank'?late:0;
- const lateBank=!isRest&&late>0&&latePay===0?late:0;
- // Se o atraso é descontado na folha, a entrada contratual das 9h
- // é a referência do banco. Isso evita descontar o mesmo atraso duas vezes.
- const bankMinutes=minutes+latePay;
- // Tolerância simétrica na saída: 5 min não geram débito nem crédito.
- // No sexto minuto é lançado o período integral (não apenas 1 minuto).
- const rawBalance=bankMinutes-(+cfg.workday);
+ const isRest=isRestDay(date);
+ const lateParts=lateTreatmentMinutes(date,r,entry);
+ const adjustedMinutes=minutes+lateParts.pay+lateParts.abono;
+ // A saída antecipada é tratada separadamente, sem uma segunda
+ // cobrança do atraso já pago ou abonado.
+ const earlyMinutes=isRest?0:Math.max(0,Number(cfg.workday)-adjustedMinutes);
+ const earlyAbono=!isRest&&earlyMinutes>EXIT_TOLERANCE_MIN&&r.earlyTreatment==='abono'
+  ?earlyMinutes:0;
+ const bankMinutes=adjustedMinutes+earlyAbono;
+ const rawBalance=bankMinutes-Number(cfg.workday);
  const countedBalance=isRest?minutes:(Math.abs(rawBalance)<=EXIT_TOLERANCE_MIN?0:rawBalance);
- const deficit=Math.max(0,-countedBalance);
- const extra=Math.max(0,countedBalance);
- const credit=Math.round(extra*+cfg.multiplier);
- const debit=deficit;
- return {minutes,lunchMinutes,bankMinutes,late,lateBank,latePay,
-  lateMoney:latePay*+cfg.lateValue,credit,debit,bank:credit-debit,rest:isRest};
+ const debit=Math.max(0,-countedBalance);
+ const credit=Math.round(Math.max(0,countedBalance)*Number(cfg.multiplier));
+ return {minutes,lunchMinutes,extraBreakMinutes:extra.minutes,bankMinutes,
+  late:lateParts.late,lateBank:lateParts.bank,latePay:lateParts.pay,
+  lateAbono:lateParts.abono,earlyMinutes,earlyAbono,
+  abonoMinutes:lateParts.abono+earlyAbono,
+  lateMoney:lateParts.pay*Number(cfg.lateValue),
+  credit,debit,bank:credit-debit,rest:isRest};
 }
 function summaryMonth(ym){let s={minutes:0,lateMoney:0,lateMinutes:0,extra:0,credit:0,debit:0,count:0};for(let [date,r] of Object.entries(records)){if(!date.startsWith(ym))continue;let c=calc(date,r);if(!c)continue;s.count++;s.minutes+=c.minutes;s.lateMoney+=c.lateMoney;s.lateMinutes+=c.latePay;s.credit+=c.credit;s.debit+=c.debit;if(c.minutes>+cfg.workday&&!c.rest)s.extra+=c.minutes-+cfg.workday;}return s}
 function summarySem(k,throughMonth=null){let s={credit:0,debit:0,balance:0,days:0};for(let [date,r] of Object.entries(records)){if(semKey(date)!==k||(throughMonth&&date.slice(0,7)>throughMonth))continue;let c=calc(date,r);if(!c)continue;s.credit+=c.credit;s.debit+=c.debit;s.days++}for(let a of adjustments){if(semKey(a.date)!==k||(throughMonth&&a.date.slice(0,7)>throughMonth))continue;let m=+a.minutes;if(m>0)s.credit+=m;else s.debit-=m}s.balance=s.credit-s.debit;return s}
