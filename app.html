@@ -1048,7 +1048,40 @@ function renderSimulation(){
  $('simDates').innerHTML=rows.length?'<details><summary style="padding:4px 0 12px;font-weight:750">Ver '+rows.length+' dias disponíveis</summary>'
   +rows.join('')+'</details>':'<p class="date-message">Nenhum dia útil disponível no período.</p>';
 }
-function bind(){document.querySelectorAll('.nav').forEach(b=>b.addEventListener('click',()=>{go(b.dataset.page)}));$('headMonth').onclick=()=>go('records');$('allRecords').onclick=()=>go('records');$('homeManual').onclick=()=>openEdit(localDate());
+function bind(){
+ $('salaryHomeToggle').onclick=()=>{
+  if(!salaryConfig?.gross||!Number.isFinite(Number(salaryConfig.gross)))openSalarySettings();
+  else $('salaryHomeDetails').classList.toggle('hidden');
+ };
+ $('salaryHomeConfigure').onclick=openSalarySettings;
+ $('salarySave').onclick=saveSalaryConfig;
+ $('salaryAddDeduction').onclick=()=>{
+  salaryConfig=readSalaryDraft();
+  salaryConfig.deductions.push({id:String(Date.now())+Math.random().toString(36).slice(2,7),name:'',unit:'fixed',amount:''});
+  renderSalarySettings();
+ };
+ $('salaryDeductionsList').onclick=e=>{
+  const btn=e.target.closest('[data-salary-remove]');if(!btn)return;
+  const id=btn.dataset.salaryRemove;
+  salaryConfig=readSalaryDraft();
+  salaryConfig.deductions=salaryConfig.deductions.filter(x=>x.id!==id);
+  renderSalarySettings();
+ };
+ $('homePlanVacation').onclick=openPlanning;
+ $('settingsPlanVacation').onclick=openPlanning;
+ $('simPlanVacation').onclick=openPlanning;
+ $('simOpenPlanning').onclick=openPlanning;
+ $('backPlanning').onclick=()=>go('simulation');
+ $('planStart').onchange=()=>{if(!$('planEnd').value||$('planEnd').value<$('planStart').value)$('planEnd').value=$('planStart').value};
+ $('planAdd').onclick=addPlannedPeriod;
+ $('planList').onclick=e=>{
+  const btn=e.target.closest('[data-plan-delete]');if(!btn)return;
+  const item=plannedPeriods.find(p=>p.id===btn.dataset.planDelete);
+  if(!item||!confirm('Excluir este período planejado?'))return;
+  plannedPeriods=plannedPeriods.filter(p=>p.id!==item.id);
+  save();renderPlanning();alertUser('Período excluído');
+ };
+ document.querySelectorAll('.nav').forEach(b=>b.addEventListener('click',()=>{go(b.dataset.page)}));$('headMonth').onclick=()=>go('records');$('allRecords').onclick=()=>go('records');$('homeManual').onclick=()=>openEdit(localDate());
  const openSheet=()=>{sheetSetStatus('');$('sheetUndoCard').classList.toggle('hidden',!localStorage.getItem('ponto2_sheet_undo'));go('sheet')};
  $('openSheetRecords').onclick=openSheet;
  $('openSheetSettings').onclick=openSheet;
