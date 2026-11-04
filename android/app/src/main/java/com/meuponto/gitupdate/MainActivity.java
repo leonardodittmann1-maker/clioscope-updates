@@ -278,22 +278,22 @@ public class MainActivity extends Activity {
         }
         return lines;
     }
-    private void showSheetResult(Text best,Text enhanced,String error,int rotation,int foundDates){
+    private void showSheetResult(Text best,Text enhanced,JSONArray sections,String error,int rotation,int foundDates){
         JSONObject payload=new JSONObject();
         try{
             payload.put("text",best==null?"":best.getText());
             payload.put("lines",sheetLines(best));
             payload.put("rotation",rotation);
             payload.put("datesDetected",foundDates);
+            JSONArray variants=sections==null?new JSONArray():sections;
             if(enhanced!=null){
-                JSONArray variants=new JSONArray();
                 JSONObject extra=new JSONObject();
                 extra.put("text",enhanced.getText());
                 extra.put("lines",sheetLines(enhanced));
                 extra.put("method","enhanced-zoom");
                 variants.put(extra);
-                payload.put("variants",variants);
             }
+            payload.put("variants",variants);
         }catch(Exception ignored){}
         final String js="window.__nativeSheetOCRCallback && window.__nativeSheetOCRCallback("
             +JSONObject.quote(payload.toString())+","+JSONObject.quote(error==null?"":error)+");";
@@ -348,7 +348,7 @@ public class MainActivity extends Activity {
         if(index>=angles.length||(best!=null&&best.dates>=30&&best.punches>=55)){
             if(best==null){
                 source.recycle();
-                showSheetResult(null,null,"Não foi possível ler esta foto.",0,0);
+                showSheetResult(null,null,null,"Não foi possível ler esta foto.",0,0);
                 return;
             }
             enhanceSheet(source,best);
@@ -401,46 +401,129 @@ public class MainActivity extends Activity {
         if(right-left<w*.37)return upright;
         return Bitmap.createBitmap(upright,left,0,right-left,h);
     }
-    private void enhanceSheet(Bitmap source,SheetCandidate candidate){
-        sheetProgress("Ampliando e realçando os horários da folha...");
-        new Thread(()->{
-            Bitmap upright=null,region=null,clean=null;
-            try{
-                Matrix rotation=new Matrix();
-                rotation.postRotate(candidate.rotation);
-                upright=Bitmap.createBitmap(source,0,0,source.getWidth(),source.getHeight(),rotation,true);
-                // A recortada pode ficar mais nítida para o leitor, e as
-                // coordenadas são independentes na segunda versão OCR.
-                region=zoomSheetRegion(upright,candidate.text);
-                clean=sheetContrast(region);
-                Bitmap finalClean=clean,finalUpright=upright,finalRegion=region;
-                recognizer.process(InputImage.fromBitmap(finalClean,0))
-                    .addOnSuccessListener(result->{
-                        showSheetResult(candidate.text,result,"",candidate.rotation,candidate.dates);
-                        finalClean.recycle();
-                        if(finalRegion!=finalUpright)finalRegion.recycle();
-                        finalUpright.recycle();source.recycle();
-                    })
-                    .addOnFailureListener(error->{
-                        showSheetResult(candidate.text,null,
-                           "O realce não terminou; os dados encontrados podem ser revisados.",
-                           candidate.rotation,candidate.dates);
-                        finalClean.recycle();
-                        if(finalRegion!=finalUpright)finalRegion.recycle();
-                        finalUpright.recycle();source.recycle();
-                    });
-            }catch(Exception error){
-                if(clean!=null)clean.recycle();
-                if(region!=null&&region!=upright)region.recycle();
-                if(upright!=null)upright.recycle();
-                source.recycle();
-                showSheetResult(candidate.text,null,
-                    "Leitura parcial: confira as datas e horários.",candidate.rotation,candidate.dates);
+    private Bitmap cropSheetPunchTable(Bitmap upright, Text bestFull){
+        int w=upright.getWidth(),h=upright.getHeight();
+        // O relatório tem as datas no início e a Saída perto do centro.
+        // A extrema direita (Trabalhadas, BH, Motivo) NÃO tem batidas.
+        int left=(int)(w*.085),right=(int)(w*.60);
+        java.util.ArrayList<Integer> dateXs=new java.util.ArrayList<>();
+        java.util.regex.Pattern dateRx=java.util.regex.Pattern.compile(
+           "(?<![0-9])(?:0?[1-9]|[12][0-9]|3[01])[/.-](?:0?[1-9]|1[0-2])[/.-]20[0-9]{2}(?![0-9])");
+        if(bestFull!=null){
+            for(Text.TextBlock block:bestFull.getTextBlocks()){
+                for(Text.Line line:block.getLines()){
+                    Rect r=line.getBoundingBox();
+                    if(r!=null&&dateRx.matcher(line.getText()).find()&&
+                       r.left>w*.035&&r.left<w*.50){
+                        dateXs.add(r.left);
+                    }
+                }
             }
-        }).start();
+        }
+        // Ajusta o corte horizontal se houver datas realmente alinhadas.
+        if(dateXs.size()>=4){
+            java.util.Collections.sort(dateXs);
+            int center=dateXs.get(dateXs.size()/2);
+            int min=dateXs.get(0),max=dateXs.get(dateXs.size()-1);
+            if(max-min<w*.085){
+                left=Math.max(0,center-(int)(w*.055));
+                right=Math.min(w,center+(int)(w*.41));
+            }
+        }
+        int top=Math.max(0,(int)(h*.01));
+        int bottom=Math.min(h,(int)(h*.94));
+        if(right-left<w*.30){left=(int)(w*.075);right=(int)(w*.61);}
+        return Bitmap.createBitmap(upright,left,top,right-left,bottom-top);
+    }
+
+    private void finishSheet(Bitmap source,Bitmap upright,Bitmap region,Bitmap main,
+                             Text original,Text enlarged,JSONArray sections,
+                             int rotation,int count,String warning){
+        showSheetResult(original,enlarged,sections,warning,rotation,count);
+        if(main!=null&&main!=region&&main!=upright&&!main.isRecycled())main.recycle();
+        if(region!=null&&region!=upright&&!region.isRecycled())region.recycle();
+        if(upright!=null&&!upright.isRecycled())upright.recycle();
+        if(source!=null&&!source.isRecycled())source.recycle();
+    }
+
+    private void processSheetBands(Bitmap source,Bitmap upright,Bitmap region,
+                                   Bitmap main,Text original,Text enlarged,
+                                   JSONArray sections,int band,int numberOfBands,
+                                   int rotation,int dates){
+        if(band>=numberOfBands){
+            finishSheet(source,upright,region,main,original,enlarged,sections,
+                rotation,dates,"");
+            return;
+        }
+        sheetProgress("Lendo horários por partes: "+(band+1)+"/"+numberOfBands+"...");
+        final int h=main.getHeight(),w=main.getWidth();
+        // Faixas menores deixam os algarismos 09:19/12:45 etc. nítidos.
+        int top=Math.max(0,band*h/numberOfBands-(int)(h*.018));
+        int bottom=Math.min(h,(band+1)*h/numberOfBands+(int)(h*.018));
+        Bitmap slice=null,upscaled=null;
+        try{
+            slice=Bitmap.createBitmap(main,0,top,w,bottom-top);
+            double scale=Math.min(2.7,Math.max(1,2500.0/w));
+            int targetW=Math.max(w,(int)Math.round(w*scale));
+            int targetH=Math.max(1,(int)Math.round(slice.getHeight()*scale));
+            upscaled=Bitmap.createScaledBitmap(slice,targetW,targetH,true);
+            if(upscaled!=slice)slice.recycle();
+            final Bitmap used=upscaled;
+            recognizer.process(InputImage.fromBitmap(used,0))
+                .addOnSuccessListener(result->{
+                    try{
+                        JSONObject variant=new JSONObject();
+                        variant.put("text",result.getText());
+                        variant.put("lines",sheetLines(result));
+                        variant.put("method","enlarged-section-"+band);
+                        sections.put(variant);
+                    }catch(Exception ignored){}
+                    used.recycle();
+                    processSheetBands(source,upright,region,main,original,enlarged,
+                        sections,band+1,numberOfBands,rotation,dates);
+                })
+                .addOnFailureListener(err->{
+                    used.recycle();
+                    processSheetBands(source,upright,region,main,original,enlarged,
+                        sections,band+1,numberOfBands,rotation,dates);
+                });
+        }catch(Exception e){
+            if(upscaled!=null&&!upscaled.isRecycled())upscaled.recycle();
+            if(slice!=null&&!slice.isRecycled())slice.recycle();
+            processSheetBands(source,upright,region,main,original,enlarged,
+                sections,band+1,numberOfBands,rotation,dates);
+        }
+    }
+    private void enhanceSheet(Bitmap source,SheetCandidate candidate){
+        sheetProgress("Separando a tabela dos totais e ampliando as batidas...");
+        Bitmap upright=null,region=null,enhanced=null;
+        try{
+            Matrix matrix=new Matrix();
+            matrix.postRotate(candidate.rotation);
+            upright=Bitmap.createBitmap(source,0,0,source.getWidth(),source.getHeight(),matrix,true);
+            region=cropSheetPunchTable(upright,candidate.text);
+            // Leitura da tabela sem as colunas de atrasos, totais e banco.
+            enhanced=sheetContrast(region);
+            Bitmap output=enhanced,up=upright,roi=region;
+            recognizer.process(InputImage.fromBitmap(output,0))
+                .addOnSuccessListener(result->
+                    processSheetBands(source,up,roi,output,candidate.text,result,
+                        new JSONArray(),0,6,candidate.rotation,candidate.dates))
+                .addOnFailureListener(err->
+                    processSheetBands(source,up,roi,output,candidate.text,null,
+                        new JSONArray(),0,6,candidate.rotation,candidate.dates));
+        }catch(Exception error){
+            showSheetResult(candidate.text,null,null,
+                "O recorte automático falhou. Revise a leitura encontrada.",
+                candidate.rotation,candidate.dates);
+            if(enhanced!=null&&!enhanced.isRecycled())enhanced.recycle();
+            if(region!=null&&region!=upright&&!region.isRecycled())region.recycle();
+            if(upright!=null&&!upright.isRecycled())upright.recycle();
+            if(source!=null&&!source.isRecycled())source.recycle();
+        }
     }
     private void recognizeSheet(Uri uri){
-        sheetProgress("Localizando a orientação e as datas da folha...");
+        sheetProgress("Preparando a foto para leitura ampliada...");
         new Thread(()->{
             try{
                 BitmapFactory.Options options=new BitmapFactory.Options();
@@ -469,7 +552,8 @@ public class MainActivity extends Activity {
                 }
                 readSheetRotations(image,new int[]{0,90,270,180},0,null);
             }catch(Exception error){
-                showSheetResult(null,null,"Falha ao ler a folha: "+error.getMessage(),0,0);
+                showSheetResult(null,null,null,
+                    "Falha ao ler a folha: "+error.getMessage(),0,0);
             }
         }).start();
     }
