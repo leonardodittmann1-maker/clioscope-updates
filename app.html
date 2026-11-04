@@ -254,7 +254,7 @@ const load=(key,fallback)=>{try{return JSON.parse(localStorage.getItem(key))??fa
   updated.lunchDefaultVersion=2;
   return updated;
  };
- let plannedPeriods=load('ponto2_plannedPeriods',[]),salaryConfig=load('ponto2_salaryConfig',{gross:'',deductions:[]});
+ let plannedPeriods=load('ponto2_plannedPeriods',[]),salaryConfig=load('ponto2_salaryConfig',{gross:'',deductions:[]}),planReturnPage='simulation';
  let cfg=normalizeSettings(load('ponto2_cfg',{})),records=load('ponto2_records',{}),adjustments=load('ponto2_adjustments',[]),holidayCache=load('ponto2_holidays',{}),currentMonth=localDate().slice(0,7),selectedSummaryMonth=localDate().slice(0,7),editFor=localDate(),page='home',scanURL=null,scanBusy=false;let toastTimeout;
 const save=()=>{localStorage.setItem('ponto2_cfg',JSON.stringify(cfg));localStorage.setItem('ponto2_records',JSON.stringify(records));localStorage.setItem('ponto2_adjustments',JSON.stringify(adjustments));localStorage.setItem('ponto2_holidays',JSON.stringify(holidayCache));localStorage.setItem('ponto2_plannedPeriods',JSON.stringify(plannedPeriods));localStorage.setItem('ponto2_salaryConfig',JSON.stringify(salaryConfig));};
 const alertUser=t=>{let v=$('toast');v.textContent=t;v.classList.add('show');clearTimeout(toastTimeout);toastTimeout=setTimeout(()=>v.classList.remove('show'),3200)};
@@ -380,7 +380,7 @@ function renderSettings(){let map={cfgStart:'start',cfgEnd:'end',cfgTolerance:'t
 function saveSettings(){let c={...cfg,start:formatInput($('cfgStart').value),end:formatInput($('cfgEnd').value),tolerance:Number($('cfgTolerance').value),workday:Number($('cfgWorkday').value),lunch:Number($('cfgLunch').value),multiplier:Number($('cfgMultiplier').value),lateValue:Number($('cfgLateValue').value),bankValue:$('cfgBankValue').value.trim()===''?'':Number($('cfgBankValue').value),uf:$('cfgUF').value.toUpperCase().trim(),city:$('cfgCity').value.trim()};if(!c.start||!c.end||parseTime(c.start)>parseTime(c.end)||!Number.isFinite(c.workday)||c.workday<=0||c.workday>1440||c.lunch<0||c.lunch>480||c.tolerance<0||c.tolerance>240||c.multiplier<1||c.multiplier>10||c.lateValue<0||(c.bankValue!==''&&c.bankValue<0)){alertUser('Confira os valores das configurações');return}cfg=c;save();renderHome();alertUser('Configurações salvas')}
 async function refreshHolidays(){let year=new Date().getFullYear();$('holidayStatus').textContent='Consultando calendário...';try{let r=await fetch(`https://brasilapi.com.br/api/feriados/v1/${year}`,{cache:'no-store'});if(!r.ok)throw Error(r.status);let arr=await r.json();if(!Array.isArray(arr))throw Error('Resposta inesperada');let h={};arr.forEach(a=>{if(/^\d{4}-\d{2}-\d{2}$/.test(a.date))h[a.date]=a.name});holidayCache[`${year}_${cfg.uf.toUpperCase()}`]=h;save();$('holidayStatus').textContent=`${Object.keys(h).length} feriados consultados em ${year}. Feriados de Curitiba incluídos localmente.`;alertUser('Feriados atualizados')}catch(e){$('holidayStatus').textContent='Sem conexão. O calendário nacional básico continua disponível offline.'}}
 function exportBackup(){let blob=new Blob([JSON.stringify({version:2,exportedAt:new Date().toISOString(),settings:cfg,records,adjustments,holidayCache,plannedPeriods,salaryConfig},null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=`meu-ponto-backup-${localDate()}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(url),15000);alertUser('Backup criado')}
-async function importBackup(e){let f=e.target.files?.[0];if(!f)return;try{let o=JSON.parse(await f.text());if(!o.records||!o.settings||!Array.isArray(o.adjustments))throw Error('Incompatível');if(!confirm('Substituir todos os registros salvos pelos dados do backup?'))return;records=o.records;cfg=normalizeSettings(o.settings);adjustments=o.adjustments;holidayCache=o.holidayCache||{};plannedPeriods=Array.isArray(o.plannedPeriods)?o.plannedPeriods:[];salaryConfig=o.salaryConfig&&typeof o.salaryConfig==='object'?o.salaryConfig:{gross:'',deductions:[]};save();go('home');alertUser('Backup restaurado')}catch(err){alertUser('Backup inválido')}finally{e.target.value=''}}
+async function importBackup(e){let f=e.target.files?.[0];if(!f)return;try{let o=JSON.parse(await f.text());if(!o.records||!o.settings||!Array.isArray(o.adjustments))throw Error('Incompatível');if(!confirm('Substituir todos os registros salvos pelos dados do backup?'))return;records=o.records;cfg=normalizeSettings(o.settings);adjustments=o.adjustments;holidayCache=o.holidayCache||{};if(Object.hasOwn(o,'plannedPeriods'))plannedPeriods=Array.isArray(o.plannedPeriods)?o.plannedPeriods:[];if(Object.hasOwn(o,'salaryConfig'))salaryConfig=o.salaryConfig&&typeof o.salaryConfig==='object'?o.salaryConfig:{gross:'',deductions:[]};save();go('home');alertUser('Backup restaurado')}catch(err){alertUser('Backup inválido')}finally{e.target.value=''}}
 function parseReceipt(text){
  // Comprovante INNer REP: data e hora costumam anteceder PIS/PTS.
  // Corrige caracteres frequentemente confundidos pelo OCR, mas valida o calendário.
@@ -947,6 +947,7 @@ function addPlannedPeriod(){
  $('planNote').value='';
 }
 function openPlanning(){
+ planReturnPage=['home','settings','simulation'].includes(page)?page:'simulation';
  $('planStart').value||=localDate();$('planEnd').value||=$('planStart').value;
  go('planning');
 }
@@ -1071,7 +1072,7 @@ function bind(){
  $('settingsPlanVacation').onclick=openPlanning;
  $('simPlanVacation').onclick=openPlanning;
  $('simOpenPlanning').onclick=openPlanning;
- $('backPlanning').onclick=()=>go('simulation');
+ $('backPlanning').onclick=()=>go(planReturnPage);
  $('planStart').onchange=()=>{if(!$('planEnd').value||$('planEnd').value<$('planStart').value)$('planEnd').value=$('planStart').value};
  $('planAdd').onclick=addPlannedPeriod;
  $('planList').onclick=e=>{
