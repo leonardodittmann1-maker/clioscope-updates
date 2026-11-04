@@ -190,6 +190,27 @@
 .salary-override-row input{min-width:0;flex:1;border:1px solid var(--line);border-radius:9px;padding:9px;font-size:13px}
 .salary-override-row button{flex-shrink:0;border:0;border-radius:9px;padding:9px;background:#b87c65;color:white;font-weight:700;font-size:12px}
 .salary-month-reset{margin-top:9px;border:0;background:none;color:#a74d43;font-size:12px;font-weight:700}
+
+/* Navegação mensal compacta ao lado do título, sem estourar no celular. */
+@media(max-width:440px){
+ .header{gap:4px}
+ .header .logo-title{min-width:0;gap:7px}
+ .header .logo{flex:0 0 39px;width:39px;height:39px}
+ .header h1{font-size:clamp(20px,6.2vw,25px);white-space:nowrap}
+ .home-month-controls{gap:2px}
+ .home-month-arrow{min-width:21px;min-height:31px;padding:2px 3px;font-size:17px}
+ .home-month-label{padding:5px 4px;gap:2px}
+ .home-month-label span{font-size:10px}
+ .home-month-label input{width:20px;min-width:20px;height:20px}
+ .home-month-label input::-webkit-calendar-picker-indicator{width:17px;height:17px}
+}
+@media(max-width:350px){
+ .header .logo{flex-basis:34px;width:34px;height:34px}
+ .header h1{font-size:19px}
+ .home-month-arrow{min-width:19px;padding:2px}
+ .home-month-label span{font-size:9px}
+ .home-month-label input{width:16px;min-width:16px}
+}
 </style></head><body><div class="app">
 <div class="header"><div class="logo-title"><div class="logo" style="background:linear-gradient(135deg,#da9c86,#875144);color:white;font-size:29px;display:flex;align-items:center;justify-content:center">◷</div><div><h1>Meu Ponto</h1></div></div><div class="home-month-controls">
  <button id="homePrevMonth" class="home-month-arrow" type="button" aria-label="Mês anterior">‹</button>
