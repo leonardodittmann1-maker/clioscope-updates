@@ -8,6 +8,7 @@ import android.graphics.Color;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Rect;
+import android.graphics.Matrix;
 import android.net.Uri;
 import android.provider.MediaStore;
 import android.view.View;
@@ -246,72 +247,233 @@ public class MainActivity extends Activity {
     }
 
 
-    private void showSheetResult(Text result, String error) {
-        JSONObject payload=new JSONObject();
-        try {
-            payload.put("text",result == null ? "" : result.getText());
-            JSONArray lines=new JSONArray();
-            if(result != null)for(Text.TextBlock block:result.getTextBlocks())for(Text.Line line:block.getLines()){
+    // Guarda as coordenadas das linhas para associar batidas à linha e
+    // à coluna corretas no espelho mensal.
+    private JSONArray sheetLines(Text result) throws Exception {
+        JSONArray lines = new JSONArray();
+        if(result == null)return lines;
+        for(Text.TextBlock block:result.getTextBlocks()){
+            for(Text.Line line:block.getLines()){
                 Rect r=line.getBoundingBox();
-                if(r == null)continue;
+                if(r==null)continue;
                 JSONObject obj=new JSONObject();
                 obj.put("text",line.getText());
                 obj.put("x",r.left);obj.put("y",r.top);
                 obj.put("w",r.width());obj.put("h",r.height());
+                // Palavras isoladas permitem reconhecer corretamente números
+                // mesmo quando o OCR uniu linhas inteiras do espelho.
+                JSONArray words=new JSONArray();
+                for(Text.Element word:line.getElements()){
+                    Rect w=word.getBoundingBox();
+                    if(w==null)continue;
+                    JSONObject token=new JSONObject();
+                    token.put("text",word.getText());
+                    token.put("x",w.left);token.put("y",w.top);
+                    token.put("w",w.width());token.put("h",w.height());
+                    words.put(token);
+                }
+                obj.put("words",words);
                 lines.put(obj);
             }
-            payload.put("lines",lines);
+        }
+        return lines;
+    }
+    private void showSheetResult(Text best,Text enhanced,String error,int rotation,int foundDates){
+        JSONObject payload=new JSONObject();
+        try{
+            payload.put("text",best==null?"":best.getText());
+            payload.put("lines",sheetLines(best));
+            payload.put("rotation",rotation);
+            payload.put("datesDetected",foundDates);
+            if(enhanced!=null){
+                JSONArray variants=new JSONArray();
+                JSONObject extra=new JSONObject();
+                extra.put("text",enhanced.getText());
+                extra.put("lines",sheetLines(enhanced));
+                extra.put("method","enhanced-zoom");
+                variants.put(extra);
+                payload.put("variants",variants);
+            }
         }catch(Exception ignored){}
         final String js="window.__nativeSheetOCRCallback && window.__nativeSheetOCRCallback("
-             +JSONObject.quote(payload.toString())+","+JSONObject.quote(error==null?"":error)+");";
+            +JSONObject.quote(payload.toString())+","+JSONObject.quote(error==null?"":error)+");";
+        runOnUiThread(()->{if(web!=null)web.evaluateJavascript(js,null);});
+    }
+    private void sheetProgress(String message){
+        final String js="window.__nativeSheetOCRProgress && window.__nativeSheetOCRProgress("
+            +JSONObject.quote(message)+");";
         runOnUiThread(()->{if(web!=null)web.evaluateJavascript(js,null);});
     }
     private int countSheetDates(String value){
         java.util.regex.Matcher m=java.util.regex.Pattern.compile(
             "(?<![0-9])(?:0?[1-9]|[12][0-9]|3[01])[/.-](?:0?[1-9]|1[0-2])[/.-]20[0-9]{2}(?![0-9])"
         ).matcher(value==null?"":value);
-        int n=0;while(m.find())n++;return n;
+        java.util.HashSet<String> unique=new java.util.HashSet<>();
+        while(m.find())unique.add(m.group());
+        return unique.size();
     }
-    private void trySheetRotation(Bitmap bitmap,int[] angles,int index,Text best,int bestScore){
-        if(index>=angles.length||bestScore>=7){
-            showSheetResult(best,bestScore<2?"Poucas datas reconhecidas: confira o enquadramento da folha.":"");
-            bitmap.recycle();return;
+    private int sheetTimeCount(String text){
+        java.util.regex.Matcher matcher=java.util.regex.Pattern.compile(
+            "(?<![0-9])[0-2]?[0-9][:][0-5][0-9](?![0-9])"
+        ).matcher(text==null?"":text);
+        int n=0;while(matcher.find())n++;return n;
+    }
+    private static class SheetCandidate{
+        Text text;
+        int rotation,dates,punches,score;
+        SheetCandidate(Text result,int angle,int count,int times,int quality){
+            text=result;rotation=angle;dates=count;punches=times;score=quality;
         }
-        try{
-            recognizer.process(InputImage.fromBitmap(bitmap,angles[index]))
-                .addOnSuccessListener(result->{
-                    int score=countSheetDates(result.getText());
-                    trySheetRotation(bitmap,angles,index+1,score>bestScore?result:best,Math.max(bestScore,score));
-                }).addOnFailureListener(error->trySheetRotation(bitmap,angles,index+1,best,bestScore));
-        }catch(Exception error){trySheetRotation(bitmap,angles,index+1,best,bestScore);}
     }
-    private void recognizeSheet(Uri uri){
+    private SheetCandidate sheetCandidate(Text text,int rotation){
+        int dates=countSheetDates(text.getText()),times=sheetTimeCount(text.getText());
+        int score=dates*1000+Math.min(times,140)*3;
+        // Prefere datas alinhadas verticalmente, próprias de uma tabela.
+        java.util.ArrayList<Integer> xs=new java.util.ArrayList<>();
+        java.util.regex.Pattern day=java.util.regex.Pattern.compile(
+           "(?<![0-9])(?:0?[1-9]|[12][0-9]|3[01])[/.-](?:0?[1-9]|1[0-2])[/.-]20[0-9]{2}(?![0-9])");
+        for(Text.TextBlock b:text.getTextBlocks())for(Text.Line line:b.getLines()){
+            if(day.matcher(line.getText()).find()&&line.getBoundingBox()!=null)
+                xs.add(line.getBoundingBox().left);
+        }
+        if(xs.size()>3){
+            java.util.Collections.sort(xs);
+            int mid=xs.get(xs.size()/2),near=0;
+            for(int x:xs)if(Math.abs(x-mid)<100)near++;
+            score+=Math.min(near,31)*12;
+        }
+        return new SheetCandidate(text,rotation,dates,times,score);
+    }
+    private void readSheetRotations(Bitmap source,int[] angles,int index,SheetCandidate best){
+        if(index>=angles.length||(best!=null&&best.dates>=30&&best.punches>=55)){
+            if(best==null){
+                source.recycle();
+                showSheetResult(null,null,"Não foi possível ler esta foto.",0,0);
+                return;
+            }
+            enhanceSheet(source,best);
+            return;
+        }
+        final int rotation=angles[index];
+        try{
+            recognizer.process(InputImage.fromBitmap(source,rotation))
+                .addOnSuccessListener(result->{
+                    SheetCandidate candidate=sheetCandidate(result,rotation);
+                    SheetCandidate selected=best==null||candidate.score>best.score?candidate:best;
+                    readSheetRotations(source,angles,index+1,selected);
+                })
+                .addOnFailureListener(error->readSheetRotations(source,angles,index+1,best));
+        }catch(Exception ignored){readSheetRotations(source,angles,index+1,best);}
+    }
+    private Bitmap sheetContrast(Bitmap source){
+        int width=source.getWidth(),height=source.getHeight();
+        int[] colors=new int[width*height];
+        source.getPixels(colors,0,width,0,0,width,height);
+        for(int i=0;i<colors.length;i++){
+            int c=colors[i];
+            int lum=((Color.red(c)*77)+(Color.green(c)*150)+(Color.blue(c)*29))>>8;
+            // O papel fica branco e a impressão escura mais evidente.
+            int v=Math.max(0,Math.min(255,(int)((lum-185)*1.55+220)));
+            colors[i]=Color.rgb(v,v,v);
+        }
+        Bitmap clean=Bitmap.createBitmap(width,height,Bitmap.Config.ARGB_8888);
+        clean.setPixels(colors,0,width,0,0,width,height);
+        return clean;
+    }
+    private Bitmap zoomSheetRegion(Bitmap upright,Text baseline){
+        int w=upright.getWidth(),h=upright.getHeight();
+        // A entrada e a saída ocupam a parte esquerda do espelho.
+        // Identifica as datas pelo OCR para evitar cortar outros modelos.
+        java.util.ArrayList<Integer> dates=new java.util.ArrayList<>();
+        java.util.regex.Pattern rx=java.util.regex.Pattern.compile(
+           "(?<![0-9])(?:0?[1-9]|[12][0-9]|3[01])[/.-](?:0?[1-9]|1[0-2])[/.-]20[0-9]{2}(?![0-9])");
+        for(Text.TextBlock b:baseline.getTextBlocks())
+            for(Text.Line line:b.getLines())
+                if(rx.matcher(line.getText()).find()&&line.getBoundingBox()!=null)
+                    dates.add(line.getBoundingBox().left);
+        if(dates.size()<3)return upright;
+        java.util.Collections.sort(dates);
+        int dateX=dates.get(dates.size()/2);
+        int left=Math.max(0,dateX-(int)(w*.065));
+        // Evita as colunas Trabalho/BB/Saldo à direita. A última batida
+        // é a coluna Saída, que está próxima da metade da página.
+        int right=Math.min(w,Math.max(left+(int)(w*.52),(int)(w*.72)));
+        if(right-left<w*.37)return upright;
+        return Bitmap.createBitmap(upright,left,0,right-left,h);
+    }
+    private void enhanceSheet(Bitmap source,SheetCandidate candidate){
+        sheetProgress("Ampliando e realçando os horários da folha...");
         new Thread(()->{
+            Bitmap upright=null,region=null,clean=null;
             try{
-                InputImage image=InputImage.fromFilePath(getApplicationContext(),uri);
-                recognizer.process(image).addOnSuccessListener(result->{
-                    int score=countSheetDates(result.getText());
-                    if(score>=5){showSheetResult(result,"");return;}
-                    try{
-                        BitmapFactory.Options opts=new BitmapFactory.Options();
-                        opts.inJustDecodeBounds=true;
-                        try(InputStream in=getContentResolver().openInputStream(uri)){
-                            BitmapFactory.decodeStream(in,null,opts);
-                        }
-                        int biggest=Math.max(opts.outWidth,opts.outHeight),sample=1;
-                        while(biggest/sample>3800)sample*=2;
-                        opts.inJustDecodeBounds=false;opts.inSampleSize=sample;
-                        Bitmap bmp;
-                        try(InputStream in=getContentResolver().openInputStream(uri)){
-                            bmp=BitmapFactory.decodeStream(in,null,opts);
-                        }
-                        if(bmp==null){showSheetResult(result,"Não foi possível girar a imagem.");return;}
-                        trySheetRotation(bmp,new int[]{90,270,180},0,result,score);
-                    }catch(Exception e){showSheetResult(result,"Leitura incompleta: "+e.getMessage());}
-                }).addOnFailureListener(err->showSheetResult(null,"Falha no OCR: "+err.getMessage()));
-            }catch(Exception e){showSheetResult(null,"Não foi possível abrir a folha: "+e.getMessage());}
+                Matrix rotation=new Matrix();
+                rotation.postRotate(candidate.rotation);
+                upright=Bitmap.createBitmap(source,0,0,source.getWidth(),source.getHeight(),rotation,true);
+                // A recortada pode ficar mais nítida para o leitor, e as
+                // coordenadas são independentes na segunda versão OCR.
+                region=zoomSheetRegion(upright,candidate.text);
+                clean=sheetContrast(region);
+                Bitmap finalClean=clean,finalUpright=upright,finalRegion=region;
+                recognizer.process(InputImage.fromBitmap(finalClean,0))
+                    .addOnSuccessListener(result->{
+                        showSheetResult(candidate.text,result,"",candidate.rotation,candidate.dates);
+                        finalClean.recycle();
+                        if(finalRegion!=finalUpright)finalRegion.recycle();
+                        finalUpright.recycle();source.recycle();
+                    })
+                    .addOnFailureListener(error->{
+                        showSheetResult(candidate.text,null,
+                           "O realce não terminou; os dados encontrados podem ser revisados.",
+                           candidate.rotation,candidate.dates);
+                        finalClean.recycle();
+                        if(finalRegion!=finalUpright)finalRegion.recycle();
+                        finalUpright.recycle();source.recycle();
+                    });
+            }catch(Exception error){
+                if(clean!=null)clean.recycle();
+                if(region!=null&&region!=upright)region.recycle();
+                if(upright!=null)upright.recycle();
+                source.recycle();
+                showSheetResult(candidate.text,null,
+                    "Leitura parcial: confira as datas e horários.",candidate.rotation,candidate.dates);
+            }
         }).start();
     }
+    private void recognizeSheet(Uri uri){
+        sheetProgress("Localizando a orientação e as datas da folha...");
+        new Thread(()->{
+            try{
+                BitmapFactory.Options options=new BitmapFactory.Options();
+                options.inJustDecodeBounds=true;
+                try(InputStream in=getContentResolver().openInputStream(uri)){
+                    BitmapFactory.decodeStream(in,null,options);
+                }
+                if(options.outWidth<=0||options.outHeight<=0)
+                    throw new IllegalStateException("Formato de imagem inválido");
+                int sample=1,longer=Math.max(options.outWidth,options.outHeight);
+                while(longer/sample>3600)sample*=2;
+                options.inJustDecodeBounds=false;options.inSampleSize=sample;
+                Bitmap image;
+                try(InputStream in=getContentResolver().openInputStream(uri)){
+                    image=BitmapFactory.decodeStream(in,null,options);
+                }
+                if(image==null)throw new IllegalStateException("Não foi possível decodificar a foto");
+                int longest=Math.max(image.getWidth(),image.getHeight());
+                if(longest<2450){
+                    double scale=Math.min(2.3,3000.0/longest);
+                    Bitmap enlarged=Bitmap.createScaledBitmap(image,
+                       (int)Math.round(image.getWidth()*scale),
+                       (int)Math.round(image.getHeight()*scale),true);
+                    if(enlarged!=image)image.recycle();
+                    image=enlarged;
+                }
+                readSheetRotations(image,new int[]{0,90,270,180},0,null);
+            }catch(Exception error){
+                showSheetResult(null,null,"Falha ao ler a folha: "+error.getMessage(),0,0);
+            }
+        }).start();
+    }
+
     private void recognizePhoto(Uri uri, boolean sheet) {
         if(sheet){recognizeSheet(uri);return;}
         new Thread(() -> {
