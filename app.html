@@ -173,11 +173,11 @@
 .home-month-label input{width:29px;min-width:29px;height:23px;border:0;background:transparent;color:transparent;padding:0;font-size:10px;cursor:pointer;min-height:0}
 .home-month-label input::-webkit-calendar-picker-indicator{width:19px;height:19px;opacity:.8;margin:0;padding:0;cursor:pointer}
 @media(max-width:360px){.home-month-controls{gap:2px}.home-month-arrow{min-width:22px;padding:2px 3px}.home-month-label{padding:5px}.home-month-label span{font-size:10px}}
-.salary-annual-card{padding:13px 15px;border-color:#e6d2c6;background:#fffcfa}
-.salary-annual-title{font-size:12px;font-weight:800;color:#91503d;margin-bottom:8px}
-.salary-annual-card .value-line{font-size:12px;padding:8px 0;gap:8px}
-.salary-annual-card .value-line b{font-size:13px;white-space:nowrap}
-.salary-annual-card .hint{font-size:11px;line-height:1.5;margin-top:8px}
+.salary-extra-inline{margin-top:14px;padding:14px 0 2px;border-top:1px solid var(--line)}
+.salary-annual-title{font-size:12px;font-weight:800;color:#91503d;margin-bottom:9px}
+.salary-extra-inline .value-line{font-size:12px;padding:8px 0;gap:8px}
+.salary-extra-inline .value-line b{font-size:13px;white-space:nowrap}
+.salary-extra-inline .hint{font-size:11px;line-height:1.5;margin-top:9px}
 .salary-annual-period{display:flex;flex-direction:column;gap:3px;margin:13px 0 5px;font-size:12px;color:#774d3d}
 .salary-annual-period span{font-size:11px;color:var(--muted)}
 .sheet-warning{padding:9px 10px;background:#fff5e9;border-radius:8px;color:#9a5a27}
@@ -228,10 +228,16 @@
   <span class="salary-left"><span class="salary-emoji">R$</span><span><strong>Salário estimado</strong><small id="salaryMonthLabel">Líquido do mês</small></span></span>
   <span class="salary-right"><strong id="salaryHomeValue">Configurar</strong><span>⌄</span></span>
  </button>
- <div id="salaryHomeDetails" class="hidden"><div class="divider"></div><div id="salaryHomeBreakdown"></div><p class="hint" style="margin-top:8px">Estimativa calculada com o salário informado atualmente e referência tributária de 2026. O adiantamento de férias não deve ser somado novamente ao salário mensal.</p><button id="salaryHomeConfigure" type="button" class="btn outline" style="margin-top:12px;width:100%">Editar salário e descontos</button></div>
+ <div id="salaryHomeDetails" class="hidden">
+ <div class="divider"></div>
+ <div id="salaryHomeBreakdown"></div>
+ <div id="salaryAnnualCard" class="salary-extra-inline hidden">
+  <div class="salary-annual-title">13º e férias neste mês</div>
+  <div id="salaryAnnualContent"></div>
+ </div>
+ <p class="hint" style="margin-top:10px">Simulação referente ao mês selecionado. Valores de 13º e férias são exibidos separadamente, sem serem somados ao salário líquido mensal.</p>
+ <button id="salaryHomeConfigure" type="button" class="btn outline" style="margin-top:12px;width:100%">Editar salário e descontos</button>
 </div>
-<div id="salaryAnnualCard" class="card salary-annual-card hidden">
- <div class="salary-annual-title">Pagamentos extras do mês</div><div id="salaryAnnualContent"></div>
 </div>
 <div class="section-title"><h2>Resumo de hoje</h2></div>
 <div class="card today-card" id="todayCard"></div>
