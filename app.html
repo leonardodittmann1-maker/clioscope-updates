@@ -900,7 +900,9 @@ function inssProgressive2026(gross){
  let previous=0,total=0;
  for(const bracket of INSS_BRACKETS_2026){
   const portion=Math.max(0,Math.min(base,bracket.limit)-previous);
-  total+=portion*bracket.rate;previous=bracket.limit;
+  // Arredonda cada faixa em centavos, como na folha de pagamento.
+  total+=Math.round((portion*bracket.rate+1e-9)*100)/100;
+  previous=bracket.limit;
   if(base<=bracket.limit)break;
  }
  return Math.round((total+Number.EPSILON)*100)/100;
