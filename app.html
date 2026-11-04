@@ -180,6 +180,10 @@
 .salary-annual-card .hint{font-size:11px;line-height:1.5;margin-top:8px}
 .salary-annual-period{display:flex;flex-direction:column;gap:3px;margin:13px 0 5px;font-size:12px;color:#774d3d}
 .salary-annual-period span{font-size:11px;color:var(--muted)}
+.sheet-warning{padding:9px 10px;background:#fff5e9;border-radius:8px;color:#9a5a27}
+.sheet-fields input:focus{outline:2px solid #c47f68;outline-offset:1px}
+.sheet-row .sheet-info{overflow-wrap:anywhere}
+.sheet-row .sheet-line{flex-wrap:wrap}
 </style></head><body><div class="app">
 <div class="header"><div class="logo-title"><div class="logo" style="background:linear-gradient(135deg,#da9c86,#875144);color:white;font-size:29px;display:flex;align-items:center;justify-content:center">◷</div><div><h1>Meu Ponto</h1></div></div><div class="home-month-controls">
  <button id="homePrevMonth" class="home-month-arrow" type="button" aria-label="Mês anterior">‹</button>
@@ -238,7 +242,7 @@
    <button id="sheetCamera" class="btn" type="button">📷 Tirar foto</button>
    <button id="sheetGallery" class="btn outline" type="button">Galeria</button>
   </div>
-  <p class="hint" style="margin-top:11px">Fotografe a folha inteira, com as datas e a coluna Saída legíveis. Leitura realizada no celular; confira sempre antes de aplicar.</p>
+  <p class="hint" style="margin-top:11px">Para melhor reconhecimento, fotografe a folha de frente, com luz uniforme, sem reflexos e com as datas e horários de entrada e saída legíveis. A foto é interpretada no aparelho.</p>
   <p id="sheetStatus" class="progress hidden" role="status" aria-live="polite"></p>
  </div>
  <div id="sheetResults" class="hidden">
@@ -246,10 +250,10 @@
     <div class="section-title" style="margin:0 0 8px"><h3>Conferência por dia</h3><span id="sheetCount" class="sheet-count"></span></div>
     <p id="sheetSummary" class="date-message"></p>
     <div class="btnline" style="margin-top:12px">
-      <button id="sheetSelectDiff" type="button" class="btn outline">Selecionar diferenças</button>
+      <button id="sheetSelectDiff" type="button" class="btn outline">Selecionar leituras confiáveis</button>
       <button id="sheetUnselectAll" type="button" class="btn outline">Desmarcar tudo</button>
     </div>
-    <p class="hint" style="margin:10px 0">Corrija as batidas reconhecidas, marque os dias desejados e confirme. Folgas, feriados e justificativas sem batidas não criam horários. O banco informado na folha é somente referência.</p>
+    <p class="hint" style="margin:10px 0">Nenhum dia é selecionado automaticamente. Confira as quatro batidas de cada data, corrija o que o leitor não identificou e marque somente os dias desejados. Folgas e atestados sem batidas não serão importados.</p>
   </div>
   <div id="sheetRows"></div>
   <div class="card sheet-actions">
@@ -905,7 +909,7 @@ function sheetReceive(payload,error){
   }
   for(const row of sheetRowsState){
    const old=records[row.date];
-   row.checked=row.valid&&row.confidence==='alta'&&SHEET_KEYS.some(k=>(old?.[k]||'')!==(row[k]||''));
+   row.checked=false;
   }
   sheetSetStatus(error?'Leitura parcial: '+error:'Leitura concluída. Confira os horários antes de aplicar.');
   sheetRenderReview();
@@ -924,22 +928,42 @@ function sheetRowDiff(row){
  const old=records[row.date]||{};
  return SHEET_KEYS.filter(k=>(old[k]||'')!==(row[k]||''));
 }
+
+function sheetRowStatus(row){
+ const old=records[row.date]||{};
+ const blankConflicts=SHEET_KEYS.some(k=>Boolean(old[k])&&!row[k]);
+ const diff=sheetRowDiff(row).length>0;
+ if(!row.hasPunches&&!row.valid)return {label:'Sem batidas',className:'review'};
+ if(!row.valid)return {label:'Confira horários',className:'review'};
+ if(blankConflicts)return {label:'Revisar campos vazios',className:'review'};
+ if(!diff)return {label:'Sem diferença',className:'ok'};
+ if(row.confidence!=='alta')return {label:'Revisar leitura',className:'review'};
+ return {label:'Diferente',className:'changed'};
+}
+function sheetUpdateSummary(){
+ const valid=sheetRowsState.filter(r=>r.valid),changed=valid.filter(r=>sheetRowDiff(r).length);
+ const uncertain=sheetRowsState.filter(r=>sheetRowStatus(r).className==='review');
+ $('sheetCount').textContent=sheetRowsState.length+' dias';
+ $('sheetSummary').textContent=valid.length+' dias com batidas válidas; '+changed.length
+  +' com diferenças; '+uncertain.length+' precisam de revisão.';
+}
 function sheetRenderReview(){
  $('sheetResults').classList.remove('hidden');
- const valid=sheetRowsState.filter(r=>r.valid),changed=valid.filter(r=>sheetRowDiff(r).length),uncertain=sheetRowsState.filter(r=>r.confidence!=='alta');
- $('sheetCount').textContent=sheetRowsState.length+' dias';
- $('sheetSummary').textContent=valid.length+' dias com batidas completas; '+changed.length+' com diferenças; '+uncertain.length+' para revisão.';
+ sheetUpdateSummary();
  $('sheetRows').innerHTML=sheetRowsState.map((r,i)=>{
-  const diff=sheetRowDiff(r),old=records[r.date],tag=!r.hasPunches?'Sem batidas':!r.valid?'Leitura incerta':diff.length?'Diferente':'Conferido';
-  const cls=!r.valid?'review':diff.length?'changed':'ok';
-  const oldLine=old?SHEET_KEYS.map(k=>old[k]||'—').join(' / '):'Sem registro no app';
+  const old=records[r.date],status=sheetRowStatus(r);
+  const oldLine=old?SHEET_KEYS.map(k=>old[k]||'—').join(' / '):'Sem registro no aplicativo';
+  const blankConflicts=SHEET_KEYS.some(k=>Boolean(old?.[k])&&!r[k]);
   return '<div class="card sheet-row" data-sheet-index="'+i+'">'
    +'<div class="sheet-line"><label><input data-sheet-select type="checkbox" '+(r.checked?'checked ':'')+(!r.valid?'disabled ':'')+'/>'
-   +safe(fmtDate(r.date))+'</label><span class="sheet-tag '+cls+'">'+tag+'</span></div>'
-   +(r.valid||r.hasPunches?'<div class="sheet-fields">'+SHEET_KEYS.map((k,j)=>'<label>'+SHEET_LABELS[j]+'<input data-sheet-field="'+k+'" inputmode="numeric" maxlength="5" placeholder="—" value="'+safe(r[k]||'')+'"></label>').join('')+'</div>':'')
-   +'<p class="sheet-info">No app: '+safe(oldLine)+'</p>'
+   +safe(fmtDate(r.date))+'</label><span class="sheet-tag '+status.className+'">'+status.label+'</span></div>'
+   +'<div class="sheet-fields">'+SHEET_KEYS.map((k,j)=>'<label>'+SHEET_LABELS[j]
+     +'<input data-sheet-field="'+k+'" aria-label="'+SHEET_LABELS[j]+' em '+safe(fmtDate(r.date))
+     +'" inputmode="numeric" maxlength="5" placeholder="—" value="'+safe(r[k]||'')+'"></label>').join('')+'</div>'
+   +'<p class="sheet-info">Registrado no app (entrada / almoço / retorno / saída): '+safe(oldLine)+'</p>'
    +(r.reason?'<p class="sheet-note">Na folha: '+safe(r.reason)+'</p>':'')
-   +(!r.valid&&r.hasPunches?'<p class="sheet-info">Confira os horários ou fotografe novamente. Este dia não será atualizado sem validação.</p>':'')
+   +(blankConflicts?'<p class="sheet-info sheet-warning">Atenção: existem horários no app que não foram reconhecidos na folha. Confira antes de sobrescrever.</p>':'')
+   +(!r.valid?'<p class="sheet-info sheet-warning">Digite entrada e saída. O almoço só deve ser preenchido se houver intervalo registrado.</p>':'')
    +'</div>';
  }).join('');
  sheetUpdateSelected();
@@ -952,14 +976,27 @@ function sheetUpdateSelected(){
 function sheetReviewChanged(e){
  const card=e.target.closest('[data-sheet-index]');if(!card)return;
  const row=sheetRowsState[Number(card.dataset.sheetIndex)];if(!row)return;
- if(e.target.hasAttribute('data-sheet-select')){row.checked=e.target.checked;sheetUpdateSelected();return}
- const key=e.target.dataset.sheetField;if(!SHEET_KEYS.includes(key))return;
- row[key]=formatInput(e.target.value);e.target.value=row[key]||'';
+ if(e.target.hasAttribute('data-sheet-select')){
+  row.checked=e.target.checked&&row.valid;
+  sheetUpdateSelected();return;
+ }
+ const key=e.target.dataset.sheetField;
+ if(!SHEET_KEYS.includes(key))return;
+ // Não recria os campos após editar: mantém o foco e o teclado do Android.
+ row[key]=formatInput(e.target.value);
+ e.target.value=row[key]||'';
  const a=parseTime(row.entry),b=parseTime(row.lunchOut),c=parseTime(row.lunchIn),d=parseTime(row.exit);
  row.valid=a!==null&&d!==null&&a<d&&((b===null&&c===null)||(b!==null&&c!==null&&a<b&&b<c&&c<d));
+ row.hasPunches=SHEET_KEYS.some(k=>!!row[k]);
  row.confidence=row.valid?'alta':'revisar';
  if(!row.valid)row.checked=false;
- sheetRenderReview();
+ const checkbox=card.querySelector('[data-sheet-select]');
+ checkbox.disabled=!row.valid;
+ checkbox.checked=!!row.checked;
+ const status=sheetRowStatus(row),tag=card.querySelector('.sheet-tag');
+ tag.className='sheet-tag '+status.className;
+ tag.textContent=status.label;
+ sheetUpdateSummary();sheetUpdateSelected();
 }
 function sheetApplyChanges(){
  const chosen=sheetRowsState.filter(r=>r.checked&&r.valid&&sheetRowDiff(r).length);
@@ -1511,7 +1548,7 @@ function bind(){
  $('sheetFileCamera').onchange=sheetFileSelected;
  $('sheetFileGallery').onchange=sheetFileSelected;
  $('sheetRows').onchange=sheetReviewChanged;
- $('sheetSelectDiff').onclick=()=>{sheetRowsState.forEach(r=>r.checked=r.valid&&r.confidence==='alta'&&sheetRowDiff(r).length>0);sheetRenderReview()};
+ $('sheetSelectDiff').onclick=()=>{sheetRowsState.forEach(r=>r.checked=r.valid&&sheetRowStatus(r).className==='changed'&&sheetRowDiff(r).length>0);sheetRenderReview()};
  $('sheetUnselectAll').onclick=()=>{sheetRowsState.forEach(r=>r.checked=false);sheetRenderReview()};
  $('sheetApply').onclick=sheetApplyChanges;
  $('sheetUndo').onclick=sheetUndoLast;
