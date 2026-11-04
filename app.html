@@ -203,6 +203,7 @@
  <div class="value-line"><span>Dias com horas extras</span><b id="simTargetDays">0</b></div>
  <div class="value-line"><span>Crédito previsto no banco (1,5×)</span><b id="simEarned">0h 00m</b></div>
  <div class="value-line"><span>Saldo projetado ao completar o plano</span><b id="simFinalBalance">0h 00m</b></div>
+ <div class="value-line"><span>Desconto estimado se não quitar</span><b id="simWithoutPayment">A definir</b></div>
  <p class="hint" style="margin-top:10px">Até 5 minutos extras por dia não geram crédito. A partir do sexto, todos os minutos entram no banco com multiplicador configurado.</p>
 </div>
 <div class="section-title"><h2>Calendário da simulação</h2></div>
@@ -643,10 +644,13 @@ function sheetInterpretRow(anchor,rowLines,exitColumn){
  let entry=left[0]?.time||'',lunchOut='',lunchIn='',exit=exits[0]?.time||'';
  if(left.length>=3){lunchOut=left[1].time;lunchIn=left[2].time}
  const fallback=!rowLines.some(l=>l.w>0);
- if(!exit&&fallback){
-  const positive=candidates.map(t=>t.time);
-  if(positive.length===4){[entry,lunchOut,lunchIn,exit]=positive}
-  else if(positive.length===2){[entry,exit]=positive}
+ if(fallback){
+  // Nas versões antigas sem posições OCR, recuperamos as batidas na
+  // ordem do texto, mas jamais aprovamos automaticamente essa leitura.
+  const afterDate=joined.replace(/\b\d{1,2}[\/.\-]\d{1,2}[\/.\-]20\d{2}\b/g,' ');
+  const positive=sheetTokens({text:afterDate,x:0,w:0}).map(t=>t.time).filter(t=>t!=='00:00');
+  if(positive.length>=4){[entry,lunchOut,lunchIn,exit]=positive}
+  else if(positive.length===2){entry=positive[0];exit=positive[1]}
  }
  let valid=Boolean(entry&&exit&&parseTime(entry)!==null&&parseTime(exit)>parseTime(entry));
  if(lunchOut||lunchIn)valid=valid&&Boolean(lunchOut&&lunchIn&&parseTime(lunchOut)>parseTime(entry)&&parseTime(lunchIn)>parseTime(lunchOut)&&parseTime(exit)>parseTime(lunchIn));
@@ -1024,6 +1028,8 @@ function renderSimulation(){
  $('simEarned').textContent=fmtMin(data.earned);
  $('simFinalBalance').textContent=fmtMin(data.projectedBalance,true);
  $('simFinalBalance').style.color=data.projectedBalance<0?'#b74e32':'#1768b4';
+ const bankPrice=cfg.bankValue===''?NaN:Number(cfg.bankValue);
+ $('simWithoutPayment').textContent=Number.isFinite(bankPrice)&&bankPrice>=0?brl(data.due*bankPrice):'A definir em Mais';
  $('simExcluded').textContent=data.unavailable.vacations+' dia(s) de férias, '
   +data.unavailable.holidays+' feriado(s), '+data.unavailable.bridges+' emenda(s)/folga(s), '
   +data.unavailable.weekends+' dia(s) de fim de semana e '
