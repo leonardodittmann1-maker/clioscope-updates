@@ -184,6 +184,12 @@
 .sheet-fields input:focus{outline:2px solid #c47f68;outline-offset:1px}
 .sheet-row .sheet-info{overflow-wrap:anywhere}
 .sheet-row .sheet-line{flex-wrap:wrap}
+.salary-month-override{margin-top:13px;padding:10px 0;border-top:1px solid var(--line)}
+.salary-month-override summary{font-weight:750;font-size:12px;color:#95634f;cursor:pointer}
+.salary-override-row{display:flex;gap:7px;margin-top:9px}
+.salary-override-row input{min-width:0;flex:1;border:1px solid var(--line);border-radius:9px;padding:9px;font-size:13px}
+.salary-override-row button{flex-shrink:0;border:0;border-radius:9px;padding:9px;background:#b87c65;color:white;font-weight:700;font-size:12px}
+.salary-month-reset{margin-top:9px;border:0;background:none;color:#a74d43;font-size:12px;font-weight:700}
 </style></head><body><div class="app">
 <div class="header"><div class="logo-title"><div class="logo" style="background:linear-gradient(135deg,#da9c86,#875144);color:white;font-size:29px;display:flex;align-items:center;justify-content:center">◷</div><div><h1>Meu Ponto</h1></div></div><div class="home-month-controls">
  <button id="homePrevMonth" class="home-month-arrow" type="button" aria-label="Mês anterior">‹</button>
@@ -1103,7 +1109,7 @@ function inssProgressive2026(gross){
 function normalizeSalaryConfig(raw){
  const source=raw&&typeof raw==='object'?raw:{};
  const config={gross:source.gross??'',inssMode:'auto',inssManual:'',vrPerDay:'',healthPlan:'',legacyVrFixed:'',
-  first13Month:source.first13Month??'11',transit:source.transit??'',additional:source.additional??'',
+  first13Month:source.first13Month??'11',monthlyGross:source.monthlyGross&&typeof source.monthlyGross==='object'?source.monthlyGross:{},transit:source.transit??'',additional:source.additional??'',
   otherDeduction:source.otherDeduction??'',reimbursement:source.reimbursement??''};
  if('inssMode' in source||'vrPerDay' in source||'healthPlan' in source){
   return {...config,gross:source.gross??'',inssMode:source.inssMode==='manual'?'manual':'auto',
@@ -1143,7 +1149,7 @@ function salaryDraftFromInputs(){
  const numeric=id=>{const v=$(id).value.trim();return v===''?'':parseMoneyText(v)};
  return {gross:numeric('salaryGross'),inssMode:$('salaryInssMode').value==='manual'?'manual':'auto',
   inssManual:numeric('salaryInssManual'),vrPerDay:numeric('salaryVrDaily'),
-  healthPlan:numeric('salaryHealth'),first13Month:$('salary13FirstMonth').value||'11',
+  healthPlan:numeric('salaryHealth'),first13Month:$('salary13FirstMonth').value||'11',monthlyGross:salaryConfig?.monthlyGross||{},
   transit:numeric('salaryTransit'),additional:numeric('salaryAdditional'),
   otherDeduction:numeric('salaryOtherDeduction'),reimbursement:numeric('salaryReimbursement'),
   legacyVrFixed:''};
@@ -1153,7 +1159,7 @@ function salaryPreviewDraft(){
  $('salaryInssManualRow').classList.toggle('hidden',mode!=='manual');
  const draft=salaryDraftFromInputs(),base=Number(draft.gross);
  const validGross=draft.gross!==''&&Number.isFinite(base)&&base>=0;
- const totals=salaryTotals(validGross?base:0,draft,localDate().slice(0,7));
+ const totals=salaryTotals((validGross?base:0)+optionalMoney(draft,'additional'),draft,localDate().slice(0,7));
  $('salaryInssPreview').textContent=mode==='auto'?
   (validGross?'Desconto progressivo estimado: '+brl(totals.inss):'Informe o salário bruto para calcular o INSS.'):
   'Usa exatamente o valor do INSS informado no contracheque.';
@@ -1235,9 +1241,10 @@ function vacationPaymentProjections(gross,ym){
  });
 }
 function renderSalaryHome(){
- const gross=Number(salaryConfig?.gross);
- const valid=salaryConfig?.gross!==''&&Number.isFinite(gross)&&gross>0;
  const period=homeMonth;
+ const specific=salaryConfig?.monthlyGross?.[period];
+ const gross=Number(specific??salaryConfig?.gross);
+ const valid=(specific??salaryConfig?.gross)!==''&&Number.isFinite(gross)&&gross>0;
  const [y,m]=period.split('-').map(Number);
  $('salaryMonthLabel').textContent=new Date(y,m-1,1).toLocaleDateString('pt-BR',{month:'long',year:'numeric'})+' · líquido do mês';
  const annualCard=$('salaryAnnualCard');
@@ -1272,8 +1279,15 @@ function renderSalaryHome(){
   +line('Atrasos em folha',late,'−')
   +line('Total líquido mensal estimado',net)
   +line('FGTS — depósito da empresa (não descontado)',totals.fgts)
-  +'</div>';
- const thirteenth=thirteenthProjection(gross,salaryConfig,period);
+  +'</div>'
+  +'<details class="salary-month-override"><summary>Definir salário bruto deste mês</summary>'
+  +'<p class="hint">'+(specific!=null?'Este mês usa um salário específico.':'Sem salário específico: usamos o bruto informado nas configurações.')+'</p>'
+  +'<div class="salary-override-row"><input id="salaryMonthlyGross" aria-label="Salário bruto de '+safe(period)+'" inputmode="decimal" placeholder="Salário do mês" value="'+safe(specific==null?'':formatMoneyInput(specific))+'">'
+  +'<button type="button" data-save-salary-month>Salvar mês</button></div>'
+  +(specific!=null?'<button type="button" class="salary-month-reset" data-reset-salary-month>Voltar ao salário padrão</button>':'')
+  +'</details>';
+ const thirteenthBase=Number(salaryConfig?.monthlyGross?.[period.slice(0,4)+'-12']??salaryConfig?.gross);
+ const thirteenth=thirteenthProjection(thirteenthBase,salaryConfig,period);
  const vacation=vacationPaymentProjections(gross,period);
  const annual=[];
  if(thirteenth?.kind==='first')annual.push(line('13º — 1ª parcela (adiantamento)',thirteenth.amount,'+'));
@@ -1533,6 +1547,19 @@ function bind(){
   else $('salaryHomeDetails').classList.toggle('hidden');
  };
  $('salaryHomeConfigure').onclick=openSalarySettings;
+ $('salaryHomeDetails').onclick=e=>{
+  if(e.target.closest('[data-save-salary-month]')){
+   const value=$('salaryMonthlyGross')?.value?.trim()||'';
+   const gross=parseMoneyText(value);
+   if(!value||!Number.isFinite(gross)||gross<=0){alertUser('Informe um salário bruto válido para o mês');return}
+   salaryConfig.monthlyGross=salaryConfig.monthlyGross||{};
+   salaryConfig.monthlyGross[homeMonth]=gross;save();renderHome();return;
+  }
+  if(e.target.closest('[data-reset-salary-month]')){
+   if(salaryConfig.monthlyGross)delete salaryConfig.monthlyGross[homeMonth];
+   save();renderHome();
+  }
+ };
  $('salarySave').onclick=saveSalaryConfig;
  for(const id of ['salaryGross','salaryInssMode','salaryInssManual','salaryVrDaily','salaryHealth','salary13FirstMonth','salaryTransit','salaryAdditional','salaryOtherDeduction','salaryReimbursement']){
   $(id).addEventListener(id==='salaryInssMode'?'change':'input',salaryPreviewDraft);
