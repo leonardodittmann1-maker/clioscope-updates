@@ -603,7 +603,7 @@ function sheetRecordSignature(r){
  return JSON.stringify({
   entry:r?.entry||'',lunchOut:r?.lunchOut||'',lunchIn:r?.lunchIn||'',exit:r?.exit||'',
   extraBreaks:Array.isArray(r?.extraBreaks)?r.extraBreaks.map(x=>({out:x.out||'',back:x.back||''})):[],
-  delay:r?.delay||'',earlyTreatment:r?.earlyTreatment||''
+  delay:r?.delay||'bank',earlyTreatment:r?.earlyTreatment||'bank'
  });
 }
 function parseOfficialBank(note){
