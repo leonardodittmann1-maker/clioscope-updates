@@ -1044,7 +1044,9 @@ function inssProgressive2026(gross){
 }
 function normalizeSalaryConfig(raw){
  const source=raw&&typeof raw==='object'?raw:{};
- const config={gross:source.gross??'',inssMode:'auto',inssManual:'',vrPerDay:'',healthPlan:'',legacyVrFixed:''};
+ const config={gross:source.gross??'',inssMode:'auto',inssManual:'',vrPerDay:'',healthPlan:'',legacyVrFixed:'',
+  first13Month:source.first13Month??'11',transit:source.transit??'',additional:source.additional??'',
+  otherDeduction:source.otherDeduction??'',reimbursement:source.reimbursement??''};
  if('inssMode' in source||'vrPerDay' in source||'healthPlan' in source){
   return {...config,gross:source.gross??'',inssMode:source.inssMode==='manual'?'manual':'auto',
    inssManual:source.inssManual??'',vrPerDay:source.vrPerDay??'',healthPlan:source.healthPlan??'',
@@ -1080,13 +1082,12 @@ function salaryTotals(gross,config,ym){
   inssMode:mode};
 }
 function salaryDraftFromInputs(){
- const grossText=$('salaryGross').value.trim();
- const inssText=$('salaryInssManual').value.trim(),vrText=$('salaryVrDaily').value.trim(),healthText=$('salaryHealth').value.trim();
- return {gross:grossText===''?'':parseMoneyText(grossText),
-  inssMode:$('salaryInssMode').value==='manual'?'manual':'auto',
-  inssManual:inssText===''?'':parseMoneyText(inssText),
-  vrPerDay:vrText===''?'':parseMoneyText(vrText),
-  healthPlan:healthText===''?'':parseMoneyText(healthText),
+ const numeric=id=>{const v=$(id).value.trim();return v===''?'':parseMoneyText(v)};
+ return {gross:numeric('salaryGross'),inssMode:$('salaryInssMode').value==='manual'?'manual':'auto',
+  inssManual:numeric('salaryInssManual'),vrPerDay:numeric('salaryVrDaily'),
+  healthPlan:numeric('salaryHealth'),first13Month:$('salary13FirstMonth').value||'11',
+  transit:numeric('salaryTransit'),additional:numeric('salaryAdditional'),
+  otherDeduction:numeric('salaryOtherDeduction'),reimbursement:numeric('salaryReimbursement'),
   legacyVrFixed:''};
 }
 function salaryPreviewDraft(){
@@ -1110,6 +1111,10 @@ function renderSalarySettings(){
  $('salaryInssManual').value=formatMoneyInput(salaryConfig.inssManual);
  $('salaryVrDaily').value=formatMoneyInput(salaryConfig.vrPerDay);
  $('salaryHealth').value=formatMoneyInput(salaryConfig.healthPlan);
+ $('salary13FirstMonth').value=salaryConfig.first13Month||'11';
+ for(const [id,key] of [['salaryTransit','transit'],['salaryAdditional','additional'],['salaryOtherDeduction','otherDeduction'],['salaryReimbursement','reimbursement']]){
+  $(id).value=formatMoneyInput(salaryConfig[key]);
+ }
  salaryPreviewDraft();
 }
 function saveSalaryConfig(){
@@ -1117,7 +1122,7 @@ function saveSalaryConfig(){
  if(draft.gross===''||!Number.isFinite(draft.gross)||draft.gross<=0){
   alertUser('Informe um salário bruto válido');return;
  }
- for(const k of ['inssManual','vrPerDay','healthPlan']){
+ for(const k of ['inssManual','vrPerDay','healthPlan','transit','additional','otherDeduction','reimbursement']){
   if(draft[k]!==''&&(!Number.isFinite(draft[k])||draft[k]<0)){
    alertUser('Confira os valores informados de INSS, VR e plano');return;
   }
@@ -1389,7 +1394,7 @@ function bind(){
  };
  $('salaryHomeConfigure').onclick=openSalarySettings;
  $('salarySave').onclick=saveSalaryConfig;
- for(const id of ['salaryGross','salaryInssMode','salaryInssManual','salaryVrDaily','salaryHealth']){
+ for(const id of ['salaryGross','salaryInssMode','salaryInssManual','salaryVrDaily','salaryHealth','salary13FirstMonth','salaryTransit','salaryAdditional','salaryOtherDeduction','salaryReimbursement']){
   $(id).addEventListener(id==='salaryInssMode'?'change':'input',salaryPreviewDraft);
  }
  $('homePlanVacation').onclick=openPlanning;
