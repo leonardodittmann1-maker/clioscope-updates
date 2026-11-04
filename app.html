@@ -996,11 +996,11 @@ function sheetParseOCR(payload){
   for(const row of fromText){
    const existing=result.find(x=>x.date===row.date);
    if(!existing){
-    row.confidence='revisar';row.checked=false;result.push(row);
-   }else if(!existing.valid&&row.valid){
-    existing.entry=row.entry;existing.lunchOut=row.lunchOut;existing.lunchIn=row.lunchIn;
-    existing.exit=row.exit;existing.hasPunches=row.hasPunches;existing.valid=true;
-    existing.confidence='revisar';
+    // Texto sem coordenadas pode misturar horários de linhas vizinhas.
+    // Nunca sobreescreva folga/atestado reconhecido pela geometria.
+    row.confidence='revisar';row.choice='app';
+    row.textOnlyFallback=true;
+    result.push(row);
    }
   }
  }
