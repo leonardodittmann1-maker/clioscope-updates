@@ -621,7 +621,10 @@ function calc(date,r){
  const adjustedMinutes=minutes+lateParts.pay+lateParts.abono;
  // A saída antecipada é tratada separadamente, sem uma segunda
  // cobrança do atraso já pago ou abonado.
- const earlyMinutes=isRest?0:Math.max(0,Number(cfg.workday)-adjustedMinutes);
+ // O atraso lançado ao banco não é uma segunda "saída antecipada".
+ // Só permite abonar a parcela de jornada realmente faltante além do atraso.
+ const totalShortfall=Math.max(0,Number(cfg.workday)-adjustedMinutes);
+ const earlyMinutes=isRest?0:Math.max(0,totalShortfall-lateParts.bank);
  const earlyAbono=!isRest&&earlyMinutes>EXIT_TOLERANCE_MIN&&r.earlyTreatment==='abono'
   ?earlyMinutes:0;
  const bankMinutes=adjustedMinutes+earlyAbono;
