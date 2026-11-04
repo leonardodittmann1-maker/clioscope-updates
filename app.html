@@ -254,6 +254,16 @@
 .backup-text-details summary,.backup-restore-details summary{cursor:pointer;color:#87513c;font-weight:750}
 .backup-text-details textarea,.backup-restore-details textarea{width:100%;max-width:100%;display:block;margin-top:9px;border-radius:9px;border:1px solid var(--line);background:#fff;padding:10px;box-sizing:border-box;font:11px/1.5 monospace;resize:vertical;user-select:text;-webkit-user-select:text}
 .backup-rescue .hint,.backup-restore-details .hint{line-height:1.6;margin-top:8px}
+
+#sheetImageTools{margin-top:12px;padding:12px;border:1px solid var(--line);border-radius:12px;background:#fffaf6}
+.sheet-tool-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.7fr);gap:10px;align-items:center;margin-bottom:11px}
+.sheet-tool-row label{font-size:12px;font-weight:750;color:#725949}
+.sheet-tool-row select{max-width:100%;width:100%;border:1px solid var(--line);border-radius:9px;padding:9px 7px;background:#fff;font-size:12px}
+#sheetRetry{width:100%;font-size:12px}
+.sheet-image-details{font-size:12px;margin-top:11px}
+.sheet-image-details summary{cursor:pointer;font-weight:700;color:#87513c}
+.sheet-image-scroll{overflow:auto;max-height:300px;margin-top:8px;background:#eee;touch-action:pan-x pan-y}
+.sheet-image-scroll img{display:block;width:auto;max-width:none;max-height:400px}
 </style></head><body><div class="app">
 <div class="header"><div class="logo-title"><div class="logo" style="background:linear-gradient(135deg,#da9c86,#875144);color:white;font-size:29px;display:flex;align-items:center;justify-content:center">◷</div><div><h1>Meu Ponto</h1></div></div><div class="home-month-controls">
  <button id="homePrevMonth" class="home-month-arrow" type="button" aria-label="Mês anterior">‹</button>
@@ -318,7 +328,12 @@
    <button id="sheetCamera" class="btn" type="button">📷 Tirar foto</button>
    <button id="sheetGallery" class="btn outline" type="button">Galeria</button>
   </div>
-  <p class="hint" style="margin-top:11px">Para melhor reconhecimento, fotografe a folha de frente, com luz uniforme, sem reflexos e com as datas e horários de entrada e saída legíveis. A foto é interpretada no aparelho.</p>
+  <p class="hint" style="margin-top:11px">Leitura independente do APK: a foto é dividida em partes e reconhecida diretamente pela interface. O modelo de OCR é carregado pela internet na primeira utilização; sua foto não é enviada para o GitHub.</p>
+  <div id="sheetImageTools" class="hidden">
+    <div class="sheet-tool-row"><label for="sheetRotation">Orientação da folha</label><select id="sheetRotation"><option value="auto">Detectar automaticamente</option><option value="0">Sem girar</option><option value="90">Girar 90°</option><option value="270">Girar -90°</option><option value="180">Girar 180°</option></select></div>
+    <button id="sheetRetry" class="btn outline" type="button">Ler foto novamente</button>
+    <details class="sheet-image-details"><summary>Ver a foto selecionada</summary><div class="sheet-image-scroll"><img id="sheetImagePreview" alt="Folha de ponto selecionada para leitura"></div></details>
+  </div>
   <p id="sheetStatus" class="progress hidden" role="status" aria-live="polite"></p>
  </div>
  <div id="sheetResults" class="hidden">
