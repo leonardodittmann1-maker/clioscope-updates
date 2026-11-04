@@ -697,7 +697,7 @@ function openEdit(date=localDate()){
    anchorTop:anchor?anchor.getBoundingClientRect().top:null
   };
  }
- if(!activeScan)$('editReceiptPanel').classList.add('hidden');editFor=date;$('editDate').value=date;let r=records[date]||{};['entry','lunchOut','lunchIn','exit'].forEach(k=>$(k).value=r[k]||'');$('note').value=r.note||'';document.querySelector(`input[name=delay][value=${r.delay==='bank'?'bank':'pay'}]`).checked=true;$('editTitle').textContent=records[date]?'Editar registro':'Novo registro';$('deleteDay').disabled=!records[date];previewDay();go('edit')}
+ if(!activeScan)$('editReceiptPanel').classList.add('hidden');editFor=date;$('editDate').value=date;let r=records[date]||{};['entry','lunchOut','lunchIn','exit'].forEach(k=>$(k).value=r[k]||'');$('note').value=r.note||'';document.querySelector(`input[name=delay][value=${['pay','bank','abono'].includes(r.delay)?r.delay:'pay'}]`).checked=true;document.querySelector(`input[name=earlyTreatment][value=${r.earlyTreatment==='abono'?'abono':'bank'}]`).checked=true;renderExtraBreaks(r.extraBreaks||[]);$('editTitle').textContent=records[date]?'Editar registro':'Novo registro';$('deleteDay').disabled=!records[date];go('edit');previewDay();}
 function returnToRecordList(date=editFor){
  const context=editReturnContext;
  currentMonth=(context?.month||date.slice(0,7));
@@ -721,11 +721,124 @@ function returnToRecordList(date=editFor){
  if(typeof requestAnimationFrame==='function')requestAnimationFrame(restore);
  else restore();
 }
-function readForm(){let x={};['entry','lunchOut','lunchIn','exit'].forEach(k=>x[k]=formatInput($(k).value));x.note=$('note').value.trim();x.delay=document.querySelector('input[name=delay]:checked').value;return x}
-function previewDay(){let date=$('editDate').value||editFor;let en=parseTime($('entry').value),l1=parseTime($('lunchOut').value),l2=parseTime($('lunchIn').value);const lunchReturnForecast=l1===null?'':fromMinutes(l1+Number(cfg.lunch));$('lunchIn').placeholder=lunchReturnForecast||'Previsão';let rem=+cfg.workday;let payrollLate=en===null||isRestDay(date)?0:Math.max(0,en-parseTime(cfg.end));
- if(payrollLate<=+cfg.tolerance||document.querySelector('input[name=delay]:checked')?.value==='bank')payrollLate=0;
- let forecast=en===null?null:en+rem+(l1!==null&&l2!==null?l2-l1:l1!==null||l2!==null?+cfg.lunch:0)-payrollLate;let text=forecast!==null&&forecast<1440?fromMinutes(forecast):'—';$('exit').placeholder=text;$('exitForecast').textContent=forecast!==null?`Saída prevista: ${text}`:'A saída prevista aparecerá aqui';$('lunchForecast').textContent=l1!==null&&l2===null&&lunchReturnForecast?'Retorno previsto: '+lunchReturnForecast:'';let late=en===null?0:en-parseTime(cfg.end);$('delaySection').classList.toggle('hidden',late<=+cfg.tolerance);let h=holidayName(date);$('editHoliday').classList.toggle('hidden',!h);$('editHoliday').textContent=h?'✦ Feriado: '+h:'';let r=readForm();let c=calc(date,r);$('dayPreview').textContent=c?`Trabalhadas: ${fmtMin(c.minutes)} · Banco: ${fmtMin(c.bank,true)} · Desconto salarial: ${brl(c.lateMoney)}`:'Preencha entrada e saída para calcular a jornada. Pode salvar batidas parciais.'}
-function saveDay(){if(scanBusy){alertUser('Aguarde a leitura do comprovante');return}let date=$('editDate').value;if(!/^\d{4}-\d{2}-\d{2}$/.test(date)){alertUser('Informe uma data válida');return}for(let k of ['entry','lunchOut','lunchIn','exit']){if($(k).value.trim()&&!formatInput($(k).value)){alertUser('Confira o horário em '+k);return}}let r=readForm();if(!['entry','lunchOut','lunchIn','exit'].some(k=>r[k])){alertUser('Informe pelo menos uma batida');return}let en=parseTime(r.entry),ex=parseTime(r.exit),l1=parseTime(r.lunchOut),l2=parseTime(r.lunchIn);if(en!==null&&ex!==null&&ex<=en){alertUser('Saída deve ser posterior à entrada');return}if(l1!==null&&l2!==null&&l2<=l1){alertUser('Confira o horário do almoço');return}if((l1!==null&&en!==null&&l1<=en)||(l2!==null&&ex!==null&&l2>=ex)){alertUser('Confira a ordem das batidas');return}records[date]=r;save();activeScan=null;alertUser('Registro salvo');returnToRecordList(date)}
+
+function readExtraBreakFields(){
+ return [...$('extraBreaksList').querySelectorAll('.extra-break-row')].map(row=>({
+  out:row.querySelector('[data-extra-out]')?.value.trim()||'',
+  back:row.querySelector('[data-extra-back]')?.value.trim()||''
+ }));
+}
+function renderExtraBreaks(items=[]){
+ const rows=Array.isArray(items)?items:[];
+ $('extraBreaksList').innerHTML=rows.map((x,i)=>
+  '<div class="extra-break-row" data-break-index="'+i+'">'
+  +'<div class="extra-break-head"><strong>Intervalo '+(i+1)+'</strong>'
+  +'<button type="button" class="extra-break-remove" data-break-remove="'+i+'">Excluir</button></div>'
+  +'<div class="extra-break-times">'
+  +'<div class="field"><label>Saída</label><input data-extra-out inputmode="numeric" maxlength="5" placeholder="14:20" value="'+safe(x.out||'')+'"></div>'
+  +'<div class="field"><label>Retorno</label><input data-extra-back inputmode="numeric" maxlength="5" placeholder="14:40" value="'+safe(x.back||'')+'"></div>'
+  +'</div></div>'
+ ).join('');
+ $('extraBreaksMessage').classList.add('hidden');
+}
+function readForm(){
+ const x={};
+ for(const k of ['entry','lunchOut','lunchIn','exit'])x[k]=formatInput($(k).value);
+ x.note=$('note').value.trim();
+ x.delay=document.querySelector('input[name=delay]:checked')?.value||'pay';
+ x.earlyTreatment=document.querySelector('input[name=earlyTreatment]:checked')?.value||'bank';
+ x.extraBreaks=readExtraBreakFields().filter(x=>x.out||x.back)
+  .map(x=>({out:formatInput(x.out)||x.out,back:formatInput(x.back)||x.back}));
+ return x;
+}
+function previewDay(){
+ const date=$('editDate').value||editFor,r=readForm();
+ const en=parseTime(r.entry),ex=parseTime(r.exit),l1=parseTime(r.lunchOut),l2=parseTime(r.lunchIn);
+ const lunchReturnForecast=l1===null?'':fromMinutes(l1+Number(cfg.lunch));
+ $('lunchIn').placeholder=lunchReturnForecast||'Previsão';
+ const lunchDuration=l1!==null&&l2!==null?l2-l1:
+  l1!==null||l2!==null?Number(cfg.lunch):0;
+ const extra=extraBreaksAnalysis(r,en,ex,l1,l2);
+ const late=en===null?null:lateTreatmentMinutes(date,r,en);
+ const coveredLate=(late?.pay||0)+(late?.abono||0);
+ const forecast=en===null||!extra.valid||extra.open?null:
+  en+Number(cfg.workday)+lunchDuration+extra.minutes-coveredLate;
+ const forecastText=forecast===null?'':fromMinutes(forecast);
+ $('exit').placeholder=forecastText||'Previsão';
+ $('exitForecast').textContent=forecastText?'Saída prevista: '+forecastText:
+  extra.open?'Preencha o retorno do intervalo para calcular a saída':'A saída prevista aparecerá aqui';
+ $('lunchForecast').textContent=l1!==null&&l2===null&&lunchReturnForecast?
+  'Retorno previsto: '+lunchReturnForecast:'';
+ const lateActive=en!==null&&!isRestDay(date)&&late.late>Number(cfg.tolerance);
+ $('delaySection').classList.toggle('hidden',!lateActive);
+ const h=holidayName(date);
+ $('editHoliday').classList.toggle('hidden',!h);
+ $('editHoliday').textContent=h?'✦ Feriado: '+h:'';
+ const c=calc(date,r);
+ const earlyActive=!!c&&!c.rest&&c.earlyMinutes>EXIT_TOLERANCE_MIN;
+ $('earlySection').classList.toggle('hidden',!earlyActive);
+ if(earlyActive)$('earlyDescription').textContent=
+  fmtMin(c.earlyMinutes)+' de jornada não cumprida. Escolha Banco de horas ou Abono.';
+ $('extraBreaksMessage').classList.toggle('hidden',extra.valid&&!extra.open);
+ $('extraBreaksMessage').textContent=!extra.valid?extra.error:
+  extra.open?'O retorno de um intervalo ainda está pendente. O registro pode ser salvo como parcial, desde que não haja saída final.':'';
+ if(c){
+  const details=['Trabalhadas: '+fmtMin(c.minutes)];
+  if(c.extraBreakMinutes>0)details.push('Outros intervalos: '+fmtMin(c.extraBreakMinutes));
+  details.push('Banco: '+fmtMin(c.bank,true));
+  if(c.abonoMinutes>0)details.push('Abonado: '+fmtMin(c.abonoMinutes));
+  if(c.lateMoney>0)details.push('Desconto salarial: '+brl(c.lateMoney));
+  $('dayPreview').textContent=details.join(' · ');
+ }else{
+  $('dayPreview').textContent=!extra.valid?extra.error:
+   extra.open?'Intervalo adicional aberto: registre o retorno para concluir a jornada.':
+   'Preencha entrada e saída para calcular a jornada. Pode salvar batidas parciais.';
+ }
+}
+function saveDay(){
+ if(scanBusy){alertUser('Aguarde a leitura do comprovante');return}
+ const date=$('editDate').value;
+ if(!/^\d{4}-\d{2}-\d{2}$/.test(date)){alertUser('Informe uma data válida');return}
+ for(const k of ['entry','lunchOut','lunchIn','exit']){
+  if($(k).value.trim()&&!formatInput($(k).value)){
+   alertUser('Confira o horário em '+k);return;
+  }
+ }
+ for(const row of $('extraBreaksList').querySelectorAll('.extra-break-row')){
+  for(const input of row.querySelectorAll('[data-extra-out],[data-extra-back]')){
+   if(input.value.trim()&&!formatInput(input.value)){
+    alertUser('Confira os horários dos intervalos adicionais');return;
+   }
+  }
+ }
+ const r=readForm();
+ if(!['entry','lunchOut','lunchIn','exit'].some(k=>r[k])){
+  alertUser('Informe pelo menos uma batida');return;
+ }
+ const en=parseTime(r.entry),ex=parseTime(r.exit);
+ const l1=parseTime(r.lunchOut),l2=parseTime(r.lunchIn);
+ if(en!==null&&ex!==null&&ex<=en){alertUser('Saída deve ser posterior à entrada');return}
+ if(l1!==null&&l2!==null&&l2<=l1){alertUser('Confira o horário do almoço');return}
+ if((l1!==null&&en!==null&&l1<=en)||(l2!==null&&ex!==null&&l2>=ex)){
+  alertUser('Confira a ordem das batidas');return;
+ }
+ const extras=extraBreaksAnalysis(r,en,ex,l1,l2);
+ if(!extras.valid){alertUser(extras.error);return}
+ if(extras.open&&ex!==null){
+  alertUser('Há uma saída para intervalo sem retorno. Preencha o retorno antes de registrar a saída final.');return;
+ }
+ if(extras.open&&en===null){
+  alertUser('Informe a entrada antes de abrir um intervalo adicional.');return;
+ }
+ if(ex!==null&&en!==null&&l1!==null&&l2===null){
+  alertUser('Preencha o retorno do almoço ou apague a saída de almoço para indicar que não houve intervalo.');return;
+ }
+ if(en!==null&&ex!==null&&!calc(date,r)){
+  alertUser('Confira os horários do almoço e os intervalos adicionais.');return;
+ }
+ records[date]=r;save();activeScan=null;
+ alertUser('Registro salvo');returnToRecordList(date);
+}
 function changeSummaryMonth(delta){
  const [year,month]=selectedSummaryMonth.split('-').map(Number);
  selectedSummaryMonth=localDate(new Date(year,month-1+delta,1)).slice(0,7);
