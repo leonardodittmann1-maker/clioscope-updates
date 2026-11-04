@@ -264,6 +264,25 @@
 .sheet-image-details summary{cursor:pointer;font-weight:700;color:#87513c}
 .sheet-image-scroll{overflow:auto;max-height:300px;margin-top:8px;background:#eee;touch-action:pan-x pan-y}
 .sheet-image-scroll img{display:block;width:auto;max-width:none;max-height:400px}
+
+/* Batidas adicionais dentro do expediente */
+#earlySection{margin:16px 0 5px}
+#earlySection .hint{line-height:1.55}
+.extra-breaks-section{margin-top:18px;padding-top:16px;border-top:1px solid var(--line)}
+.extra-breaks-section .section-title{margin:0 0 7px}
+.extra-breaks-section>p.hint{font-size:12px;line-height:1.55;margin-bottom:12px}
+.extra-breaks-list{display:grid;gap:9px}
+.extra-break-row{border:1px solid var(--line);border-radius:12px;padding:11px;background:#fff;min-width:0}
+.extra-break-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px}
+.extra-break-head strong{font-size:12px;color:#735346}
+.extra-break-remove{border:1px solid #ead4cb;border-radius:8px;color:#aa5243;background:#fff6f2;font-size:11px;padding:7px 9px;flex-shrink:0}
+.extra-break-times{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.extra-break-times .field{min-width:0}
+.extra-break-times label{font-size:11px;color:var(--muted);display:block;margin-bottom:5px}
+.extra-break-times input{display:block;width:100%;min-width:0;min-height:41px;padding:9px 10px;border:1px solid var(--line);border-radius:9px;background:#fff;box-sizing:border-box;font-size:15px}
+.extra-breaks-add{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;margin:10px 0 0}
+.extra-breaks-add span{font-size:19px}
+#extraBreaksMessage{margin-top:8px;font-size:11px}
 </style></head><body><div class="app">
 <div class="header"><div class="logo-title"><div class="logo" style="background:linear-gradient(135deg,#da9c86,#875144);color:white;font-size:29px;display:flex;align-items:center;justify-content:center">◷</div><div><h1>Meu Ponto</h1></div></div><div class="home-month-controls">
  <button id="homePrevMonth" class="home-month-arrow" type="button" aria-label="Mês anterior">‹</button>
@@ -358,8 +377,28 @@
 <section id="edit" class="page"><div class="panel-header"><button id="backEdit">‹ Voltar</button><strong id="editTitle">Novo registro</strong><span style="width:58px"></span></div>
 <div class="card"><div id="editReceiptPanel" class="receipt-panel hidden" role="status" aria-live="polite"><div class="receipt-head"><span id="editReceiptMessage">Lendo comprovante...</span><span id="editReceiptSpinner" class="receipt-spinner"></span></div><div id="editReceiptSelectRow" class="field hidden"><label for="editReceiptKind">Batida identificada</label><div class="receipt-identified"><strong id="editReceiptTime">—</strong><select id="editReceiptKind" aria-label="Selecionar onde colocar a batida"><option value="entry">Entrada</option><option value="lunchOut">Saída para almoço</option><option value="lunchIn">Retorno do almoço</option><option value="exit">Saída final</option></select></div></div></div><div class="field"><label for="editDate">Data</label><input id="editDate" type="date"></div><div id="editHoliday" class="label-holiday hidden"></div>
 <div class="two"><div class="field"><label for="entry">Entrada</label><input id="entry" placeholder="07:45" inputmode="numeric" maxlength="5"></div><div class="field"><label for="lunchOut">Saída para almoço</label><input id="lunchOut" placeholder="12:00" inputmode="numeric" maxlength="5"></div><div class="field"><label for="lunchIn">Retorno do almoço</label><input id="lunchIn" placeholder="Previsão" inputmode="numeric" maxlength="5"><p class="hint" id="lunchForecast"></p></div><div class="field"><label for="exit">Saída final</label><input id="exit" placeholder="Previsão" inputmode="numeric" maxlength="5"><p class="hint" id="exitForecast">Saída prevista em cinza</p></div></div>
-<div id="delaySection" class="hidden"><div class="section-title"><h3>Entrada após 9h10</h3></div><div id="delayChooser" class="select-group"><label class="choice"><input type="radio" name="delay" value="pay" checked><div><strong>Atraso (desconto na folha)</strong><span>R$ 0,21 por minuto, configurável. Não lança o mesmo atraso no banco.</span></div></label><label class="choice"><input type="radio" name="delay" value="bank"><div><strong>Banco de horas</strong><span>Debita os minutos no banco, sem cobrar como atraso salarial.</span></div></label></div></div>
-<div class="field" style="margin-top:16px"><label for="note">Observações</label><textarea id="note" placeholder="Abono, justificativa ou anotação (opcional)"></textarea></div>
+<div id="delaySection" class="hidden"><div class="section-title"><h3>Entrada após 9h10</h3></div>
+ <div id="delayChooser" class="select-group">
+  <label class="choice"><input type="radio" name="delay" value="pay" checked><div><strong>Atraso (desconto na folha)</strong><span>Desconta o atraso da folha, sem debitá-lo novamente no banco.</span></div></label>
+  <label class="choice"><input type="radio" name="delay" value="bank"><div><strong>Banco de horas</strong><span>Debita os minutos do saldo do banco.</span></div></label>
+  <label class="choice"><input type="radio" name="delay" value="abono"><div><strong>Abono</strong><span>Marca o atraso como abonado e não aplica débito nem desconto por esses minutos.</span></div></label>
+ </div>
+</div>
+<div id="earlySection" class="hidden"><div class="section-title"><h3>Saída antecipada</h3></div>
+ <p class="hint" id="earlyDescription">Saída antes do término da jornada.</p>
+ <div class="select-group" style="margin-top:9px">
+  <label class="choice"><input type="radio" name="earlyTreatment" value="bank" checked><div><strong>Banco de horas</strong><span>Desconta o tempo não cumprido do banco.</span></div></label>
+  <label class="choice"><input type="radio" name="earlyTreatment" value="abono"><div><strong>Abono</strong><span>Considera o tempo não cumprido como abonado, sem débito no banco.</span></div></label>
+ </div>
+</div>
+<div class="field" style="margin-top:16px"><label for="note">Observações</label><textarea id="note" placeholder="Justificativa ou anotação (opcional)"></textarea></div>
+<div class="extra-breaks-section">
+ <div class="section-title"><h3>Intervalos adicionais</h3></div>
+ <p class="hint">Para saídas e retornos durante o expediente, além do almoço. Cada pausa será descontada uma única vez das horas trabalhadas.</p>
+ <div id="extraBreaksList" class="extra-breaks-list"></div>
+ <button id="addExtraBreak" class="btn outline extra-breaks-add" type="button"><span aria-hidden="true">＋</span> Adicionar intervalo</button>
+ <p id="extraBreaksMessage" class="hint hidden" role="status" aria-live="polite"></p>
+</div>
 <div id="dayPreview" class="info"></div><div class="btnline" style="margin-top:15px"><button id="saveDay" class="btn">Salvar registro</button><button id="deleteDay" class="btn danger" style="flex:0 0 30%">Excluir</button></div></div>
 </section>
 <section id="scanner" class="page"><div class="panel-header"><button id="backScanner">‹ Voltar</button><strong>Scanner de ponto</strong><span style="width:58px"></span></div><div class="card"><h3>Escanear comprovante</h3><div class="btnline"><button class="btn" id="takePhoto">📷 Tirar foto</button><button class="btn outline" id="pickPhoto">Galeria</button></div><img id="scanImage" class="scan-picture hidden" alt="Foto do comprovante"><p id="scanMessage" class="progress hidden" role="status" aria-live="polite"></p>
