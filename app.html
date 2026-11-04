@@ -639,7 +639,7 @@ function calc(date,r){
 function summaryMonth(ym){let s={minutes:0,lateMoney:0,lateMinutes:0,extra:0,credit:0,debit:0,count:0};for(let [date,r] of Object.entries(records)){if(!date.startsWith(ym))continue;let c=calc(date,r);if(!c)continue;s.count++;s.minutes+=c.minutes;s.lateMoney+=c.lateMoney;s.lateMinutes+=c.latePay;s.credit+=c.credit;s.debit+=c.debit;if(c.minutes>+cfg.workday&&!c.rest)s.extra+=c.minutes-+cfg.workday;}return s}
 function summarySem(k,throughMonth=null){let s={credit:0,debit:0,balance:0,days:0};for(let [date,r] of Object.entries(records)){if(semKey(date)!==k||(throughMonth&&date.slice(0,7)>throughMonth))continue;let c=calc(date,r);if(!c)continue;s.credit+=c.credit;s.debit+=c.debit;s.days++}for(let a of adjustments){if(semKey(a.date)!==k||(throughMonth&&a.date.slice(0,7)>throughMonth))continue;let m=+a.minutes;if(m>0)s.credit+=m;else s.debit-=m}s.balance=s.credit-s.debit;return s}
 function go(next){page=next;document.querySelectorAll('.page').forEach(x=>x.classList.toggle('active',x.id===next));document.querySelectorAll('.nav').forEach(x=>x.classList.toggle('active',x.dataset.page===next));if(next==='home')renderHome();if(next==='records')renderRecords();if(next==='summary')renderSummary();if(next==='simulation')renderSimulation();if(next==='planning')renderPlanning();if(next==='settings')renderSettings();window.scrollTo(0,0)}
-function recordRow(date,r){let c=calc(date,r),hol=holidayName(date),status=hol?'Feriado':!c?'Parcial':c.latePay?'Atraso':c.lateBank?'Banco':c.bank>0?'Extra':c.bank<0?'Débito':'Normal';let cls=hol?'holiday':status==='Atraso'?'debit':status==='Banco'?'credit':c?.bank>0?'good':'';return `<div class="list-row" data-date="${date}"><div class="daybox"><b>${date.slice(8)}</b><small>${new Date(date+'T12:00:00').toLocaleDateString('pt-BR',{weekday:'short'}).replace('.','')}</small></div><div class="list-main"><strong>${safe(r.entry)||'—'} → ${safe(r.exit)||'—'}</strong><p>${c?fmtMin(c.minutes)+' trabalhadas':'Registro incompleto'}${c?.latePay?' • '+brl(c.lateMoney):''}</p></div><div class="row-right">${c?`<small style="color:${c.bank<0?'#b74e32':'#1768b4'}">${fmtMin(c.bank,true)}</small>`:''}<span class="chip ${cls}">${status}</span></div></div>`}
+function recordRow(date,r){let c=calc(date,r),hol=holidayName(date),status=hol?'Feriado':!c?'Parcial':c.latePay?'Atraso':c.abonoMinutes>0?'Abono':c.lateBank?'Banco':c.bank>0?'Extra':c.bank<0?'Débito':'Normal';let cls=hol?'holiday':status==='Atraso'?'debit':status==='Abono'?'good':status==='Banco'?'credit':c?.bank>0?'good':'';return `<div class="list-row" data-date="${date}"><div class="daybox"><b>${date.slice(8)}</b><small>${new Date(date+'T12:00:00').toLocaleDateString('pt-BR',{weekday:'short'}).replace('.','')}</small></div><div class="list-main"><strong>${safe(r.entry)||'—'} → ${safe(r.exit)||'—'}</strong><p>${c?fmtMin(c.minutes)+' trabalhadas':'Registro incompleto'}${c?.latePay?' • '+brl(c.lateMoney):''}</p></div><div class="row-right">${c?`<small style="color:${c.bank<0?'#b74e32':'#1768b4'}">${fmtMin(c.bank,true)}</small>`:''}<span class="chip ${cls}">${status}</span></div></div>`}
 function renderToday(){
  const date=localDate(),r=records[date]||{},c=records[date]?calc(date,r):null;
  const weekday=new Date(date+'T12:00:00').toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'short'});
@@ -648,8 +648,12 @@ function renderToday(){
  const names=['Entrada','Almoço','Retorno','Saída'];
  const en=parseTime(r.entry),startLunch=parseTime(r.lunchOut),endLunch=parseTime(r.lunchIn);
  const lunchReturnForecast=startLunch!==null&&endLunch===null?fromMinutes(startLunch+Number(cfg.lunch)):'';
- const payrollLate=en===null||rest||Math.max(0,en-parseTime(cfg.end))<=+cfg.tolerance||r.delay==='bank'?0:Math.max(0,en-parseTime(cfg.end));
- const forecast=en===null?'':fromMinutes(en+Number(cfg.workday)+(startLunch!==null&&endLunch!==null?endLunch-startLunch:startLunch!==null||endLunch!==null?Number(cfg.lunch):0)-payrollLate);
+ const extra=extraBreaksAnalysis(r,en,null,startLunch,endLunch);
+ const late=en===null?null:lateTreatmentMinutes(date,r,en);
+ const coveredLate=(late?.pay||0)+(late?.abono||0);
+ const plannedLunch=startLunch!==null&&endLunch!==null?endLunch-startLunch:
+  startLunch!==null||endLunch!==null?Number(cfg.lunch):0;
+ const forecast=en===null||!extra.valid||extra.open?'':fromMinutes(en+Number(cfg.workday)+plannedLunch+extra.minutes-coveredLate);
  const hasAny=values.some(k=>!!r[k]);
  const state=c?'Concluído':hasAny?'Em andamento':hol?'Feriado':rest?'Folga':'Sem registro';
  const times=values.map((k,i)=>{let isForecast=k==='exit'&&!r.exit&&!!forecast;let isLunchForecast=k==='lunchIn'&&!r.lunchIn&&!!lunchReturnForecast;let value=r[k]||(isForecast?forecast:isLunchForecast?lunchReturnForecast:'—');return `<div class="today-slot"><span>${names[i]}</span><b class="${!r[k]?'ghost':''}">${safe(value)}</b></div>`}).join('');
@@ -657,6 +661,7 @@ function renderToday(){
  if(c){
   detail=`<span>Trabalhadas: <strong>${fmtMin(c.minutes)}</strong></span><span>Banco: <strong class="${c.bank<0?'bank-negative':'bank-positive'}">${fmtMin(c.bank,true)}</strong></span>`;
   if(c.lateMoney>0)detail+=`<span>Desconto: <strong>${brl(c.lateMoney)}</strong></span>`;
+  if(c.abonoMinutes>0)detail+=`<span>Abono: <strong>${fmtMin(c.abonoMinutes)}</strong></span>`;
  }else if(hasAny){
   detail=forecast&&!r.exit?'Saída prevista em cinza · complete as batidas para calcular o saldo':'Complete as batidas para calcular a jornada';
  }else{
@@ -2469,7 +2474,29 @@ function bind(){
    if(!useDetectedTime(kind))showEditReceipt('Confira onde inserir o horário identificado');
   }
  }else openEdit($('editDate').value);
-};document.querySelectorAll('input[name=delay]').forEach(x=>x.onchange=previewDay);$('saveDay').onclick=saveDay;$('deleteDay').onclick=()=>{if(!records[editFor]||!confirm('Excluir este dia?'))return;delete records[editFor];save();activeScan=null;returnToRecordList();alertUser('Registro excluído')};$('homeRecords').onclick=$('recordsList').onclick=e=>{let el=e.target.closest('[data-date]');if(el)openEdit(el.dataset.date)};$('previousMonth').onclick=()=>shiftMonth(-1);$('nextMonth').onclick=()=>shiftMonth(1);$('summaryPrevMonth').onclick=()=>changeSummaryMonth(-1);$('summaryNextMonth').onclick=()=>changeSummaryMonth(1);$('summaryMonthPicker').onchange=()=>{const ym=$('summaryMonthPicker').value;if(/^\d{4}-(0[1-9]|1[0-2])$/.test(ym)){selectedSummaryMonth=ym;renderSummary()}};$('saveSettings').onclick=saveSettings;$('refreshHolidays').onclick=refreshHolidays;$('backup').onclick=exportBackup;$('backupShare').onclick=shareBackupFile;$('backupCopy').onclick=copyBackupText;
+};document.querySelectorAll('input[name=delay],input[name=earlyTreatment]').forEach(x=>x.onchange=previewDay);
+ $('addExtraBreak').onclick=()=>{
+  const rows=readExtraBreakFields();
+  if(rows.length>=20){alertUser('Máximo de 20 intervalos adicionais por dia');return}
+  rows.push({out:'',back:''});
+  renderExtraBreaks(rows);previewDay();
+  $('extraBreaksList').lastElementChild?.querySelector('[data-extra-out]')?.focus();
+ };
+ $('extraBreaksList').onclick=e=>{
+  const btn=e.target.closest('[data-break-remove]');
+  if(!btn)return;
+  const index=Number(btn.dataset.breakRemove);
+  const rows=readExtraBreakFields();
+  rows.splice(index,1);
+  renderExtraBreaks(rows);previewDay();
+ };
+ $('extraBreaksList').oninput=previewDay;
+ $('extraBreaksList').addEventListener('blur',e=>{
+  if(!e.target.matches('[data-extra-out],[data-extra-back]'))return;
+  if(e.target.value)e.target.value=formatInput(e.target.value)||e.target.value;
+  previewDay();
+ },true);
+ $('saveDay').onclick=saveDay;$('deleteDay').onclick=()=>{if(!records[editFor]||!confirm('Excluir este dia?'))return;delete records[editFor];save();activeScan=null;returnToRecordList();alertUser('Registro excluído')};$('homeRecords').onclick=$('recordsList').onclick=e=>{let el=e.target.closest('[data-date]');if(el)openEdit(el.dataset.date)};$('previousMonth').onclick=()=>shiftMonth(-1);$('nextMonth').onclick=()=>shiftMonth(1);$('summaryPrevMonth').onclick=()=>changeSummaryMonth(-1);$('summaryNextMonth').onclick=()=>changeSummaryMonth(1);$('summaryMonthPicker').onchange=()=>{const ym=$('summaryMonthPicker').value;if(/^\d{4}-(0[1-9]|1[0-2])$/.test(ym)){selectedSummaryMonth=ym;renderSummary()}};$('saveSettings').onclick=saveSettings;$('refreshHolidays').onclick=refreshHolidays;$('backup').onclick=exportBackup;$('backupShare').onclick=shareBackupFile;$('backupCopy').onclick=copyBackupText;
  $('restore').onclick=()=>$('restoreFile').click();$('restoreFile').onchange=importBackup;
  $('restorePasted').onclick=importPastedBackup;$('addAdjust').onclick=()=>{let date=$('adjustDate').value,num=Number($('adjustMinutes').value);if(!date||!Number.isInteger(num)||!num){alertUser('Informe data e minutos');return}adjustments.push({id:Date.now().toString(36)+Math.random().toString(36).slice(2,6),date,minutes:num,reason:$('adjustReason').value.trim()});save();$('adjustMinutes').value='';$('adjustReason').value='';renderSummary();alertUser('Ajuste adicionado')};$('adjustList').onclick=e=>{let el=e.target.closest('[data-adjust-delete]');if(!el)return;adjustments=adjustments.filter(a=>a.id!==el.dataset.adjustDelete);save();renderSummary()};}
 function shiftMonth(delta){let [y,m]=currentMonth.split('-').map(Number),d=new Date(y,m-1+delta,1);currentMonth=localDate(d).slice(0,7);renderRecords()}
