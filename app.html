@@ -811,17 +811,21 @@ function sheetInterpretRow(anchor,rowLines,exitColumn){
  let entry=left[0]?.time||'',lunchOut='',lunchIn='',exit=exits[0]?.time||'';
  if(left.length>=3){lunchOut=left[1].time;lunchIn=left[2].time}
  const fallback=!rowLines.some(l=>l.w>0);
- if(fallback){
-  // Nas versões antigas sem posições OCR, recuperamos as batidas na
-  // ordem do texto, mas jamais aprovamos automaticamente essa leitura.
-  const afterDate=joined.replace(/\b\d{1,2}[\/.\-]\d{1,2}[\/.\-]20\d{2}\b/g,' ');
-  const positive=sheetTokens({text:afterDate,x:0,w:0}).map(t=>t.time).filter(t=>t!=='00:00');
-  if(positive.length>=4){[entry,lunchOut,lunchIn,exit]=positive}
-  else if(positive.length===2){entry=positive[0];exit=positive[1]}
+ const afterDate=joined.replace(/\b\d{1,2}[\/.\-]\d{1,2}[\/.\-]20\d{2}\b/g,' ');
+ const sequential=sheetTokens({text:afterDate,x:0,w:0}).map(t=>t.time).filter(t=>t!=='00:00');
+ const asc=times=>times.every((t,i)=>i===0||parseTime(t)>parseTime(times[i-1]));
+ let usedFallback=false;
+ if((fallback||!entry||!exit||!asc([entry,exit]))&&sequential.length>=2){
+  // Leitura pela ordem das colunas, ignorando totais de horas e banco posteriores.
+  if(sequential.length>=4&&asc(sequential.slice(0,4))){
+   [entry,lunchOut,lunchIn,exit]=sequential.slice(0,4);usedFallback=true;
+  }else if(asc(sequential.slice(0,2))){
+   entry=sequential[0];exit=sequential[1];lunchOut='';lunchIn='';usedFallback=true;
+  }
  }
  let valid=Boolean(entry&&exit&&parseTime(entry)!==null&&parseTime(exit)>parseTime(entry));
  if(lunchOut||lunchIn)valid=valid&&Boolean(lunchOut&&lunchIn&&parseTime(lunchOut)>parseTime(entry)&&parseTime(lunchIn)>parseTime(lunchOut)&&parseTime(exit)>parseTime(lunchIn));
- const uncertain=(left.length===2||exits.length!==1||fallback);
+ const uncertain=(left.length===2||exits.length!==1||fallback||usedFallback);
  const hasPunches=Boolean(entry||lunchOut||lunchIn||exit);
  return {date:anchor.date,entry,lunchOut,lunchIn,exit,reason,valid,
   confidence:valid&&!uncertain?'alta':'revisar',checked:false,hasPunches,source:joined};
@@ -859,6 +863,21 @@ function sheetParseOCR(payload){
   const existed=result.findIndex(x=>x.date===parsed.date);
   if(existed<0)result.push(parsed);
   else if(parsed.valid&&!result[existed].valid)result[existed]=parsed;
+ }
+ // Alguns leitores não conseguem posicionar todas as linhas no papel.
+ // Recupera datas ausentes do texto completo, sempre sinalizando revisão.
+ if(geometric&&String(payload?.text||'').trim()){
+  const fromText=sheetParseOCR({text:payload.text,lines:[]});
+  for(const row of fromText){
+   const existing=result.find(x=>x.date===row.date);
+   if(!existing){
+    row.confidence='revisar';row.checked=false;result.push(row);
+   }else if(!existing.valid&&row.valid){
+    existing.entry=row.entry;existing.lunchOut=row.lunchOut;existing.lunchIn=row.lunchIn;
+    existing.exit=row.exit;existing.hasPunches=row.hasPunches;existing.valid=true;
+    existing.confidence='revisar';
+   }
+  }
  }
  return result.sort((a,b)=>a.date.localeCompare(b.date));
 }
