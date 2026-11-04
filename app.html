@@ -281,7 +281,7 @@ const load=(key,fallback)=>{try{return JSON.parse(localStorage.getItem(key))??fa
   updated.lunchDefaultVersion=2;
   return updated;
  };
- let plannedPeriods=load('ponto2_plannedPeriods',[]),salaryConfig=load('ponto2_salaryConfig',{gross:'',deductions:[]}),planReturnPage='simulation';
+ let plannedPeriods=load('ponto2_plannedPeriods',[]),salaryConfig=normalizeSalaryConfig(load('ponto2_salaryConfig',{gross:'',deductions:[]})),planReturnPage='simulation';
  let cfg=normalizeSettings(load('ponto2_cfg',{})),records=load('ponto2_records',{}),adjustments=load('ponto2_adjustments',[]),holidayCache=load('ponto2_holidays',{}),currentMonth=localDate().slice(0,7),selectedSummaryMonth=localDate().slice(0,7),editFor=localDate(),page='home',scanURL=null,scanBusy=false;let toastTimeout;
 const save=()=>{localStorage.setItem('ponto2_cfg',JSON.stringify(cfg));localStorage.setItem('ponto2_records',JSON.stringify(records));localStorage.setItem('ponto2_adjustments',JSON.stringify(adjustments));localStorage.setItem('ponto2_holidays',JSON.stringify(holidayCache));localStorage.setItem('ponto2_plannedPeriods',JSON.stringify(plannedPeriods));localStorage.setItem('ponto2_salaryConfig',JSON.stringify(salaryConfig));};
 const alertUser=t=>{let v=$('toast');v.textContent=t;v.classList.add('show');clearTimeout(toastTimeout);toastTimeout=setTimeout(()=>v.classList.remove('show'),3200)};
@@ -407,7 +407,7 @@ function renderSettings(){let map={cfgStart:'start',cfgEnd:'end',cfgTolerance:'t
 function saveSettings(){let c={...cfg,start:formatInput($('cfgStart').value),end:formatInput($('cfgEnd').value),tolerance:Number($('cfgTolerance').value),workday:Number($('cfgWorkday').value),lunch:Number($('cfgLunch').value),multiplier:Number($('cfgMultiplier').value),lateValue:Number($('cfgLateValue').value),bankValue:$('cfgBankValue').value.trim()===''?'':Number($('cfgBankValue').value),uf:$('cfgUF').value.toUpperCase().trim(),city:$('cfgCity').value.trim()};if(!c.start||!c.end||parseTime(c.start)>parseTime(c.end)||!Number.isFinite(c.workday)||c.workday<=0||c.workday>1440||c.lunch<0||c.lunch>480||c.tolerance<0||c.tolerance>240||c.multiplier<1||c.multiplier>10||c.lateValue<0||(c.bankValue!==''&&c.bankValue<0)){alertUser('Confira os valores das configurações');return}cfg=c;save();renderHome();alertUser('Configurações salvas')}
 async function refreshHolidays(){let year=new Date().getFullYear();$('holidayStatus').textContent='Consultando calendário...';try{let r=await fetch(`https://brasilapi.com.br/api/feriados/v1/${year}`,{cache:'no-store'});if(!r.ok)throw Error(r.status);let arr=await r.json();if(!Array.isArray(arr))throw Error('Resposta inesperada');let h={};arr.forEach(a=>{if(/^\d{4}-\d{2}-\d{2}$/.test(a.date))h[a.date]=a.name});holidayCache[`${year}_${cfg.uf.toUpperCase()}`]=h;save();$('holidayStatus').textContent=`${Object.keys(h).length} feriados consultados em ${year}. Feriados de Curitiba incluídos localmente.`;alertUser('Feriados atualizados')}catch(e){$('holidayStatus').textContent='Sem conexão. O calendário nacional básico continua disponível offline.'}}
 function exportBackup(){let blob=new Blob([JSON.stringify({version:2,exportedAt:new Date().toISOString(),settings:cfg,records,adjustments,holidayCache,plannedPeriods,salaryConfig},null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=`meu-ponto-backup-${localDate()}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(url),15000);alertUser('Backup criado')}
-async function importBackup(e){let f=e.target.files?.[0];if(!f)return;try{let o=JSON.parse(await f.text());if(!o.records||!o.settings||!Array.isArray(o.adjustments))throw Error('Incompatível');if(!confirm('Substituir todos os registros salvos pelos dados do backup?'))return;records=o.records;cfg=normalizeSettings(o.settings);adjustments=o.adjustments;holidayCache=o.holidayCache||{};if(Object.hasOwn(o,'plannedPeriods'))plannedPeriods=Array.isArray(o.plannedPeriods)?o.plannedPeriods:[];if(Object.hasOwn(o,'salaryConfig'))salaryConfig=o.salaryConfig&&typeof o.salaryConfig==='object'?o.salaryConfig:{gross:'',deductions:[]};save();go('home');alertUser('Backup restaurado')}catch(err){alertUser('Backup inválido')}finally{e.target.value=''}}
+async function importBackup(e){let f=e.target.files?.[0];if(!f)return;try{let o=JSON.parse(await f.text());if(!o.records||!o.settings||!Array.isArray(o.adjustments))throw Error('Incompatível');if(!confirm('Substituir todos os registros salvos pelos dados do backup?'))return;records=o.records;cfg=normalizeSettings(o.settings);adjustments=o.adjustments;holidayCache=o.holidayCache||{};if(Object.hasOwn(o,'plannedPeriods'))plannedPeriods=Array.isArray(o.plannedPeriods)?o.plannedPeriods:[];if(Object.hasOwn(o,'salaryConfig'))salaryConfig=normalizeSalaryConfig(o.salaryConfig);save();go('home');alertUser('Backup restaurado')}catch(err){alertUser('Backup inválido')}finally{e.target.value=''}}
 function parseReceipt(text){
  // Comprovante INNer REP: data e hora costumam anteceder PIS/PTS.
  // Corrige caracteres frequentemente confundidos pelo OCR, mas valida o calendário.
@@ -888,47 +888,108 @@ function voucherEligibleDays(ym){
  }
  return days;
 }
-function salaryTotals(gross,items,ym=localDate().slice(0,7)){
- let fixed=0,percent=0,breakdown=[];
- const workdays=voucherEligibleDays(ym);
- for(const item of items||[]){
-  const amount=Number(item.amount),isPercent=item.unit==='percent',isDaily=item.unit==='perWorkday';
-  if(!Number.isFinite(amount)||amount<0||isPercent&&amount>100)continue;
-  const cost=isPercent?gross*amount/100:isDaily?workdays*amount:amount;
-  if(isPercent)percent+=cost;else fixed+=cost;
-  breakdown.push({name:String(item.name||'Desconto'),cost,unit:item.unit,days:isDaily?workdays:null,rate:isDaily?amount:null});
+
+const INSS_BRACKETS_2026=[
+ {limit:1621,rate:0.075},
+ {limit:2902.84,rate:0.09},
+ {limit:4354.27,rate:0.12},
+ {limit:8475.55,rate:0.14}
+];
+function inssProgressive2026(gross){
+ const base=Math.max(0,Number(gross)||0);
+ let previous=0,total=0;
+ for(const bracket of INSS_BRACKETS_2026){
+  const portion=Math.max(0,Math.min(base,bracket.limit)-previous);
+  total+=portion*bracket.rate;previous=bracket.limit;
+  if(base<=bracket.limit)break;
  }
- return {fixed,percent,breakdown,workdays};
+ return Math.round((total+Number.EPSILON)*100)/100;
 }
-function readSalaryDraft(){
- const grossRaw=$('salaryGross').value;
- const gross=grossRaw.trim()===''?'':parseMoneyText(grossRaw);
- const deductions=[...$('salaryDeductionsList').querySelectorAll('[data-salary-id]')].map(row=>{
-  const name=row.querySelector('[data-salary-name]')?.value?.trim()||'';
-  const selectedUnit=row.querySelector('[data-salary-unit]')?.value;const unit=['percent','perWorkday'].includes(selectedUnit)?selectedUnit:'fixed';
-  const raw=row.querySelector('[data-salary-amount]')?.value||'';
-  return {id:row.dataset.salaryId,name,unit,amount:raw.trim()===''?'':parseMoneyText(raw)};
- });
- return {gross,deductions};
+function normalizeSalaryConfig(raw){
+ const source=raw&&typeof raw==='object'?raw:{};
+ const config={gross:source.gross??'',inssMode:'auto',inssManual:'',vrPerDay:'',healthPlan:'',legacyVrFixed:''};
+ if('inssMode' in source||'vrPerDay' in source||'healthPlan' in source){
+  return {...config,gross:source.gross??'',inssMode:source.inssMode==='manual'?'manual':'auto',
+   inssManual:source.inssManual??'',vrPerDay:source.vrPerDay??'',healthPlan:source.healthPlan??'',
+   legacyVrFixed:source.legacyVrFixed??''};
+ }
+ const items=Array.isArray(source.deductions)?source.deductions:[];
+ const norm=x=>String(x||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
+ const inss=items.find(i=>/\binss\b/.test(norm(i.name)));
+ if(inss&&Number.isFinite(Number(inss.amount))&&Number(inss.amount)>=0){
+  config.inssMode='manual';
+  config.inssManual=inss.unit==='percent'?Math.round(Number(source.gross||0)*Number(inss.amount))/100:Number(inss.amount);
+ }
+ const vr=items.find(i=>/\b(vr|vale[ -]?refeicao|refeicao)\b/.test(norm(i.name)));
+ if(vr){
+  if(vr.unit==='perWorkday')config.vrPerDay=vr.amount??'';
+  else if(vr.amount!=='')config.legacyVrFixed=vr.amount??'';
+ }
+ const health=items.find(i=>/\b(plano|saude|convenio)\b/.test(norm(i.name)));
+ if(health&&health.unit==='fixed')config.healthPlan=health.amount??'';
+ return config;
+}
+function salaryTotals(gross,config,ym){
+ const base=Number(gross),days=voucherEligibleDays(ym);
+ const mode=config?.inssMode==='manual'?'manual':'auto';
+ const manual=Number(config?.inssManual);
+ const inss=mode==='manual'?(config?.inssManual===''||!Number.isFinite(manual)?0:Math.max(0,manual)):inssProgressive2026(base);
+ const vrRate=config?.vrPerDay===''?0:Math.max(0,Number(config?.vrPerDay)||0);
+ const vr=Math.round(days*vrRate*100)/100;
+ const health=config?.healthPlan===''?0:Math.max(0,Number(config?.healthPlan)||0);
+ const fgts=Math.round(base*.08*100)/100;
+ return {inss,vr,vrRate,days,health,fgts,
+  deductions:Math.round((inss+vr+health)*100)/100,
+  inssMode:mode};
+}
+function salaryDraftFromInputs(){
+ const grossText=$('salaryGross').value.trim();
+ const inssText=$('salaryInssManual').value.trim(),vrText=$('salaryVrDaily').value.trim(),healthText=$('salaryHealth').value.trim();
+ return {gross:grossText===''?'':parseMoneyText(grossText),
+  inssMode:$('salaryInssMode').value==='manual'?'manual':'auto',
+  inssManual:inssText===''?'':parseMoneyText(inssText),
+  vrPerDay:vrText===''?'':parseMoneyText(vrText),
+  healthPlan:healthText===''?'':parseMoneyText(healthText),
+  legacyVrFixed:''};
+}
+function salaryPreviewDraft(){
+ const mode=$('salaryInssMode').value;
+ $('salaryInssManualRow').classList.toggle('hidden',mode!=='manual');
+ const draft=salaryDraftFromInputs(),base=Number(draft.gross);
+ const validGross=draft.gross!==''&&Number.isFinite(base)&&base>=0;
+ const totals=salaryTotals(validGross?base:0,draft,localDate().slice(0,7));
+ $('salaryInssPreview').textContent=mode==='auto'?
+  (validGross?'Desconto progressivo estimado: '+brl(totals.inss):'Informe o salário bruto para calcular o INSS.'):
+  'Usa exatamente o valor do INSS informado no contracheque.';
+ $('salaryFgtsPreview').textContent=validGross?'Depósito estimado da empresa (8%): '+brl(totals.fgts):'Depósito estimado: —';
+ $('salaryVrPreview').textContent=totals.days+' dias úteis considerados neste mês × '
+  +(draft.vrPerDay===''?'valor diário não informado':Number.isFinite(draft.vrPerDay)?brl(draft.vrPerDay):'valor inválido')
+  +' = '+brl(totals.vr)+'. Exclui feriados, férias e emendas/folgas cadastradas.';
 }
 function renderSalarySettings(){
- $('salaryGross').value=formatMoneyInput(salaryConfig?.gross??'');
- const rows=Array.isArray(salaryConfig?.deductions)?salaryConfig.deductions:[];
- $('salaryDeductionsList').innerHTML=rows.length?rows.map(row=>
-  '<div class="salary-deduction" data-salary-id="'+safe(row.id)+'">'
-  +'<input data-salary-name aria-label="Nome do desconto" placeholder="Ex.: INSS" value="'+safe(row.name)+'">'
-  +'<input data-salary-amount aria-label="Valor do desconto" inputmode="decimal" placeholder="Valor" value="'+safe(row.amount===' '?'':row.amount??'')+'">'
-  +'<select data-salary-unit aria-label="Tipo de desconto"><option value="fixed"'+(!['percent','perWorkday'].includes(row.unit)?' selected':'')+'>R$</option><option value="percent"'+(row.unit==='percent'?' selected':'')+'>%</option><option value="perWorkday"'+(row.unit==='perWorkday'?' selected':'')+'>R$/dia útil</option></select>'
-  +'<button type="button" class="deduction-delete" data-salary-remove="'+safe(row.id)+'" aria-label="Excluir desconto">×</button></div>'
- ).join(''):'<p class="hint">Nenhum desconto cadastrado.</p>';
+ salaryConfig=normalizeSalaryConfig(salaryConfig);
+ $('salaryGross').value=formatMoneyInput(salaryConfig.gross);
+ $('salaryInssMode').value=salaryConfig.inssMode;
+ $('salaryInssManual').value=formatMoneyInput(salaryConfig.inssManual);
+ $('salaryVrDaily').value=formatMoneyInput(salaryConfig.vrPerDay);
+ $('salaryHealth').value=formatMoneyInput(salaryConfig.healthPlan);
+ salaryPreviewDraft();
 }
 function saveSalaryConfig(){
- const draft=readSalaryDraft();
- if(draft.gross!==''&&(!Number.isFinite(draft.gross)||draft.gross<0)){alertUser('Confira o salário bruto');return}
- for(const item of draft.deductions)if(!item.name||item.amount===''||!Number.isFinite(item.amount)||item.amount<0||(item.unit==='percent'&&item.amount>100)){
-  alertUser('Informe nome, valor e unidade válidos para cada desconto');return;
+ const draft=salaryDraftFromInputs();
+ if(draft.gross===''||!Number.isFinite(draft.gross)||draft.gross<=0){
+  alertUser('Informe um salário bruto válido');return;
  }
- salaryConfig=draft;save();renderSalaryHome();alertUser('Salário e descontos salvos');
+ for(const k of ['inssManual','vrPerDay','healthPlan']){
+  if(draft[k]!==''&&(!Number.isFinite(draft[k])||draft[k]<0)){
+   alertUser('Confira os valores informados de INSS, VR e plano');return;
+  }
+ }
+ if(draft.inssMode==='manual'&&draft.inssManual===''){
+  alertUser('Informe o INSS do contracheque ou selecione cálculo automático');return;
+ }
+ salaryConfig=draft;save();renderSalaryHome();
+ alertUser('Salário e descontos salvos');
 }
 function renderSalaryHome(){
  const gross=Number(salaryConfig?.gross);
@@ -937,19 +998,21 @@ function renderSalaryHome(){
  $('salaryMonthLabel').textContent=new Date(period+'-01T12:00:00').toLocaleDateString('pt-BR',{month:'long',year:'numeric'});
  if(!valid){
   $('salaryHomeValue').textContent='Configurar';
-  $('salaryHomeBreakdown').innerHTML='<p class="hint">Informe seu salário bruto e descontos em Mais → Salário e descontos.</p>';
+  $('salaryHomeBreakdown').innerHTML='<p class="hint">Informe o salário bruto em Mais → Salário e descontos.</p>';
   return;
  }
- const summary=salaryTotals(gross,salaryConfig.deductions,period);
+ const totals=salaryTotals(gross,salaryConfig,period);
  const late=summaryMonth(period).lateMoney;
- const total=summary.fixed+summary.percent+late;
- const net=gross-total;
+ const net=Math.round((gross-totals.deductions-late)*100)/100;
  $('salaryHomeValue').textContent=brl(net);
  $('salaryHomeBreakdown').innerHTML='<div class="salary-home-rows">'
   +'<div class="value-line"><span>Salário bruto</span><b>'+brl(gross)+'</b></div>'
-  +summary.breakdown.map(item=>'<div class="value-line"><span>'+safe(item.name)+(item.unit==='perWorkday'?' ('+item.days+' dias × '+brl(item.rate)+')':'')+'</span><b>−'+brl(item.cost)+'</b></div>').join('')
-  +'<div class="value-line"><span>Atrasos em folha no mês</span><b>−'+brl(late)+'</b></div>'
+  +'<div class="value-line"><span>INSS'+(totals.inssMode==='auto'?' (progressivo 2026)':' (informado)')+'</span><b>−'+brl(totals.inss)+'</b></div>'
+  +'<div class="value-line"><span>VR ('+totals.days+' dias × '+brl(totals.vrRate)+')</span><b>−'+brl(totals.vr)+'</b></div>'
+  +'<div class="value-line"><span>Plano de saúde</span><b>−'+brl(totals.health)+'</b></div>'
+  +'<div class="value-line"><span>Atrasos em folha</span><b>−'+brl(late)+'</b></div>'
   +'<div class="value-line"><span>Total líquido estimado</span><b>'+brl(net)+'</b></div>'
+  +'<div class="value-line"><span>FGTS — depósito da empresa (8%, não descontado)</span><b>'+brl(totals.fgts)+'</b></div>'
   +'</div>';
 }
 function openSalarySettings(){
@@ -1106,18 +1169,9 @@ function bind(){
  };
  $('salaryHomeConfigure').onclick=openSalarySettings;
  $('salarySave').onclick=saveSalaryConfig;
- $('salaryAddDeduction').onclick=()=>{
-  salaryConfig=readSalaryDraft();
-  salaryConfig.deductions.push({id:String(Date.now())+Math.random().toString(36).slice(2,7),name:'',unit:'fixed',amount:''});
-  renderSalarySettings();
- };
- $('salaryDeductionsList').onclick=e=>{
-  const btn=e.target.closest('[data-salary-remove]');if(!btn)return;
-  const id=btn.dataset.salaryRemove;
-  salaryConfig=readSalaryDraft();
-  salaryConfig.deductions=salaryConfig.deductions.filter(x=>x.id!==id);
-  renderSalarySettings();
- };
+ for(const id of ['salaryGross','salaryInssMode','salaryInssManual','salaryVrDaily','salaryHealth']){
+  $(id).addEventListener(id==='salaryInssMode'?'change':'input',salaryPreviewDraft);
+ }
  $('homePlanVacation').onclick=openPlanning;
  $('settingsPlanVacation').onclick=openPlanning;
  $('simPlanVacation').onclick=openPlanning;
