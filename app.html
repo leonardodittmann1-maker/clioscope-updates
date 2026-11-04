@@ -972,6 +972,8 @@ function confirmScan(){
 const SHEET_KEYS=['entry','lunchOut','lunchIn','exit'];
 const SHEET_LABELS=['Entrada','Almoço','Retorno','Saída'];
 let sheetModePending=false,sheetBusy=false,sheetEarly=null,sheetRowsState=[],sheetLastText='';
+let sheetBrowserMode=false,sheetLastFile=null,sheetNativeFallback=null,sheetPreviewURL=null;
+let sheetTesseractPromise=null,sheetTesseractScriptPromise=null;
 const sheetNorm=text=>String(text||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase();
 function sheetFindDates(text){
  const dates=[],rx=/(\d{1,2})\s*[\/.\-]\s*(\d{1,2})\s*[\/.\-]\s*(20\d{2})/g;
@@ -1210,29 +1212,168 @@ function sheetSetStatus(message){
 function sheetSetMode(mode){
  try{window.MeupontoOCR?.setMode?.(mode)}catch(e){}
 }
+
 function sheetStart(inputId){
  if(sheetBusy){alertUser('A leitura da folha ainda está em andamento');return}
- sheetModePending=true;sheetEarly=null;
- sheetSetMode('sheet');
+ sheetModePending=true;sheetEarly=null;sheetNativeFallback=null;sheetBrowserMode=true;
+ // A melhoria nativa do APK 4.5 pode não estar instalada, já que o Android
+ // recusou o novo instalador. O leitor web funciona inclusive em APKs antigos.
+ sheetSetMode('receipt');
  $(inputId).click();
 }
-async function sheetFileSelected(e){
- const input=e.target,file=input.files?.[0];if(!file)return;
- if(sheetBusy){alertUser('Aguarde a leitura anterior');input.value='';return}
- sheetBusy=true;sheetRowsState=[];
- $('sheetResults').classList.add('hidden');
- sheetSetStatus('Reconhecendo os dias e horários da folha...');
- if(sheetEarly){
-  const result=sheetEarly;sheetEarly=null;
-  sheetReceive(result.payload,result.error);
- }else if(!window.MeupontoOCR?.isAvailable?.()){
-  try{
-   const worker=await warmOCR();
-   const result=await worker.recognize(file);
-   sheetReceive({text:result.data?.text||'',lines:[]},'');
-  }catch(err){sheetReceive({text:'',lines:[]},'Falha no leitor: '+String(err?.message||err))}
+async function loadSheetTesseract(){
+ if(sheetTesseractPromise)return sheetTesseractPromise;
+ sheetTesseractPromise=(async()=>{
+  if(!window.Tesseract){
+   if(!sheetTesseractScriptPromise)sheetTesseractScriptPromise=new Promise((resolve,reject)=>{
+    const script=document.createElement('script'),timer=setTimeout(()=>reject(Error('Tempo esgotado ao baixar o modelo de leitura. Verifique a internet.')),25000);
+    script.src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
+    script.onload=()=>{clearTimeout(timer);resolve()};
+    script.onerror=()=>{clearTimeout(timer);reject(Error('O leitor não carregou pela internet.'))};
+    document.head.appendChild(script);
+   });
+   await sheetTesseractScriptPromise;
+  }
+  if(!window.Tesseract?.createWorker)throw Error('Motor de reconhecimento indisponível');
+  sheetSetStatus('Preparando o reconhecimento dos horários...');
+  const worker=await Tesseract.createWorker('eng',1,{logger:()=>{}});
+  await worker.setParameters({tessedit_pageseg_mode:'6',preserve_interword_spaces:'1'});
+  return worker;
+ })().catch(error=>{sheetTesseractPromise=null;sheetTesseractScriptPromise=null;throw error});
+ return sheetTesseractPromise;
+}
+async function sheetLoadImage(file){
+ const url=URL.createObjectURL(file),img=new Image();
+ try{
+  await new Promise((resolve,reject)=>{
+   img.onload=resolve;img.onerror=()=>reject(Error('Não consegui abrir esta foto. Use uma imagem JPG ou PNG.'));
+   img.src=url;
+  });
+  if(!img.naturalWidth||!img.naturalHeight)throw Error('A imagem não tem dimensões válidas');
+  return img;
+ }finally{
+  // A imagem permanece válida mesmo depois da revogação: já foi decodificada.
+  URL.revokeObjectURL(url);
  }
+}
+function sheetRotatePhoto(img,rotation){
+ const turned=rotation===90||rotation===270;
+ const naturalW=img.naturalWidth,naturalH=img.naturalHeight;
+ const fullW=turned?naturalH:naturalW,fullH=turned?naturalW:naturalH;
+ const scale=Math.min(1,2400/Math.max(fullW,fullH));
+ const dw=Math.round(naturalW*scale),dh=Math.round(naturalH*scale);
+ const canvas=document.createElement('canvas');
+ canvas.width=Math.round(fullW*scale);canvas.height=Math.round(fullH*scale);
+ const ctx=canvas.getContext('2d',{willReadFrequently:true});
+ ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);
+ if(rotation===90){ctx.translate(canvas.width,0);ctx.rotate(Math.PI/2)}
+ else if(rotation===180){ctx.translate(canvas.width,canvas.height);ctx.rotate(Math.PI)}
+ else if(rotation===270){ctx.translate(0,canvas.height);ctx.rotate(-Math.PI/2)}
+ ctx.drawImage(img,0,0,dw,dh);
+ return canvas;
+}
+function sheetCropArea(page,topFraction=0,bottomFraction=1,contrast=false){
+ const x=Math.floor(page.width*.047),right=Math.ceil(page.width*.75);
+ const y=Math.max(0,Math.floor(page.height*(.017+.925*topFraction)));
+ const bottom=Math.min(page.height,Math.ceil(page.height*(.017+.925*bottomFraction)));
+ const sourceW=Math.max(1,right-x),sourceH=Math.max(1,bottom-y);
+ const scale=Math.min(2.8,Math.max(1,2300/sourceW));
+ const canvas=document.createElement('canvas');
+ canvas.width=Math.max(1,Math.floor(sourceW*scale));
+ canvas.height=Math.max(1,Math.floor(sourceH*scale));
+ const ctx=canvas.getContext('2d',{willReadFrequently:true});
+ ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);
+ if(contrast)ctx.filter='grayscale(1) contrast(1.75) brightness(1.13)';
+ ctx.drawImage(page,x,y,sourceW,sourceH,0,0,canvas.width,canvas.height);
+ ctx.filter='none';
+ return canvas;
+}
+function sheetDetectedCount(text){
+ return new Set(sheetFindDates(text).map(x=>x.date)).size;
+}
+async function sheetOCRText(worker,image){
+ const result=await worker.recognize(image);
+ return String(result?.data?.text||'');
+}
+async function sheetScanWeb(file,rotationMode='auto'){
+ const worker=await loadSheetTesseract();
+ const img=await sheetLoadImage(file);
+ const guess=img.naturalHeight>img.naturalWidth*1.14?[90,270,0,180]:[0,180,90,270];
+ const angles=rotationMode==='auto'?guess:[Number(rotationMode)];
+ let best=null;
+ for(let i=0;i<angles.length;i++){
+  const angle=angles[i];
+  sheetSetStatus('Identificando orientação da folha ('+(i+1)+'/'+angles.length+')...');
+  const page=sheetRotatePhoto(img,angle);
+  const preview=sheetCropArea(page,0,1,false);
+  let text='';
+  try{text=await sheetOCRText(worker,preview)}catch(err){
+   if(i===angles.length-1&&!best)throw err;
+  }
+  const dates=sheetDetectedCount(text);
+  if(!best||dates>best.dates)best={angle,page,text,dates};
+  // Uma leitura já com várias datas não precisa testar todas as rotações.
+  if(dates>=9)break;
+ }
+ if(!best)throw Error('Não reconheci texto na imagem');
+ const variants=[{method:'web-completa',text:best.text,lines:[]}];
+ const strips=6;
+ for(let i=0;i<strips;i++){
+  // Sobrepõe um pouco as faixas para não perder uma linha cortada na borda.
+  const top=Math.max(0,i/strips-.012),bottom=Math.min(1,(i+1)/strips+.012);
+  sheetSetStatus('Lendo batidas ampliadas: parte '+(i+1)+' de '+strips+'...');
+  const segment=sheetCropArea(best.page,top,bottom,true);
+  try{
+   const text=await sheetOCRText(worker,segment);
+   variants.push({method:'web-faixa-'+i,text,lines:[]});
+  }catch(err){
+   variants.push({method:'web-faixa-'+i,text:'',lines:[]});
+  }
+ }
+ if(sheetNativeFallback?.text){
+  variants.push({method:'android-antigo',text:sheetNativeFallback.text,lines:[]});
+ }
+ const combinedText=variants.map(v=>v.text).filter(Boolean).join('\n\n');
+ const fullDates=sheetDetectedCount(combinedText);
+ return {text:combinedText,lines:[],variants,
+  source:'web',rotation:best.angle,datesDetected:fullDates,
+  orientationDates:best.dates};
+}
+async function sheetFileSelected(e){
+ const input=e.target,file=input.files?.[0];
+ if(!file)return;
+ if(sheetBusy){alertUser('A leitura da folha ainda está em andamento');input.value='';return}
+ sheetBusy=true;sheetModePending=true;sheetLastFile=file;
+ sheetRowsState=[];
+ $('sheetResults').classList.add('hidden');
+ $('sheetImageTools').classList.remove('hidden');
+ if(sheetPreviewURL)URL.revokeObjectURL(sheetPreviewURL);
+ sheetPreviewURL=URL.createObjectURL(file);
+ $('sheetImagePreview').src=sheetPreviewURL;
+ const angle=$('sheetRotation').value||'auto';
  input.value='';
+ sheetSetStatus('Lendo a folha independentemente da versão do APK...');
+ try{
+  const data=await sheetScanWeb(file,angle);
+  sheetReceive(data,'');
+ }catch(err){
+  if(sheetNativeFallback?.text){
+   sheetReceive({text:sheetNativeFallback.text,lines:[]},
+    'A leitura independente falhou ('+String(err?.message||err)+'); mostrando a leitura básica do Android.');
+  }else{
+   sheetReceive({text:'',lines:[]},'Falha na leitura independente: '+String(err?.message||err));
+  }
+ }
+}
+async function sheetRetryWeb(){
+ if(!sheetLastFile){alertUser('Escolha uma foto primeiro');return}
+ if(sheetBusy){alertUser('A leitura ainda está em andamento');return}
+ sheetBusy=true;sheetModePending=true;sheetBrowserMode=true;
+ $('sheetResults').classList.add('hidden');
+ sheetSetStatus('Reprocessando na orientação selecionada...');
+ try{sheetReceive(await sheetScanWeb(sheetLastFile,$('sheetRotation').value),'')}
+ catch(err){sheetReceive({text:sheetNativeFallback?.text||'',lines:[]},
+  'Erro ao reler a foto: '+String(err?.message||err))}
 }
 function sheetReceive(payload,error){
  if(!sheetModePending){return}
@@ -1264,12 +1405,25 @@ function sheetReceive(payload,error){
   sheetSetStatus('Não foi possível interpretar a folha. '+String(err?.message||err));
  }
 }
-window.__nativeSheetOCRCallback=function(payload,error){sheetReceive(payload,error)};
+window.__nativeSheetOCRCallback=function(payload,error){
+ if(sheetBrowserMode&&sheetModePending){
+  try{
+   const obj=typeof payload==='string'?JSON.parse(payload):payload||{};
+   sheetNativeFallback={text:obj.text||'',error:error||''};
+  }catch(e){}
+  return;
+ }
+ sheetReceive(payload,error);
+};
 window.__nativeSheetOCRProgress=function(message){
- if(sheetModePending)sheetSetStatus(message);
+ if(sheetModePending&&!sheetBrowserMode)sheetSetStatus(message);
 };
 const previousReceiptOcrCallback=window.__nativeOCRCallback;
 window.__nativeOCRCallback=function(text,error){
+ if(sheetModePending&&sheetBrowserMode){
+  sheetNativeFallback={text:String(text||''),error:error||''};
+  return;
+ }
  if(sheetModePending){sheetReceive({text,lines:[]},error);return}
  previousReceiptOcrCallback(text,error);
 };
@@ -2040,6 +2194,7 @@ function bind(){
  $('openSheetSettings').onclick=openSheet;
  $('backSheet').onclick=()=>{sheetModePending=false;sheetBusy=false;sheetSetMode('receipt');go('records')};
  $('sheetCamera').onclick=()=>sheetStart('sheetFileCamera');
+ $('sheetRetry').onclick=sheetRetryWeb;
  $('sheetGallery').onclick=()=>sheetStart('sheetFileGallery');
  $('sheetFileCamera').onchange=sheetFileSelected;
  $('sheetFileGallery').onchange=sheetFileSelected;
