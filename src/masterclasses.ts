@@ -1,6 +1,7 @@
 /** Cadernos aprofundados autorais, com hipóteses explícitas e exemplos reproduzíveis.
  * Não representam resoluções oficiais do INEP nem ranking estatístico de incidência.
  */
+import {ADDITIONAL_MASTERCLASSES} from './additionalCourses.js';
 export type Chapter={title:string;explanation:string[];equations?:string[];steps?:string[];question?:string;answer?:string};
 export type Masterclass={lessonId:string;estimatedMinutes:number;objectives:string[];chapters:Chapter[];takeaways:string[];sources:string[]};
 const base=['https://openstax.org/books/university-physics-volume-2/pages/1-introduction','https://www.gov.br/inep/pt-br/centrais-de-conteudo/legislacao/enade'];
@@ -288,4 +289,5 @@ C('instrumentacao',55,[
  ],equations:['u_c=√(u_1²+u_2²) (independentes, padrão)','U=k·u_c'],question:'Uma indicação de 80,0 °C com incerteza expandida de 0,7 °C confirma temperatura exatamente igual a 80,0 °C?',answer:'Não. O resultado representa uma estimativa e um intervalo de cobertura conforme as condições metrológicas, não um valor exato.'}
 ],['Não confunda precisão de leitura, exatidão e incerteza.','Sensor e cabeamento integram o sistema de medição.','Decisões exigem tolerância, incerteza e contexto da aplicação.'],['https://www.bipm.org/en/publications/guides/gum.html',...base])
 ];
+MASTERCLASSES.push(...ADDITIONAL_MASTERCLASSES);
 export const MASTER_BY_LESSON = new Map(MASTERCLASSES.map(c=>[c.lessonId,c]));
