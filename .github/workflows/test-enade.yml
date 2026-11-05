@@ -24,10 +24,10 @@ jobs:
         run: npm install --ignore-scripts --no-audit --no-fund
       - name: Compile and validate academic content
         run: npm run build
-      - name: Automated mathematical and app tests
-        run: npm test
       - name: Rebuild standalone Android study document
         run: |
           npm run single
           grep -q "CASO-014" ENADE_Eletrica_2026_Teste_Offline.html
           grep -q "trafo-ideal" ENADE_Eletrica_2026_Teste_Offline.html
+      - name: Automated mathematical and app tests
+        run: npm test
