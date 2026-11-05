@@ -1,0 +1,18 @@
+{
+  "name": "enade-eletrica-2026",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Plataforma ENADE Engenharia Elétrica 2026 — estudo local e offline",
+  "scripts": {
+    "build": "tsc -p tsconfig.json && node tools/check-content.mjs",
+    "test": "node --test tests/*.test.mjs",
+    "start": "python3 -m http.server 4173 -d dist",
+    "test:browser": "python3 -m unittest discover -s tests -p browser_test.py -v",
+    "single": "node tools/bundle-single.mjs"
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "typescript": "^5.9.0"
+  }
+}

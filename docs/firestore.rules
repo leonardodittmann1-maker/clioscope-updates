@@ -1,0 +1,14 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Substituir o identificador abaixo pelo UID exibido APÓS login.
+    // Esta regra bloqueia todas as leituras e gravações até ser configurada.
+    match /users/{userId}/data/{docId} {
+      allow read, write: if request.auth != null
+        && request.auth.uid == 'INSIRA_UID_AUTORIZADO_AQUI'
+        && request.auth.uid == userId
+        && docId == 'progress';
+    }
+    match /{document=**} { allow read, write: if false; }
+  }
+}

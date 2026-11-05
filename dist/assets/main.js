@@ -1,0 +1,683 @@
+import { PrivateFirebaseSync, validateFirebaseConfig, mergeProgress } from './sync.js';
+import { FORMULAS } from './formulae.js';
+import { OFFICIAL_ITEMS, OFFICIAL_ANNULLED, OFFICIAL_DISCURSIVES, OFFICIAL_SOURCES } from './official.js';
+import { AREAS, LESSONS, QUESTIONS, DISCURSIVES, SOURCES } from './content.js';
+import { initialProgress, eligible, score, daysUntil, pickAdaptive } from './model.js';
+import { load, save, restore, saveExamPdf, loadExamPdf, deleteExamPdf } from './store.js';
+const root = document.querySelector('#app');
+let syncEngine = null;
+let syncUid = '', syncEmail = '', syncStatus = 'Desconectado; dados somente locais';
+let syncBusy = false;
+let syncTimer = null;
+const configKey = 'enade-firebase-public-v1';
+const offlinePdfs = {};
+const pdfFor = (year, remote) => offlinePdfs[year] || remote;
+let studyPracticeLessonId = null;
+let bankOrigin = 'todas', bankYear = 'todos', bankLimit = 30;
+let progress = initialProgress();
+let page = 'home', areaId = 'EE06', lessonId = 'circuito-ohm';
+let quizIds = [], quizIndex = 0, quizSelected = null, quizRevealed = false, quizHints = 0, quizStart = Date.now();
+let activeAttempt = null;
+let search = '', groupFilter = 'todos', difficultyFilter = 'todas', levelFilter = 'todos', formulaQuery = '', formulaArea = 'todos', formulaId = FORMULAS[0].id, selectedDisc = DISCURSIVES[0].id, statsPeriod = 'todos', tutorTopic = 'ohm';
+const navs = [['home', 'Início', '⌂'], ['plan', 'Plano de estudos', '▦'], ['library', 'Biblioteca de conteúdos', '▤'], ['bank', 'Banco de questões', '◫'], ['formulas', 'Fórmulas Essenciais', 'ƒ'], ['sim', 'Simulados', '◷'], ['discursive', 'Discursivas', '✎'], ['tutor', 'Tutor de estudos', '?'], ['stats', 'Meu desempenho', '▥'], ['errors', 'Revisão de erros', '↻'], ['settings', 'Configurações e backup', '⚙']];
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c] || c));
+const qById = (id) => QUESTIONS.find(q => q.id === id);
+const answerableId = (id) => { const q = QUESTIONS.find(x => x.id === id); return Boolean(q && eligible(q)); };
+const validResponses = (rs) => rs.filter(r => answerableId(r.questionId));
+const area = (id) => AREAS.find(a => a.id === id) || (id === 'FG00' ? { id, title: 'Formação Geral — assunto a classificar', group: 'geral', law: 'Portaria 154/2026', topics: [] } : { id, title: 'Componente Específico — assunto a classificar', group: 'especifico', law: 'Portaria 164/2026', topics: [] });
+const lastAttempts = () => progress.attempts.filter(a => a.finishedAt).sort((a, b) => (b.finishedAt || 0) - (a.finishedAt || 0));
+const completed = () => progress.completedLessons.length;
+// A sequência percorre apenas aulas de fato disponíveis; não volta à primeira após concluir todas.
+const nextLesson = () => LESSONS.find(l => !progress.completedLessons.includes(l.id)) || null;
+const todaysSessions = () => ((progress.studySessions || []).filter(s => new Date(s.finishedAt).toDateString() === new Date().toDateString())).length;
+const practiceCount = (id) => new Set(validResponses(progress.responses).filter(r => qById(r.questionId)?.lessonId === id).map(r => r.questionId)).size;
+function openLesson(id) { const lesson = LESSONS.find(l => l.id === id); if (!lesson)
+    return; lessonId = lesson.id; areaId = lesson.areaId; page = 'lesson'; window.scrollTo(0, 0); render(); }
+function completeLesson(id) { const lesson = LESSONS.find(l => l.id === id); if (!lesson)
+    return false; if (progress.completedLessons.includes(id))
+    return false; progress.completedLessons.push(id); progress.minutes += lesson.duration; (progress.studySessions ??= []).push({ lessonId: id, finishedAt: new Date().toISOString() }); persist(); return true; }
+function finishStudyAndAdvance(id) { const added = completeLesson(id); studyPracticeLessonId = null; go('home'); flash(added ? 'Estudo concluído! A próxima aula está liberada.' : 'Esta aula já estava concluída.'); }
+const periodAllResponses = () => progress.responses.filter(r => { if (statsPeriod === 'todos')
+    return true; const t = new Date(r.at).getTime(), n = Date.now(); return t >= n - (statsPeriod === 'dia' ? 86400000 : statsPeriod === 'semana' ? 7 * 86400000 : 30 * 86400000); });
+const periodResponses = () => validResponses(periodAllResponses());
+const correctPct = (rs = validResponses(progress.responses)) => rs.length ? Math.round(rs.filter(r => r.correct).length / rs.length * 100) : 0;
+const attemptsActive = () => progress.attempts.find(a => a.id === activeAttempt && !a.finishedAt);
+const fmtSecs = (s) => `${Math.floor(Math.max(0, s) / 3600).toString().padStart(2, '0')}:${Math.floor(Math.max(0, s) % 3600 / 60).toString().padStart(2, '0')}:${Math.floor(Math.max(0, s) % 60).toString().padStart(2, '0')}`;
+function remaining(a) { return Math.max(0, Math.ceil(((a.pauseSince ?? Date.now()) - (a.endsAt - a.duration * 1000)) / 1000)); }
+function secondsLeft(a) { return Math.max(0, Math.ceil((a.endsAt - (a.pauseSince ?? Date.now())) / 1000)); }
+let write = Promise.resolve();
+function persist() { write = write.then(() => save(progress)).catch(e => console.error(e)); if (syncEngine?.connected) {
+    if (syncTimer)
+        clearTimeout(syncTimer);
+    syncTimer = setTimeout(() => { void cloudSync(); }, 5000);
+} }
+async function cloudSync() { if (!syncEngine?.connected || syncBusy || !navigator.onLine)
+    return; syncBusy = true; syncStatus = 'Sincronizando...'; if (page === 'settings')
+    render(); try {
+    const merged = await syncEngine.synchronize(progress);
+    progress = mergeProgress(progress, merged);
+    await save(progress);
+    syncStatus = 'Sincronizado nesta conexão: ' + new Date().toLocaleTimeString('pt-BR');
+}
+catch (e) {
+    syncStatus = 'Sincronização pendente: ' + (e instanceof Error ? e.message : String(e));
+}
+finally {
+    syncBusy = false;
+    if (page === 'settings')
+        render();
+} }
+async function connectCloud() { try {
+    const raw = localStorage.getItem(configKey);
+    if (!raw) {
+        flash('Informe a configuração web Firebase e salve antes de conectar.');
+        return;
+    }
+    syncEngine = new PrivateFirebaseSync();
+    syncStatus = 'Abrindo login Google...';
+    render();
+    const info = await syncEngine.connect(validateFirebaseConfig(JSON.parse(raw)));
+    syncUid = info.uid;
+    syncEmail = info.email || '';
+    syncStatus = 'Autenticado, aguardando sincronização';
+    await cloudSync();
+}
+catch (e) {
+    syncStatus = e instanceof Error ? e.message : String(e);
+    render();
+} }
+function flash(msg) { const box = document.createElement('div'); box.className = 'pill'; box.style.cssText = 'position:fixed;bottom:16px;right:16px;z-index:100;padding:13px;box-shadow:0 8px 30px #0002'; box.textContent = msg; document.body.append(box); setTimeout(() => box.remove(), 2800); }
+function go(next) { if (next !== 'learn')
+    studyPracticeLessonId = null; page = next; activeAttempt = null; window.scrollTo(0, 0); render(); }
+function put(tag, text, cls = '') { return `<${tag}${cls ? ` class="${cls}"` : ''}>${esc(text)}</${tag}>`; }
+function card(title, body) { return `<section class="card"><h3 class="section-title">${esc(title)}</h3>${body}</section>`; }
+function header(title, desc, side = '') { return `<div class="heading"><div><h2>${esc(title)}</h2><p>${esc(desc)}</p></div>${side}</div>`; }
+const simpleStat = (name, val, sub) => `<div class="card stat"><small>${esc(name)}</small><strong>${esc(val)}</strong><span>${esc(sub)}</span></div>`;
+function home() {
+    const next = nextLesson(), res = validResponses(progress.responses), wrong = new Set(res.filter(r => !r.correct).map(r => r.questionId));
+    const needs = Array.from(wrong).filter(id => !res.some(r => r.questionId === id && r.correct)).length;
+    const subjects = rankAreas().slice(0, 3);
+    return `<div class="hero"><div><p class="eyebrow">Sua preparação começa aqui</p><h1>Um passo por dia até o ENADE.</h1><p>Engenharia Elétrica, do conceito à prática. Aulas elaboradas e questões identificadas por procedência, com histórico salvo neste dispositivo.</p><div class="button-row"><button class="btn primary" data-action="today" ${!next ? 'disabled' : ''}>${!next ? 'Aulas disponíveis concluídas ✓' : todaysSessions() > 0 ? 'Continuar para próxima aula →' : 'Começar estudo de hoje →'}</button><button class="btn ghost" data-nav="plan">Ver plano</button></div></div><div class="countdown"><strong>${daysUntil('2026-11-29')}</strong><span>dias até 29/11/2026</span></div></div>
+<div class="cards">${simpleStat('Aulas concluídas', `${completed()}/${LESSONS.length}`, 'conteúdos concluídos')}${simpleStat('Questões respondidas', String(res.length), 'inclui repetidas')}${simpleStat('Taxa de acerto', `${correctPct()}%`, 'sobre respostas registradas')}${simpleStat('Tempo de estudo', `${progress.minutes} min`, 'sessões registradas')}</div>
+${todaysSessions() > 0 ? `<div class="notice"><b>✓ ${todaysSessions()} etapa(s) concluída(s) hoje.</b> Seu progresso foi salvo. Você pode continuar pela próxima aula agora ou deixar para outro dia.</div>` : ''}
+<div class="two-col">${card('Seu próximo conteúdo', next ? `<span class="tag green">Próxima etapa disponível</span><h3>${esc(next.title)}</h3><p class="subtle">${esc(next.summary)}</p><div class="row"><span class="tag">${esc(area(next.areaId).title)}</span><span class="tag">${next.duration} min</span></div>${practiceCount(next.id) ? `<div class="notice">Você já respondeu ${practiceCount(next.id)} questão(ões) deste assunto. Se terminou a etapa anterior, pode confirmá-la e avançar sem repetir tudo.</div>` : ''}<div class="button-row"><button class="btn primary" data-lesson="${next.id}">${practiceCount(next.id) ? 'Retomar esta aula' : 'Abrir próxima aula'}</button>${practiceCount(next.id) ? `<button class="btn" data-complete="${next.id}">Já terminei: concluir e avançar</button>` : ''}<button class="btn" data-nav="bank">Praticar questões</button></div>` : `<span class="tag green">Aulas disponíveis concluídas</span><h3>Você terminou as ${LESSONS.length} aulas prontas!</h3><p class="subtle">Novos conteúdos serão acrescentados à biblioteca. Enquanto isso, você pode revisar ou praticar.</p><div class="button-row"><button class="btn primary" data-nav="library">Revisar aulas</button><button class="btn" data-nav="bank">Praticar questões</button></div>`)}${card('Sua revisão', `<p class="subtle">${needs} questões erradas ainda não acertadas novamente. ${res.length ? 'As sugestões refletem suas respostas salvas.' : 'Responda às primeiras questões para obter recomendações de revisão.'}</p>${subjects.length ? subjects.map(x => `<div class="meter"><span class="meter-label">${esc(x.title)}</span><b>${x.pct}%</b></div>`).join('') : '<p class="subtle">Ainda não há desempenho por matéria.</p>'}<div class="button-row"><button class="btn" data-nav="errors">Ver erros</button><button class="btn" data-nav="stats">Ver desempenho</button></div>`)}</div>
+${header('Últimos simulados', 'Seu histórico de avaliações.')} ${lastAttempts().length ? `<div class="card">${lastAttempts().slice(0, 4).map(a => `<div class="meter"><span class="meter-label">${esc(a.kind)} · ${new Date(a.finishedAt).toLocaleDateString('pt-BR')}</span><b>${a.questionIds.some(id => !answerableId(id)) ? 'Legado, sem pontuação' : `${score(a.choices, a.questionIds.map(qById)).correct}/${a.questionIds.length}`}</b><button class="btn sm" data-attempt="${a.id}">Revisar</button></div>`).join('')}</div>` : '<div class="empty">Nenhum simulado concluído. Escolha um treino rápido para começar.</div>'}`;
+}
+function rankAreas() { return AREAS.map(a => { const rs = validResponses(progress.responses).filter(r => qById(r.questionId)?.areaId === a.id); return { title: a.title, id: a.id, count: rs.length, pct: correctPct(rs) }; }).filter(a => a.count).sort((a, b) => a.pct - b.pct || b.count - a.count); }
+function plan() {
+    const slot = progress.settings.session, parts = slot === 30 ? [5, 10, 12, 3] : slot === 45 ? [5, 15, 20, 5] : [10, 20, 25, 5];
+    const lesson = nextLesson();
+    return `<div class="hero"><div><p class="eyebrow">Rotina inteligente</p><h1>Seu plano diário de ${slot} minutos</h1><p>Revisão → aula → prática → análise dos erros. A recomendação prioriza lacunas observadas e conteúdos fundamentais, sem inventar frequência de cobrança.</p></div><div class="countdown"><strong>${daysUntil('2026-11-29')}</strong><span>dias até a prova</span></div></div>${header('Escolha o tempo disponível', 'Altere a duração sem perder seu progresso.')}
+<div class="filterbar">${[30, 45, 60].map(n => `<button class="btn ${slot === n ? 'primary' : ''}" data-session="${n}">${n} minutos</button>`).join('')}</div><div class="cards">${['Revisão', 'Aula', 'Questões', 'Análise'].map((l, i) => simpleStat(l, `${parts[i]} min`, ['Retomar conceitos', 'Aprender com exemplos', 'Resolver exercícios', 'Conferir erros'][i])).join('')}</div>
+${card('Próxima etapa de estudo', lesson ? `<span class="tag green">${todaysSessions() ? 'Estudo realizado hoje · continue quando quiser' : 'Próximo conteúdo não concluído'}</span><h3>${esc(lesson.title)}</h3><p class="subtle">${esc(lesson.summary)}</p><p class="subtle">A sequência avança após você concluir a aula. É possível estudar mais de uma etapa no mesmo dia, sem perder progresso.</p><button class="btn primary" data-lesson="${lesson.id}">${practiceCount(lesson.id) ? 'Retomar aula e concluir' : 'Começar próxima aula'}</button>${practiceCount(lesson.id) ? `<button class="btn" data-complete="${lesson.id}">Já finalizei: avançar para outra aula</button>` : ''}` : `<h3>Todas as aulas prontas concluídas</h3><p class="subtle">Explore as demais áreas ou revise seus exercícios enquanto novas aulas são preparadas.</p><button class="btn" data-nav="library">Revisar conteúdos</button>`)}
+${header('Prioridades de revisão', 'Baseadas no seu histórico e na matriz oficial.')}${rankAreas().length ? rankAreas().slice(0, 6).map(a => `<div class="card meter"><span class="meter-label">${esc(a.title)}</span><span>${a.count} respostas</span><strong>${a.pct}%</strong><button class="btn sm" data-area="${a.id}">Estudar</button></div>`).join('') : '<div class="notice">Você ainda não respondeu exercícios. Por isso, o plano começa pelos fundamentos e vai se ajustar com seu desempenho.</div>'}`;
+}
+function library() {
+    const q = search.toLowerCase();
+    const filtered = AREAS.filter(a => (groupFilter === 'todos' || a.group === groupFilter) && (`${a.title} ${a.topics.join(' ')}`).toLowerCase().includes(q));
+    const lesson = LESSONS.find(l => l.id === lessonId);
+    const active = area(areaId);
+    return `${header('Biblioteca de conteúdos', 'Matriz completa das portarias de 2026; aulas prontas e pendências distinguíveis.')}
+<div class="filterbar"><input aria-label="Pesquisar matéria" id="search" placeholder="Buscar matéria ou subtema" value="${esc(search)}"><select id="groupFilter" aria-label="Filtrar área"><option value="todos" ${groupFilter === 'todos' ? 'selected' : ''}>Todas as áreas</option><option value="especifico" ${groupFilter === 'especifico' ? 'selected' : ''}>Componente específico</option><option value="geral" ${groupFilter === 'geral' ? 'selected' : ''}>Formação Geral</option></select></div>
+<div class="two-col"><div class="area-list">${filtered.map(a => { const ls = LESSONS.filter(l => l.areaId === a.id); return `<button class="area ${areaId === a.id ? 'active' : ''}" data-area="${a.id}"><span class="area-icon">${a.id}</span><span><b>${esc(a.title)}</b><small>${ls.length ? `${ls.length} aula(s) concluída(s) para estudo` : 'Conteúdo em elaboração'} · ${esc(a.group === 'geral' ? 'Formação Geral' : 'Específico')}</small></span></button>`; }).join('') || '<div class="empty">Nenhuma área encontrada.</div>'}</div>
+<div><div class="card"><span class="tag green">${esc(active.law)}</span><h3>${esc(active.title)}</h3><p class="subtle">Subtemas organizados para estudo:</p><p>${active.topics.map(t => `<span class="tag" style="margin:3px">${esc(t)}</span>`).join('')}</p><hr class="divider"><h4>Aulas disponíveis</h4>${LESSONS.filter(l => l.areaId === active.id).map(l => `<div class="section-accordion"><div style="padding:14px"><b>${esc(l.title)}</b><p class="subtle">${esc(l.summary)}</p><span class="tag ${progress.completedLessons.includes(l.id) ? 'green' : ''}">${progress.completedLessons.includes(l.id) ? 'Concluída' : 'Pronta para estudo'}</span><div class="button-row"><button class="btn primary sm" data-lesson="${l.id}">Estudar</button></div></div></div>`).join('') || '<div class="notice warning">Ainda não há aula integral validada nesta área. A matriz e os subtemas estão cadastrados; nenhuma aula vazia será apresentada como pronta.</div>'}<p class="subtle">${esc(active.law)} · <a href="${active.group === 'geral' ? SOURCES.p154 : SOURCES.p164}" target="_blank" rel="noopener">Consultar portaria</a></p></div></div></div>`;
+}
+function lessonPage() {
+    const l = LESSONS.find(x => x.id === lessonId) || LESSONS[0];
+    const qs = QUESTIONS.filter(q => q.lessonId === l.id && !q.needsSource);
+    const done = progress.completedLessons.includes(l.id);
+    return `<div class="lesson-body"><div class="row"><button class="btn sm" data-nav="library">← Voltar à biblioteca</button><span class="tag">${esc(area(l.areaId).title)}</span></div><div class="heading"><div><h2>${esc(l.title)}</h2><p>${esc(l.summary)}</p></div></div><div class="row"><span class="tag green">Aula completa</span><span class="tag">${l.duration} min</span><span class="tag">Versão ${l.version}</span><span class="tag ${done ? 'green' : ''}">${done ? 'Concluída' : 'Não concluída'}</span></div>
+<section class="card" style="margin-top:18px"><h3 class="section-title">1. Entenda o conceito</h3><ul>${l.concept.map(x => `<li>${esc(x)}</li>`).join('')}</ul><h3>2. Fórmulas importantes</h3>${l.formula.map(x => `<div class="formula">${esc(x)}</div>`).join('')}<h3>3. O que significa cada variável</h3><ul>${l.variables.map(x => `<li>${esc(x)}</li>`).join('')}</ul><h3>4. Exemplo resolvido, passo a passo</h3><ol>${l.steps.map(x => `<li>${esc(x)}</li>`).join('')}</ol><h3>5. Aplicação prática</h3><p class="subtle">${esc(l.application)}</p><h3>6. Erros comuns</h3><ul>${l.mistakes.map(x => `<li>${esc(x)}</li>`).join('')}</ul><h3>7. Revisão rápida</h3><div class="feedback">${esc(l.revision)}</div><h3>8. Questões para praticar</h3><p class="subtle">${qs.length} questões autorais de treinamento vinculadas a este tema, com resolução independente revisada.</p><h3>9. Referências</h3><p class="subtle">${l.sources.map((s, i) => `<a href="${esc(s)}" rel="noopener" target="_blank">${i === 0 ? 'Portaria da matriz curricular' : 'Referência técnica: ' + esc(new URL(s).hostname)}</a>`).join(', ')}. A explicação didática é autoral e não foi aprovada pelo Inep.</p>${done ? `<div class="notice"><b>✓ Aula concluída.</b> ${nextLesson() ? `Próximo conteúdo: ${esc(nextLesson().title)}.` : 'Todas as aulas disponíveis foram concluídas.'}</div>` : ''}<div class="button-row">${done ? (nextLesson() ? `<button class="btn primary" data-lesson="${nextLesson().id}">Ir para a próxima aula →</button>` : `<button class="btn primary" data-nav="home">Voltar ao início</button>`) : `<button class="btn primary" data-complete="${l.id}">✓ Concluir estudo e avançar</button>`}<button class="btn" data-practice="${l.id}" ${!qs.length ? 'disabled' : ''}>Praticar ${qs.length} questão(ões)</button><button class="btn" data-nav="plan">Ver plano de estudos</button>${done ? `<button class="btn sm" data-uncomplete="${l.id}">Desmarcar conclusão</button>` : ''}</div></section></div>`;
+}
+function bank() {
+    const filter = (q) => (bankOrigin === 'todas' || (bankOrigin === 'autoral' ? q.origin === 'autoral' : q.origin === 'oficial-referenciada')) && (bankYear === 'todos' || String(q.year) === bankYear) && (groupFilter === 'todos' || area(q.areaId).group === groupFilter) && (difficultyFilter === 'todas' || q.difficulty === difficultyFilter) && (levelFilter === 'todos' || (q.level || 'fundamentos') === levelFilter) && (`${q.prompt} ${q.topic} ${area(q.areaId).title} ${q.year}`).toLowerCase().includes(search.toLowerCase());
+    const opts = QUESTIONS.filter(q => eligible(q) && filter(q));
+    const officialCatalog = OFFICIAL_ITEMS.filter(i => i.answer !== 'ANULADA' && (bankYear === 'todos' || String(i.year) === bankYear) && (groupFilter === 'todos' || i.section === groupFilter) && (`${i.year} questão ${i.number}`.includes(search.toLowerCase())));
+    const annulled = OFFICIAL_ANNULLED.filter(i => (bankYear === 'todos' || String(i.year) === bankYear) && (groupFilter === 'todos' || i.section === groupFilter) && (`${i.year} questão ${i.number} anulada`).includes(search.toLowerCase()));
+    const totalOfficial = OFFICIAL_ITEMS.length;
+    return `${header('Banco de questões', `Índice dos ${totalOfficial} itens objetivos oficiais de 2023, 2019 e 2017, incluindo ${OFFICIAL_ANNULLED.length} anulações.`)}
+ <div class="filterbar"><input id="search" placeholder="Buscar por ano, número ou assunto" aria-label="Buscar questões" value="${esc(search)}"><select id="bankOrigin" aria-label="Procedência"><option value="oficial" ${bankOrigin === 'oficial' ? 'selected' : ''}>Somente oficiais</option><option value="autoral" ${bankOrigin === 'autoral' ? 'selected' : ''}>Somente autorais</option><option value="todas" ${bankOrigin === 'todas' ? 'selected' : ''}>Todas</option></select><select id="bankYear" aria-label="Ano"><option value="todos">Todos os anos</option>${[2023, 2019, 2017].map(y => `<option value="${y}" ${bankYear === String(y) ? 'selected' : ''}>ENADE ${y}</option>`).join('')}</select><select id="groupFilter" aria-label="Tipo"><option value="todos">Formação Geral + Específico</option><option value="especifico" ${groupFilter === 'especifico' ? 'selected' : ''}>Específico</option><option value="geral" ${groupFilter === 'geral' ? 'selected' : ''}>Formação Geral</option></select><select id="difficultyFilter" aria-label="Dificuldade">${['todas', 'Fácil', 'Média', 'Difícil'].map(v => `<option value="${v}" ${difficultyFilter === v ? 'selected' : ''}>${v === 'todas' ? 'Todas as dificuldades' : v}</option>`).join('')}</select><select id="levelFilter" aria-label="Nível de treinamento"><option value="todos" ${levelFilter === 'todos' ? 'selected' : ''}>Todos os níveis</option><option value="fundamentos" ${levelFilter === 'fundamentos' ? 'selected' : ''}>Fundamentos</option><option value="desenvolvimento" ${levelFilter === 'desenvolvimento' ? 'selected' : ''}>Desenvolvimento</option><option value="padrao-enade" ${levelFilter === 'padrao-enade' ? 'selected' : ''}>Padrão ENADE (autoral)</option></select></div>
+ <div class="notice warning"><b>${QUESTIONS.filter(q => q.origin === 'oficial-referenciada' && eligible(q)).length} questões oficiais completas e respondíveis</b>; ${OFFICIAL_ITEMS.filter(i => i.answer !== 'ANULADA').length} itens oficiais com gabarito catalogado; ${OFFICIAL_ANNULLED.length} anuladas; ${QUESTIONS.filter(q => q.origin === 'autoral' && eligible(q)).length} questões autorais disponíveis. <b>O índice de gabaritos não é um banco de questões resolvíveis.</b> Itens sem enunciado e alternativas verificados ficam indisponíveis para responder e para simulados. O caderno do Inep permanece disponível como referência.</div>
+ ${bankOrigin !== 'autoral' ? `<div class="card"><h3>Provas oficiais completas</h3><p class="subtle">Cadernos originais, respostas definitivas e identificação das questões anuladas. São edições anteriores; não representam a configuração do ENADE 2026.</p><div class="button-row">${[2023, 2019, 2017].map(y => `<a class="btn" href="${esc(pdfFor(y, OFFICIAL_SOURCES[y].exam))}" target="_blank" rel="noopener">Prova ${y} (PDF)</a><a class="btn sm" href="${esc(OFFICIAL_SOURCES[y].key)}" target="_blank" rel="noopener">Gabarito ${y}</a>`).join('')}</div></div>` : ''}
+ <p class="subtle">${opts.length} questões completas e respondíveis${bankOrigin === 'autoral' ? '' : ` · ${officialCatalog.length} itens oficiais catalogados e indisponíveis para resolução neste aplicativo`}. Exibindo até ${bankLimit} por seção.</p>
+ <div class="lesson-grid">${opts.slice(0, bankLimit).map(q => `<div class="card question-card"><div class="row"><span class="tag ${q.origin === 'autoral' ? 'green' : 'amber'}">${q.origin === 'autoral' ? 'Questão autoral de treinamento' : `Oficial ENADE ${q.year}`}</span><span class="tag">${esc(q.origin === 'autoral' ? q.difficulty : 'Gabarito definitivo')}</span>${q.origin === 'autoral' ? `<span class="tag">${q.level === 'padrao-enade' ? 'Treino avançado tipo ENADE' : 'Fundamentos'}</span>` : ''}</div><h3>${esc(q.topic)}</h3><p class="subtle">${esc(q.prompt.length > 170 ? q.prompt.slice(0, 170) + '…' : q.prompt)}</p><p class="subtle">${esc(area(q.areaId).title)}</p><div class="button-row"><button class="btn primary sm" data-single="${q.id}">Responder ${q.origin === 'autoral' ? 'questão' : 'com PDF'}</button>${q.needsSource ? `<a class="btn sm" href="${esc(pdfFor(q.year, q.source))}" target="_blank" rel="noopener">Abrir enunciado</a>` : ''}<button class="btn sm" data-bookmark="${q.id}">${progress.bookmarks.includes(q.id) ? '★ Salva' : '☆ Salvar'}</button></div></div>`).join('')}</div>
+ ${bankOrigin !== 'autoral' ? `<section class="card"><h3>Índice oficial — aguarda enunciados completos (${officialCatalog.length})</h3><p class="subtle">Registro documental, não disponível para resposta. O link abre a fonte do Inep apenas para consulta.</p><div class="lesson-grid">${officialCatalog.slice(0, bankLimit).map(i => `<div class="card question-card"><div class="row"><span class="tag amber">ENADE ${i.year} · questão ${i.number}</span><span class="tag">Aguardando revisão</span></div><p class="subtle">${i.section === 'geral' ? 'Formação Geral' : 'Componente Específico'} · Gabarito catalogado: ${i.answer}</p><a class="btn sm" href="${esc(pdfFor(i.year, i.examUrl))}" target="_blank" rel="noopener">Consultar caderno original</a></div>`).join('')}</div></section>` : ''}
+ ${Math.max(opts.length, bankOrigin === 'autoral' ? 0 : officialCatalog.length) > bankLimit ? `<div class="button-row" style="justify-content:center"><button class="btn primary" data-action="bank-more">Mostrar mais itens</button></div>` : ''}
+ ${bankOrigin !== 'autoral' && annulled.length ? `<div class="card"><h3>Questões anuladas pelo Inep (${annulled.length})</h3><p class="subtle">Estão no índice, mas não têm alternativa correta nem entram na pontuação dos simulados.</p><div class="button-row">${annulled.map(i => `<a class="btn sm" href="${esc(pdfFor(i.year, i.examUrl))}" target="_blank" rel="noopener">${i.year} · Questão ${i.number} — ANULADA</a>`).join('')}</div></div>` : ''}`;
+}
+function startLearning(ids, originLessonId = null) { const safe = ids.filter(answerableId); if (!safe.length) {
+    go('bank');
+    flash('Este item ainda não possui enunciado e alternativas revisados para resposta.');
+    return;
+} studyPracticeLessonId = originLessonId; quizIds = safe; quizIndex = 0; quizSelected = null; quizRevealed = false; quizHints = 0; quizStart = Date.now(); page = 'learn'; render(); }
+function learn() {
+    const q = qById(quizIds[quizIndex]);
+    if (!q)
+        return '<div class="empty">Nenhuma questão selecionada.</div>';
+    const last = progress.responses.filter(r => r.questionId === q.id).at(-1);
+    return `<div class="quiz"><div class="row"><button class="btn sm" data-nav="bank">← Banco de questões</button><span class="tag">${quizIndex + 1} de ${quizIds.length}</span><span class="tag ${q.origin === 'autoral' ? 'green' : 'amber'}">${q.origin === 'autoral' ? 'Questão autoral de treinamento' : `Oficial ENADE ${q.year} · requer PDF`}</span></div><div class="heading"><div><h2>${esc(q.topic)}</h2><p>${esc(area(q.areaId).title)} · ${esc(q.difficulty)} · ID ${esc(q.id)}</p></div></div><section class="card"><p style="font-size:16px;line-height:1.7">${esc(q.prompt)}</p>${q.needsSource ? `<div class="notice warning">O enunciado completo, as alternativas e as imagens estão no PDF oficial. <a href="${esc(pdfFor(q.year, q.source))}${q.page ? '#page=' + q.page : ''}" target="_blank" rel="noopener">Abrir caderno ENADE ${q.year}${q.page ? ', página ' + q.page : ''}</a>, antes de responder. Esta referência exige internet caso o PDF não esteja salvo.</div>` : ''}<div class="options">${q.choices.map((c, i) => `<label class="option ${quizSelected === i ? 'selected' : ''} ${quizRevealed && q.answer === i ? 'correct' : ''} ${quizRevealed && quizSelected === i && i !== q.answer ? 'incorrect' : ''}"><input type="radio" name="learn-choice" value="${i}" ${quizSelected === i ? 'checked' : ''} ${quizRevealed ? 'disabled' : ''}><b>${'ABCDE'[i]}</b><span>${esc(c)}</span></label>`).join('')}</div>
+${!quizRevealed ? `<div class="button-row"><button class="btn" data-action="hint" ${quizHints >= q.hints.length ? 'disabled' : ''}>Pedir dica (${quizHints}/${q.hints.length})</button><button class="btn primary" data-action="submit-learning" ${quizSelected === null ? 'disabled' : ''}>Responder</button><button class="btn" data-action="give-up">Desistir e ver resolução</button></div>${quizHints ? `<div class="notice">${q.hints.slice(0, quizHints).map((h, i) => `${i + 1}. ${esc(h)}`).join('<br>')}</div>` : ''}` : `<div class="feedback"><b>${quizSelected === null ? 'Resolução exibida' : quizSelected === q.answer ? 'Resposta correta!' : 'Resposta incorreta.'}</b><p>${esc(q.why)}</p>${q.calculation ? `<p class="formula">${esc(q.calculation)}</p>` : ''}<p><b>Resposta:</b> ${'ABCDE'[q.answer]} · <b>Status:</b> ${esc(q.status.replaceAll('-', ' '))}</p><p class="subtle">${esc(q.origin === 'autoral' ? 'Resolução independente de questão autoral.' : 'Gabarito oficial conferido; explicação independente, não chancelada pelo Inep.')}</p>${q.lessonId ? `<button class="btn sm" data-lesson="${q.lessonId}">Revisar aula relacionada</button>` : ''}<a class="btn sm" href="${esc(q.origin === 'oficial-referenciada' ? pdfFor(q.year, q.source) : SOURCES.p164)}" target="_blank" rel="noopener">Consultar referência</a></div><div class="button-row"><button class="btn" data-bookmark="${q.id}">${progress.bookmarks.includes(q.id) ? '★ Remover dos salvos' : '☆ Salvar para revisão'}</button>${studyPracticeLessonId ? `<button class="btn primary" data-action="finish-study">✓ Concluir estudo e avançar</button><button class="btn" data-action="next-learning">${quizIndex < quizIds.length - 1 ? 'Continuar praticando' : 'Voltar ao banco'}</button>` : `<button class="btn primary" data-action="next-learning">${quizIndex < quizIds.length - 1 ? 'Próxima questão' : 'Voltar ao banco'}</button>`}</div>`}</section>${last ? `<p class="subtle">Última resposta registrada: ${new Date(last.at).toLocaleString('pt-BR')} · ${last.correct ? 'acerto' : 'erro'}</p>` : ''}</div>`;
+}
+function defaultCandidates() { return QUESTIONS.filter(q => eligible(q) && !q.needsSource); }
+function sim() {
+    const available = defaultCandidates().length;
+    return `${header('Simulados', 'Treine em modo avaliação; respostas e cronômetro salvos localmente.')}
+<div class="notice warning">Simulado oficial completo de 2026: 15 questões gerais + 30 específicas + 1 discursiva, 4 horas. <b>Indisponível por enquanto</b>: o banco atual não possui 45 questões objetivas verificadas com a distribuição exigida. O sistema não repetirá nem inventará itens.</div>
+<div class="lesson-grid">${card('Treino rápido', `<p class="subtle">Escolha um tamanho compatível com as ${available} questões autorais prontas. Correção somente após finalizar.</p><div class="button-row">${[5, 10, 15, 20].map(n => `<button class="btn ${n === 5 ? 'primary' : ''}" data-simquick="${n}" ${available < n ? 'disabled' : ''}>${n} questões</button>`).join('')}</div>`)}${card('Treino avançado tipo ENADE', `<p class="subtle">Questões autorais de várias etapas; não equivalem a itens oficiais. O gabarito aparece apenas ao finalizar.</p><div class="button-row"><button class="btn primary" data-action="sim-advanced" ${QUESTIONS.filter(q => q.level === 'padrao-enade' && eligible(q)).length < 10 ? 'disabled' : ''}>10 questões avançadas</button></div>`)}${card('Simulado adaptativo', `<p class="subtle">Seleção determinística que prioriza questões inéditas para você, erros anteriores e diversidade de áreas. Sem alegações falsas de inteligência artificial.</p><button class="btn primary" data-simadaptive="10" ${available < 10 ? 'disabled' : ''}>Começar 10 questões</button>`)}
+${card('Por área e dificuldade', `<p class="subtle">O modo seleciona apenas questões verificadas. Em áreas sem conteúdo suficiente, avisa a limitação.</p><select id="simArea" class="field" aria-label="Área do simulado">${AREAS.map(a => `<option value="${a.id}" ${a.id === areaId ? 'selected' : ''}>${esc(a.title)}</option>`).join('')}</select><div class="button-row"><button class="btn primary" data-action="sim-area">Iniciar por matéria</button></div>`)}${card('Questões erradas', `<p class="subtle">Reavalie questões que você errou, sem exibir as respostas até encerrar.</p><button class="btn primary" data-action="sim-errors">Rever erros em modo prova</button>`)}</div>
+${card('Treinar provas antigas do ENADE', `<p class="subtle">As três edições já têm gabaritos catalogados, porém os enunciados e alternativas ainda não foram integrados. Os simulados oficiais permanecem bloqueados até haver questões completas. Não é necessário abrir PDFs para resolver um simulado anunciado como pronto.</p><div class="button-row">${[2023, 2019, 2017].map(y => `<button class="btn" data-simofficial="${y}" ${!QUESTIONS.some(q => q.origin === 'oficial-referenciada' && q.year === y && eligible(q)) ? 'disabled' : ''}>ENADE ${y} · ${QUESTIONS.filter(q => q.origin === 'oficial-referenciada' && q.year === y && eligible(q)).length} prontas</button>`).join('')}</div>`)}
+${header('Histórico de simulados', 'Abra uma tentativa para conferir suas respostas originais.')}${lastAttempts().length ? `<div class="card table-scroll"><table class="table"><thead><tr><th>Tipo</th><th>Data</th><th>Resultado</th><th></th></tr></thead><tbody>${lastAttempts().map(a => { const s = score(a.choices, a.questionIds.map(qById)); return `<tr><td>${esc(a.kind)}</td><td>${new Date(a.finishedAt).toLocaleString('pt-BR')}</td><td>${a.questionIds.some(id => !answerableId(id)) ? 'Registro legado sem pontuação' : `${s.correct}/${s.total} acertos`}</td><td><button class="btn sm" data-attempt="${a.id}">Revisar</button></td></tr>`; }).join('')}</tbody></table></div>` : '<div class="empty">Nenhum simulado finalizado.</div>'}
+${progress.attempts.filter(a => !a.finishedAt).length ? card('Simulados interrompidos', progress.attempts.filter(a => !a.finishedAt).map(a => `<p class="row">${esc(a.kind)} — ${a.questionIds.length} questões ${a.questionIds.some(id => !answerableId(id)) ? `<span class="tag amber">Tentativa legada, não retomável</span>` : `<button class="btn sm" data-resume="${a.id}">Retomar</button>`}<button class="btn sm warn" data-abandon="${a.id}">Descartar</button></p>`).join('')) : ''}`;
+}
+function createAttempt(kind, qs, mode = 'practice', durationMinutes = 45) { if (!qs.length || qs.some(q => !eligible(q))) {
+    flash('Não há questões completas e revisadas para esse simulado.');
+    return;
+} const now = Date.now(); const a = { id: crypto.randomUUID(), kind, questionIds: qs.map(q => q.id), choices: {}, flagged: [], startedAt: now, endsAt: now + durationMinutes * 60000, pausedSeconds: 0, pauseSince: null, duration: durationMinutes * 60, index: 0, mode }; progress.attempts.push(a); activeAttempt = a.id; persist(); page = 'attempt'; render(); }
+function attemptPage() { const a = attemptsActive(); if (!a)
+    return '<div class="notice">Tentativa não encontrada.</div>'; if (a.questionIds.some(id => !answerableId(id)))
+    return `<div class="notice warning"><h3>Simulado antigo preservado, mas indisponível para continuar</h3><p>Essa tentativa contém itens sem enunciado e alternativas completos. Seus registros continuam salvos e podem ser exportados em Configurações, mas não serão tratados como avaliação válida.</p><button class="btn" data-nav="sim">Voltar aos simulados</button></div>`; const q = qById(a.questionIds[a.index]); if (!q)
+    return ''; const totalAnswered = Object.keys(a.choices).length; return `<div class="quiz"><div class="quiz-header"><div><button class="btn sm" data-action="leave-attempt">← Sair e salvar</button><h2>${esc(a.kind)}</h2><p class="subtle">Questão ${a.index + 1} de ${a.questionIds.length} · ${totalAnswered} respondidas · ${a.flagged.length} marcadas</p></div><div style="text-align:right"><div class="tag">${a.mode === 'real' ? 'Prova real' : 'Treino'}</div><h2 id="timer" aria-live="off">${fmtSecs(secondsLeft(a))}</h2>${a.mode === 'practice' ? `<button class="btn sm" data-action="pause-attempt">${a.pauseSince ? 'Retomar' : 'Pausar'}</button>` : ''}</div></div><div class="progress"><i style="width:${Math.round(100 * totalAnswered / a.questionIds.length)}%"></i></div><div class="card" style="margin-top:18px"><div class="row"><span class="tag">${esc(area(q.areaId).title)}</span><span class="tag">${esc(q.difficulty)}</span></div><h3 style="font-size:16px;line-height:1.65">${esc(q.prompt)}</h3>${q.needsSource ? `<div class="notice warning">Questão oficial ${q.year}: consulte o caderno antes de responder. <a href="${esc(pdfFor(q.year, q.source))}" target="_blank" rel="noopener">Abrir prova em PDF</a> (requer conexão ou PDF previamente salvo).</div>` : ''}<div class="options">${q.choices.map((c, i) => `<label class="option ${a.choices[q.id] === i ? 'selected' : ''}"><input type="radio" name="attempt-choice" value="${i}" ${a.choices[q.id] === i ? 'checked' : ''} ${a.pauseSince ? 'disabled' : ''}><b>${'ABCDE'[i]}</b><span>${esc(c)}</span></label>`).join('')}</div><div class="button-row"><button class="btn" data-action="flag">${a.flagged.includes(q.id) ? '★ Desmarcar revisão' : '☆ Marcar para revisão'}</button><button class="btn" data-action="clear-attempt-choice" ${a.choices[q.id] === undefined ? 'disabled' : ''}>Limpar resposta</button></div></div><div class="button-row"><button class="btn" data-action="prev-attempt" ${a.index === 0 ? 'disabled' : ''}>← Anterior</button><button class="btn" data-action="next-attempt" ${a.index === a.questionIds.length - 1 ? 'disabled' : ''}>Próxima →</button><button class="btn primary" data-action="finish-attempt">Finalizar simulado</button></div><div class="heading"><div><h2>Mapa de questões</h2><p>Selecione qualquer questão para navegar.</p></div></div><div class="grid5">${a.questionIds.map((id, i) => `<button class="index-btn ${a.index === i ? 'current' : ''} ${a.choices[id] !== undefined ? 'answered' : ''} ${a.flagged.includes(id) ? 'flagged' : ''}" data-idx="${i}">${i + 1}${a.flagged.includes(id) ? ' ★' : ''}</button>`).join('')}</div><p class="subtle">Não há gabarito durante o simulado. Fechar a página não apaga as respostas; em modo prova real, o relógio continua correndo.</p></div>`; }
+function finishAttempt(force = false) {
+    const a = attemptsActive();
+    if (!a)
+        return;
+    if (!force && !window.confirm(`Finalizar ${a.kind}? Você respondeu ${Object.keys(a.choices).length} de ${a.questionIds.length} questões.`))
+        return;
+    const now = Date.now();
+    a.finishedAt = now;
+    for (const id of a.questionIds) {
+        const q = qById(id), choice = a.choices[id] ?? null;
+        if (choice === null)
+            continue;
+        if (!progress.responses.some(r => r.attemptId === a.id && r.questionId === id))
+            progress.responses.push({ id: crypto.randomUUID(), questionId: id, choice, correct: choice === q.answer, at: new Date(now).toISOString(), seconds: Math.round((now - a.startedAt) / 1000 / a.questionIds.length), attemptId: a.id });
+    }
+    progress.minutes += Math.max(1, Math.round(Math.min(a.duration, (now - a.startedAt) / 1000 - a.pausedSeconds) / 60));
+    persist();
+    activeAttempt = null;
+    page = 'results';
+    resultId = a.id;
+    render();
+}
+let resultId = null;
+function results() { const a = progress.attempts.find(x => x.id === resultId); if (!a)
+    return '<div class="empty">Simulado não encontrado.</div>'; if (a.questionIds.some(id => !answerableId(id)))
+    return `${header('Registro histórico preservado', 'Esta tentativa inclui itens incompletos que não podem ser usados como avaliação válida.')}<div class="notice warning">As escolhas originais foram mantidas no backup. A pontuação antiga não compõe o desempenho de questões completas.</div><div class="card">${a.questionIds.map(id => `<p>${esc(QUESTIONS.find(q => q.id === id)?.topic || id)} — resposta salva: ${a.choices[id] === undefined ? 'em branco' : 'ABCDE'[a.choices[id]]}</p>`).join('')}</div><button class="btn" data-nav="sim">Voltar</button>`; const qs = a.questionIds.map(qById), s = score(a.choices, qs); return `<div class="quiz">${header('Resultado do simulado', `${esc(a.kind)} · ${new Date(a.finishedAt || Date.now()).toLocaleString('pt-BR')}`)}<div class="cards" style="grid-template-columns:repeat(3,1fr)">${simpleStat('Acertos', String(s.correct), `de ${s.total}`)}${simpleStat('Respondidas', String(s.answered), 'questões objetivas')}${simpleStat('Percentual', `${s.total ? Math.round(s.correct / s.total * 100) : 0}%`, 'não é nota oficial')}</div><div class="notice">Este resultado representa somente o percentual de acertos neste treinamento, não a nota do Inep.</div>${qs.map((q, i) => `<div class="card" style="margin-bottom:12px"><div class="row"><span class="tag">${i + 1}. ${esc(q.topic)}</span><span class="tag ${a.choices[q.id] === q.answer ? 'green' : 'amber'}">${a.choices[q.id] === undefined ? 'Não respondida' : a.choices[q.id] === q.answer ? 'Correta' : 'Incorreta'}</span></div><p style="font-size:14px;line-height:1.65">${esc(q.prompt)}</p><p class="subtle"><b>Sua resposta:</b> ${a.choices[q.id] === undefined ? 'em branco' : `${'ABCDE'[a.choices[q.id]]} — ${esc(q.choices[a.choices[q.id]])}`}<br><b>Gabarito:</b> ${'ABCDE'[q.answer]} — ${esc(q.choices[q.answer])}</p><div class="feedback">${esc(q.why)}</div>${q.needsSource ? `<a class="btn sm" href="${esc(pdfFor(q.year, q.source))}" target="_blank" rel="noopener">Conferir enunciado original</a>` : ''}${q.lessonId ? `<button class="btn sm" data-lesson="${q.lessonId}">Rever aula</button>` : ''}</div>`).join('')}<button class="btn" data-nav="sim">Voltar aos simulados</button></div>`; }
+function discursive() {
+    const d = DISCURSIVES.find(x => x.id === selectedDisc) || DISCURSIVES[0];
+    const draft = progress.discursive[d.id] || '';
+    return `${header('Treinamento de discursivas', 'Salve rascunhos, compare com rubricas e desenvolva argumentação técnica.')}
+<div class="card"><h3>Discursivas oficiais — 2023, 2019 e 2017</h3><p class="subtle">Índice das ${OFFICIAL_DISCURSIVES.length} questões discursivas históricas. Consulte o texto original no PDF e o padrão de resposta do Inep; os enunciados e critérios ainda não foram integrados ao editor abaixo.</p><div class="button-row">${[2023, 2019, 2017].map(y => `<a class="btn sm" target="_blank" rel="noopener" href="${esc(pdfFor(y, OFFICIAL_SOURCES[y].exam))}">Discursivas ${y} (${OFFICIAL_DISCURSIVES.filter(i => i.year === y).length})</a>`).join('')}</div></div><div class="filterbar"><select id="discSelect" aria-label="Questão discursiva">${DISCURSIVES.map(x => `<option value="${x.id}" ${x.id === d.id ? 'selected' : ''}>${esc(x.id)} — ${esc(area(x.areaId).title)}</option>`).join('')}</select></div><div class="two-col"><section class="card"><div class="row"><span class="tag green">Questão autoral</span><span class="tag">${esc(area(d.areaId).title)}</span></div><h3>Enunciado</h3><p class="subtle">${esc(d.prompt)}</p><h3>Sua resposta</h3><textarea id="discText" class="textarea" placeholder="Digite sua resposta. O rascunho é salvo automaticamente.">${esc(draft)}</textarea><p class="subtle" id="discSaved">${draft.length} caracteres · salvamento local automático</p><button class="btn primary" data-action="save-discursive">Salvar rascunho</button></section><section class="card"><h3>Critérios para conferir</h3><p class="subtle">Esta comparação é orientativa, não atribui nota oficial.</p><ul>${d.rubric.map(x => `<li style="margin-bottom:10px">${esc(x)}</li>`).join('')}</ul><details class="section-accordion"><summary>Mostrar modelo de resposta</summary><div><p class="subtle">${esc(d.model)}</p></div></details><h3>Como melhorar sua resposta</h3><p class="subtle">Comece com a conclusão técnica, justifique com conceitos, indique consequências práticas e finalize com limitações. Compare item a item com a rubrica. Não basta repetir palavras-chave.</p></section></div>`;
+}
+const tutors = [{ id: 'ohm', title: 'Lei de Ohm', intro: 'A tensão é o “empurrão”, a corrente é o fluxo e a resistência é a dificuldade de passagem.', tips: ['V = R × I', 'Se V dobra e R fica igual, I também dobra.', 'Para obter I, divida V por R.'], lesson: 'circuito-ohm' }, { id: 'potencia', title: 'Potência em CA', intro: 'kW indica a parte ativa, kVA a aparente; o fator de potência relaciona as duas.', tips: ['FP = P/S', 'P trifásica = √3·Vlinha·Ilinha·FP', 'kW e kVA não são intercambiáveis.'], lesson: 'potencia-trifasica' }, { id: 'transformador', title: 'Transformadores', intro: 'Em um transformador ideal, a tensão acompanha as espiras e a corrente vai no sentido inverso.', tips: ['V1/V2 = N1/N2', 'V1·I1 = V2·I2', 'A frequência permanece a mesma.'], lesson: 'trafo-ideal' }, { id: 'amostragem', title: 'Amostragem', intro: 'A taxa de aquisição precisa representar as variações mais rápidas do sinal.', tips: ['fs > 2fmax', 'T = 1/fs', 'Use filtro anti-aliasing.'], lesson: 'nyquist' }];
+function tutor() {
+    const t = tutors.find(x => x.id === tutorTopic);
+    return `${header('Tutor guiado de estudos', 'Respostas estruturadas com base nas aulas. Não é uma IA generativa.')}
+<div class="two-col"><div class="card"><h3 class="section-title">Sobre o que você quer ajuda?</h3>${tutors.map(x => `<button class="area ${x.id === t.id ? 'active' : ''}" style="margin-bottom:9px" data-tutor="${x.id}"><span class="area-icon">?</span><span><b>${esc(x.title)}</b></span></button>`).join('')}</div><div class="card"><span class="tag green">Tutor por conteúdo</span><h3>${esc(t.title)}</h3><p class="subtle">${esc(t.intro)}</p><h3>Passo a passo e fórmulas</h3><ol>${t.tips.map(t => `<li style="margin-bottom:12px">${esc(t)}</li>`).join('')}</ol><div class="button-row"><button class="btn primary" data-lesson="${t.lesson}">Estudar aula completa</button><button class="btn" data-practice="${t.lesson}">Testar com questões</button></div><hr class="divider"><p class="subtle">Este tutor não inventa respostas ou usa uma API externa. Novos tópicos serão adicionados após revisão do conteúdo.</p></div></div>`;
+}
+function stats() {
+    const rs = periodResponses(), legacy = periodAllResponses().filter(r => !answerableId(r.questionId)), buckets = AREAS.map(a => ({ a, rs: rs.filter(r => qById(r.questionId)?.areaId === a.id) })).filter(x => x.rs.length).sort((x, y) => y.rs.length - x.rs.length);
+    return `${header('Meu desempenho', 'Informações calculadas exclusivamente a partir das respostas registradas.')}<div class="filterbar"><select id="statsPeriod"><option value="todos">Todo o período</option><option value="dia" ${statsPeriod === 'dia' ? 'selected' : ''}>Últimas 24 horas</option><option value="semana" ${statsPeriod === 'semana' ? 'selected' : ''}>Últimos 7 dias</option><option value="mes" ${statsPeriod === 'mes' ? 'selected' : ''}>Últimos 30 dias</option></select></div><div class="cards">${simpleStat('Respostas', String(rs.length), 'inclui repetições')}${simpleStat('Acertos', String(rs.filter(r => r.correct).length), 'respostas corretas')}${simpleStat('Erros', String(rs.filter(r => !r.correct).length), 'respostas incorretas')}${simpleStat('Taxa de acerto', `${correctPct(rs)}%`, 'não é nota do ENADE')}</div>
+${card('Acertos por nível de estudo', ['fundamentos', 'padrao-enade'].map(level => { const rlevel = rs.filter(r => (qById(r.questionId).level || 'fundamentos') === level); return `<div class="meter"><span class="meter-label">${level === 'fundamentos' ? 'Fundamentos' : 'Treinamento autoral avançado'} — ${rlevel.length} respostas</span><b>${rlevel.length ? correctPct(rlevel) + '%' : 'Sem dados'}</b></div>`; }).join('') + '<p class="subtle">Nenhum percentual é estimativa de nota oficial do Inep.</p>')}
+${legacy.length ? `<div class="notice warning">${legacy.length} resposta(s) anteriores de itens incompletos foram preservadas para backup, mas excluídas das estatísticas de aprendizagem. Elas não foram apagadas.</div>` : ''}<div class="two-col">${card('Resultado por matéria', buckets.length ? buckets.map(x => { const pct = correctPct(x.rs); return `<div class="meter"><span class="meter-label">${esc(x.a.title)}<small style="display:block;color:var(--muted)">${x.rs.length} respostas</small></span><span class="meter-track"><i style="width:${pct}%"></i></span><b>${pct}%</b></div>`; }).join('') : '<p class="subtle">Resolva questões para visualizar seus resultados por área.</p>')}${card('Resumo de estudo', `<p class="subtle"><b>Aulas concluídas:</b> ${completed()}/${LESSONS.length} prontas.</p><p class="subtle"><b>Tempo registrado:</b> ${progress.minutes} minutos.</p><p class="subtle"><b>Simulados encerrados:</b> ${lastAttempts().length}.</p><p class="subtle"><b>Questões salvas:</b> ${progress.bookmarks.length}.</p><p class="subtle">A análise de dificuldade depende do número de tentativas por assunto.</p>`)}</div>
+${legacy.length ? card('Registros antigos arquivados', `<p class="subtle">As alternativas anteriores foram preservadas, mas não são contabilizadas como acertos ou erros válidos. É possível exportá-las pelo backup.</p><div class="table-scroll"><table class="table"><thead><tr><th>Data</th><th>Questão</th><th>Alternativa registrada</th></tr></thead><tbody>${legacy.slice().reverse().slice(0, 50).map(r => `<tr><td>${new Date(r.at).toLocaleString('pt-BR')}</td><td>${esc(QUESTIONS.find(q => q.id === r.questionId)?.topic || r.questionId)}</td><td>${r.choice === null ? '—' : 'ABCDE'[r.choice] || '—'}</td></tr>`).join('')}</tbody></table></div>`) : ''}${header('Histórico de respostas', 'Confira a alternativa marcada em cada tentativa.')}${rs.length ? `<div class="card table-scroll"><table class="table"><thead><tr><th>Data</th><th>Questão</th><th>Marcada</th><th>Gabarito</th><th>Resultado</th><th></th></tr></thead><tbody>${rs.slice().reverse().slice(0, 150).map(r => { const q = qById(r.questionId); return `<tr><td>${new Date(r.at).toLocaleString('pt-BR')}</td><td>${esc(q.topic)}</td><td>${r.choice === null ? '—' : 'ABCDE'[r.choice]}</td><td>${'ABCDE'[q.answer]}</td><td class="${r.correct ? 'ok' : 'bad'}">${r.correct ? 'Acerto' : 'Erro'}</td><td><button class="btn sm" data-single="${q.id}">Rever</button></td></tr>`; }).join('')}</tbody></table></div>` : '<div class="empty">Ainda não há respostas registradas.</div>'}`;
+}
+function errors() {
+    const last = new Map();
+    for (const r of validResponses(progress.responses))
+        last.set(r.questionId, r.correct);
+    const missed = [...last].filter(([, ok]) => !ok).map(([id]) => qById(id));
+    return `${header('Revisão de erros', 'Questões cujo último registro foi incorreto e questões marcadas para revisão.')}
+<div class="cards">${simpleStat('Erros pendentes', String(missed.length), 'último registro incorreto')}${simpleStat('Questões salvas', String(progress.bookmarks.length), 'marcadas manualmente')}${simpleStat('Total de respostas', String(progress.responses.length), 'histórico completo')}${simpleStat('Taxa de acerto', `${correctPct()}%`, 'geral')}</div>
+${card('Corrigir dificuldades', missed.length ? missed.map(q => `<p class="row"><span class="meter-label">${esc(q.topic)} · ${esc(area(q.areaId).title)}</span><button class="btn sm" data-single="${q.id}">Resolver novamente</button></p>`).join('') : '<p class="subtle">Nenhum erro pendente registrado. Você pode continuar praticando.</p>')}
+${header('Salvas para revisão', 'Marque questões no banco de questões ou após responder.')}${progress.bookmarks.length ? progress.bookmarks.map(id => { const q = qById(id); return `<div class="card meter"><span class="meter-label">${esc(q.topic)} ${eligible(q) ? '' : '· aguardando conteúdo'}</span>${eligible(q) ? `<button class="btn sm" data-single="${q.id}">Abrir</button>` : ''}<button class="btn sm" data-bookmark="${q.id}">Remover</button></div>`; }).join('') : '<div class="empty">Você ainda não salvou questões.</div>'}`;
+}
+function settings() {
+    return `${header('Configurações e backup', 'Seus dados ficam no aparelho até que um serviço de sincronização seja configurado.')}
+<div class="two-col">${card('Preferências', `<h4>Aparência</h4><div class="button-row"><button class="btn ${progress.settings.theme === 'light' ? 'primary' : ''}" data-theme="light">☀ Claro</button><button class="btn ${progress.settings.theme === 'dark' ? 'primary' : ''}" data-theme="dark">☾ Escuro</button></div><h4>Tempo de estudo</h4><div class="button-row">${[30, 45, 60].map(n => `<button class="btn ${progress.settings.session === n ? 'primary' : ''}" data-session="${n}">${n} min</button>`).join('')}</div><hr class="divider"><p class="subtle"><b>Armazenamento:</b> IndexedDB e cópia de segurança local no navegador. Login Google e sincronização entre dispositivos são opcionais e só funcionam após configurar o Firebase em uma origem HTTPS; o uso local não sincroniza automaticamente.</p>`)}${card('Backup de dados', `<p class="subtle">Exporte um JSON e guarde-o em local seguro. Sem a sincronização remota ativada, transfira o progresso entre dispositivos importando este backup no outro aparelho.</p><div class="button-row"><button class="btn primary" data-action="export">Exportar JSON</button><label class="btn" for="restore-file">Importar JSON</label><input type="file" accept="application/json,.json" id="restore-file" hidden></div><hr class="divider"><button class="btn warn" data-action="delete-all">Apagar meus dados</button><p class="subtle">A exclusão é irreversível sem backup. Nenhum dado é enviado para terceiros.</p>`)}
+${card('Sincronização privada entre Samsung Tab S10 FE e S23', `<p class="subtle"><b>Estado:</b> ${esc(syncStatus)}</p><p class="subtle">A sincronização exige uma origem HTTPS, Firebase Authentication e Firestore configurados no plano Spark. O arquivo aberto como content:// continua funcionando apenas offline e não realiza login Google.</p><p class="subtle">O código de sincronização está integrado, mas a conexão com um projeto de nuvem só pode ser testada depois de configurar sua conta. Nenhum serviço ou faturamento foi ativado.</p><label for="syncConfig">Configuração pública do Firebase (JSON, sem credenciais secretas)</label><textarea id="syncConfig" rows="4" class="field" placeholder='{"apiKey":"...","authDomain":"...firebaseapp.com","projectId":"...","appId":"..."}'>${esc((() => { try {
+        return localStorage.getItem(configKey) || '';
+    }
+    catch {
+        return '';
+    } })())}</textarea><div class="button-row"><button class="btn" data-action="sync-save-config">Salvar configuração local</button><button class="btn primary" data-action="sync-connect">Entrar com Google</button><button class="btn" data-action="sync-now" ${!syncEngine?.connected ? 'disabled' : ''}>Sincronizar agora</button><button class="btn" data-action="sync-signout" ${!syncEngine?.connected ? 'disabled' : ''}>Sair da conta</button></div>${syncUid ? `<div class="notice"><b>Conta:</b> ${esc(syncEmail || 'Google')}<p><b>UID necessário para a regra Firestore:</b> <code style="overflow-wrap:anywhere">${esc(syncUid)}</code></p><p>Configure as regras de acesso em Firestore com esse UID. Até a regra estar correta, a autenticação pode funcionar sem permitir gravar dados.</p></div>` : ''}${Object.keys(progress.draftConflicts || {}).length ? `<div class="notice warning"><b>Versões divergentes de rascunhos preservadas</b>${Object.entries(progress.draftConflicts || {}).map(([id, versions]) => `<details><summary>${esc(id)} · ${versions.length} versões</summary>${versions.map((v, i) => `<p><b>Versão ${i + 1}:</b> ${esc(v)}</p>`).join('')}</details>`).join('')}</div>` : ''}<p class="subtle">O app preserva respostas offline; depois de reconectar, tenta mesclar as alterações por identificador e mantém versões divergentes de rascunhos. Em caso de conflito, exporte backup para auditoria. Limite técnico: histórico remoto compacto de até 850 KB.</p><p class="subtle">O JSON contém somente dados de configuração web considerados públicos pelo Firebase. Nunca cole chaves privadas, tokens ou senhas.</p>`)}
+${card('Cadernos oficiais para estudar offline', `<p class="subtle">Você pode baixar cada PDF diretamente do Inep e importar uma cópia para este dispositivo. O arquivo fica somente no armazenamento local do navegador; nenhum PDF nem resposta é enviado ao GitHub. O backup JSON não contém os PDFs.</p><div class="button-row">${[2023, 2019, 2017].map(y => `<div style="min-width:180px;margin-bottom:10px"><b>ENADE ${y}</b><p class="subtle">${offlinePdfs[y] ? '● PDF salvo para uso offline' : '○ PDF não importado'}</p><a class="btn sm" href="${OFFICIAL_SOURCES[y].exam}" target="_blank" rel="noopener">Baixar no Inep</a> <label class="btn sm" style="cursor:pointer">Importar PDF <input type="file" hidden class="pdf-upload" data-year="${y}" accept="application/pdf,.pdf"></label>${offlinePdfs[y] ? ` <button class="btn sm warn" data-pdf-remove="${y}">Remover</button>` : ''}</div>`).join('')}</div><p class="subtle">Os índices históricos não são exercícios completos e não exigem PDF para as questões autorais respondíveis. Para consulta documental, a cópia local do PDF é utilizada quando disponível; caso contrário, o link abre o Inep. O armazenamento local depende das permissões do navegador.</p>`)}
+${card('Fontes oficiais e transparência', `<div class="foot-links"><a href="${SOURCES.p164}" target="_blank" rel="noopener">Portaria 164/2026 — Engenharia Elétrica</a><a href="${SOURCES.p154}" target="_blank" rel="noopener">Portaria 154/2026 — Formação Geral</a><a href="${SOURCES.exam2023}" target="_blank" rel="noopener">Prova ENADE Elétrica 2023</a><a href="${SOURCES.answers2023}" target="_blank" rel="noopener">Gabarito definitivo 2023</a><a href="${SOURCES.inep}" target="_blank" rel="noopener">Perguntas e respostas Inep</a><a href="${SOURCES.edital61}" target="_blank" rel="noopener">Edital 61/2026 — Bacharelados</a><a href="${SOURCES.edital49}" target="_blank" rel="noopener">Edital 49/2026 — Geral</a></div><p class="subtle">Este aplicativo é independente e não é um produto oficial do Inep. As resoluções autorais não foram aprovadas pelo Inep. A estrutura de 2026 não usa o formato da prova de 2023.</p>`)}</div>`;
+}
+function formulasPage() {
+    const p = progress;
+    const favorites = p.formulaBookmarks || [];
+    const filtered = FORMULAS.filter(f => (formulaArea === 'todos' || formulaArea === 'favoritas' && favorites.includes(f.id) || f.areaId === formulaArea) && (`${f.name} ${f.expression} ${f.use} ${area(f.areaId).title} ${f.variables.join(' ')}`).toLocaleLowerCase('pt-BR').includes(formulaQuery.toLocaleLowerCase('pt-BR')));
+    const selected = FORMULAS.find(x => x.id === formulaId) || FORMULAS[0];
+    const rel = selected.related.map(qid => QUESTIONS.find(q => q.id === qid)).filter((q) => Boolean(q && eligible(q)));
+    return `${header('Fórmulas Essenciais', 'Expressões, aplicação, unidades, condições de uso, erros comuns e exercícios associados.')}
+ <div class="notice"><b>${FORMULAS.length} fórmulas com exemplos originais.</b> As relações são relevantes para o currículo de Engenharia Elétrica. Não existe ainda auditoria suficiente dos itens históricos para ordenar por frequência; portanto, não há ranking artificial de “mais cobradas”.</div>
+ <div class="filterbar"><input id="formulaSearch" aria-label="Buscar fórmulas" placeholder="Pesquisar nome, símbolo, unidade ou matéria" value="${esc(formulaQuery)}"><select id="formulaArea" aria-label="Matéria da fórmula"><option value="todos">Todas as matérias</option><option value="favoritas" ${formulaArea === 'favoritas' ? 'selected' : ''}>★ Favoritas</option>${AREAS.filter(a => FORMULAS.some(f => f.areaId === a.id)).map(a => `<option value="${a.id}" ${formulaArea === a.id ? 'selected' : ''}>${esc(a.title)}</option>`).join('')}</select></div>
+ <div class="two-col"><div class="area-list" style="max-height:78vh;overflow:auto">${filtered.map(f => `<button class="area ${selected.id === f.id ? 'active' : ''}" data-formula-view="${f.id}"><span class="area-icon">ƒ</span><span><b>${esc(f.name)}</b><small>${esc(area(f.areaId).title)} · ${esc(f.expression)}</small></span></button>`).join('') || '<div class="empty">Nenhuma fórmula encontrada.</div>'}</div>
+ <section class="card formula-detail"><div class="row"><span class="tag green">Material técnico original</span><span class="tag">${esc(area(selected.areaId).title)}</span></div><h2>${esc(selected.name)}</h2><div class="formula" style="font-size:clamp(1.1rem,3.4vw,1.65rem);white-space:normal;overflow-wrap:anywhere">${esc(selected.expression)}</div>
+ <h3>Para que serve?</h3><p>${esc(selected.use)}</p><h3>Variáveis e unidades</h3><ul>${selected.variables.map(v => `<li>${esc(v)}</li>`).join('')}</ul>
+ <h3>Quando é válida?</h3><p>${esc(selected.limits)}</p><h3>Exemplo resolvido</h3><div class="feedback">${esc(selected.example)}</div>
+ <h3>Erro comum</h3><p class="subtle">${esc(selected.pitfall)}</p><p class="subtle">${esc(selected.source)}</p>
+ <div class="button-row"><button class="btn" data-formula-fav="${selected.id}">${favorites.includes(selected.id) ? '★ Remover dos favoritos' : '☆ Salvar fórmula'}</button><button class="btn" data-nav="bank">Banco de questões</button></div>
+ <h3>Questões relacionadas</h3>${rel.length ? `<div class="button-row">${rel.map(q => `<button class="btn sm" data-single="${q.id}">${esc(q.topic)} (${q.level === 'padrao-enade' ? 'Avançado' : 'Fundamentos'})</button>`).join('')}</div>` : '<p class="subtle">Sem questão revisada vinculada até o momento.</p>'}
+ </section></div>`;
+}
+function shell(body) { return `<div class="layout"><aside class="sidebar" id="sidebar"><div class="brand"><div class="brand-mark">ϟ</div><div><b>ENADE Elétrica</b><small>Preparação 2026</small></div></div><nav class="nav" aria-label="Menu principal">${navs.map(([id, label, icon]) => `<button data-nav="${id}" class="${page === id ? 'active' : ''}"><span class="num">${icon}</span><span>${label}</span></button>`).join('')}</nav><div class="sidebar-bottom"><b>SEU ESPAÇO DE ESTUDO</b><br>Uso pessoal · Progresso local<br>Versão 0.4 · Nuvem opcional</div></aside><main class="main"><div class="topbar"><div class="row"><button class="btn sm mobile-menu" data-action="toggle-menu" aria-label="Abrir menu">☰</button><div><small>PLATAFORMA DE ESTUDOS</small><strong>Engenharia Elétrica · ENADE 2026</strong></div></div><div class="topright"><span class="pill">${syncEngine?.connected ? '● Google conectado' : '● Salvo no dispositivo'}</span><span>${new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}</span></div></div><div class="content">${body}<footer class="footer">Plataforma educacional independente · Diretrizes do Inep 2026 · Conteúdo disponível conforme validação</footer></div></main></div>`; }
+function render() { document.documentElement.classList.toggle('theme-dark', progress.settings.theme === 'dark'); const content = { home, plan, library, lesson: lessonPage, bank, formulas: formulasPage, learn, sim, attempt: attemptPage, results, discursive, tutor, stats, errors, settings }; root.innerHTML = shell((content[page] || home)()); updateTimer(); }
+function doLearning(answer) { const q = qById(quizIds[quizIndex]); quizSelected = answer; quizRevealed = true; if (answer !== null) {
+    progress.responses.push({ id: crypto.randomUUID(), questionId: q.id, choice: answer, correct: answer === q.answer, at: new Date().toISOString(), seconds: Math.max(1, Math.round((Date.now() - quizStart) / 1000)), attemptId: 'learn-' + crypto.randomUUID() });
+    persist();
+} render(); }
+function updateTimer() { const a = attemptsActive(); const el = document.getElementById('timer'); if (!a || !el)
+    return; el.textContent = fmtSecs(secondsLeft(a)); if (secondsLeft(a) <= 0) {
+    finishAttempt(true);
+    flash('Tempo encerrado. Simulado finalizado automaticamente.');
+} }
+setInterval(updateTimer, 1000);
+root.addEventListener('click', ev => {
+    const target = ev.target, b = target.closest('[data-nav],[data-action],[data-area],[data-lesson],[data-practice],[data-single],[data-bookmark],[data-complete],[data-uncomplete],[data-session],[data-theme],[data-simquick],[data-simadaptive],[data-attempt],[data-resume],[data-abandon],[data-idx],[data-tutor],[data-simofficial],[data-pdf-remove],[data-formula-view],[data-formula-fav]');
+    if (!b)
+        return;
+    const d = b.dataset;
+    if (d.nav) {
+        go(d.nav);
+        return;
+    }
+    if (d.formulaView) {
+        formulaId = d.formulaView;
+        page = 'formulas';
+        render();
+        return;
+    }
+    if (d.formulaFav) {
+        const p = progress;
+        p.formulaBookmarks ??= [];
+        p.formulaBookmarks = p.formulaBookmarks.includes(d.formulaFav) ? p.formulaBookmarks.filter(id => id !== d.formulaFav) : [...p.formulaBookmarks, d.formulaFav];
+        persist();
+        render();
+        return;
+    }
+    if (d.area) {
+        areaId = d.area;
+        page = 'library';
+        render();
+        return;
+    }
+    if (d.lesson) {
+        openLesson(d.lesson);
+        return;
+    }
+    if (d.complete) {
+        finishStudyAndAdvance(d.complete);
+        return;
+    }
+    if (d.uncomplete) {
+        progress.completedLessons = progress.completedLessons.filter(id => id !== d.uncomplete);
+        progress.studySessions = (progress.studySessions || []).filter(s => s.lessonId !== d.uncomplete);
+        persist();
+        render();
+        return;
+    }
+    if (d.practice) {
+        startLearning(QUESTIONS.filter(q => q.lessonId === d.practice && !q.needsSource && eligible(q)).map(q => q.id), d.practice);
+        return;
+    }
+    if (d.single) {
+        if (!answerableId(d.single)) {
+            flash('Questão catalogada, ainda não revisada para responder.');
+            return;
+        }
+        startLearning([d.single]);
+        return;
+    }
+    if (d.bookmark) {
+        progress.bookmarks = progress.bookmarks.includes(d.bookmark) ? progress.bookmarks.filter(id => id !== d.bookmark) : [...progress.bookmarks, d.bookmark];
+        persist();
+        render();
+        return;
+    }
+    if (d.session) {
+        progress.settings.session = Number(d.session);
+        persist();
+        render();
+        return;
+    }
+    if (d.theme) {
+        progress.settings.theme = d.theme;
+        persist();
+        render();
+        return;
+    }
+    if (d.tutor) {
+        tutorTopic = d.tutor;
+        render();
+        return;
+    }
+    if (d.attempt) {
+        resultId = d.attempt;
+        page = 'results';
+        render();
+        return;
+    }
+    if (d.resume) {
+        const pending = progress.attempts.find(a => a.id === d.resume);
+        if (pending?.questionIds.some(id => !answerableId(id))) {
+            flash('Tentativa antiga de itens incompletos: histórico preservado, retomada bloqueada.');
+            return;
+        }
+        activeAttempt = d.resume;
+        page = 'attempt';
+        render();
+        return;
+    }
+    if (d.abandon) {
+        if (confirm('Descartar este simulado interrompido?')) {
+            progress.attempts = progress.attempts.filter(a => a.id !== d.abandon);
+            persist();
+            render();
+        }
+        return;
+    }
+    if (d.idx) {
+        const a = attemptsActive();
+        if (a && !a.pauseSince) {
+            a.index = Number(d.idx);
+            persist();
+            render();
+        }
+        return;
+    }
+    if (d.pdfRemove) {
+        const y = Number(d.pdfRemove);
+        deleteExamPdf(y).then(() => { URL.revokeObjectURL(offlinePdfs[y]); delete offlinePdfs[y]; render(); flash('PDF removido deste dispositivo.'); }).catch(() => flash('Falha ao remover PDF.'));
+        return;
+    }
+    if (d.simofficial) {
+        const year = Number(d.simofficial);
+        const qs = QUESTIONS.filter(q => q.origin === 'oficial-referenciada' && q.year === year && eligible(q));
+        if (!qs.length) {
+            flash('As questões deste ENADE estão catalogadas, mas ainda não podem ser respondidas no aplicativo.');
+            return;
+        }
+        createAttempt(`ENADE ${year} — itens completos`, qs, 'practice', 240);
+        return;
+    }
+    if (d.simquick) {
+        const n = Number(d.simquick);
+        createAttempt(`Treino rápido — ${n} questões`, pickAdaptive(defaultCandidates(), progress.responses, n), 'practice', Math.max(15, n * 4));
+        return;
+    }
+    if (d.simadaptive) {
+        createAttempt('Adaptativo — 10 questões', pickAdaptive(defaultCandidates(), progress.responses, 10), 'practice', 40);
+        return;
+    }
+    switch (d.action) {
+        case 'toggle-menu':
+            document.querySelector('#sidebar')?.classList.toggle('open');
+            break;
+        case 'today': {
+            const l = nextLesson();
+            if (l)
+                openLesson(l.id);
+            else
+                flash('Você concluiu todas as aulas prontas. Escolha uma revisão.');
+            break;
+        }
+        case 'finish-study':
+            if (studyPracticeLessonId)
+                finishStudyAndAdvance(studyPracticeLessonId);
+            break;
+        case 'bank-more':
+            bankLimit += 30;
+            render();
+            break;
+        case 'hint':
+            quizHints++;
+            render();
+            break;
+        case 'submit-learning':
+            if (quizSelected !== null)
+                doLearning(quizSelected);
+            break;
+        case 'give-up':
+            doLearning(null);
+            break;
+        case 'next-learning':
+            if (quizIndex < quizIds.length - 1) {
+                quizIndex++;
+                quizSelected = null;
+                quizRevealed = false;
+                quizHints = 0;
+                quizStart = Date.now();
+                render();
+            }
+            else
+                go('bank');
+            break;
+        case 'sim-advanced': {
+            const qs = pickAdaptive(QUESTIONS.filter(q => q.level === 'padrao-enade'), progress.responses, 10);
+            if (qs.length === 10)
+                createAttempt('Treino autoral avançado — 10 questões', qs, 'practice', 60);
+            else
+                flash('Questões avançadas insuficientes.');
+            break;
+        }
+        case 'sim-area': {
+            const n = defaultCandidates().filter(q => q.areaId === areaId);
+            if (n.length)
+                createAttempt(`Matéria: ${area(areaId).title}`, n, 'practice', Math.max(15, n.length * 4));
+            else
+                flash('Ainda não há questões verificadas nesta matéria.');
+            break;
+        }
+        case 'sim-errors': {
+            const last = new Map();
+            for (const r of validResponses(progress.responses))
+                last.set(r.questionId, r.correct);
+            const qs = defaultCandidates().filter(q => last.get(q.id) === false);
+            if (qs.length)
+                createAttempt('Revisão dos erros', qs, 'practice', Math.max(15, qs.length * 4));
+            else
+                flash('Você ainda não tem questões erradas para revisar.');
+            break;
+        }
+        case 'flag': {
+            const a = attemptsActive();
+            if (a) {
+                const id = a.questionIds[a.index];
+                a.flagged = a.flagged.includes(id) ? a.flagged.filter(x => x !== id) : [...a.flagged, id];
+                persist();
+                render();
+            }
+            break;
+        }
+        case 'clear-attempt-choice': {
+            const a = attemptsActive();
+            if (a) {
+                delete a.choices[a.questionIds[a.index]];
+                persist();
+                render();
+            }
+            break;
+        }
+        case 'prev-attempt':
+        case 'next-attempt': {
+            const a = attemptsActive();
+            if (a && !a.pauseSince) {
+                a.index = Math.max(0, Math.min(a.questionIds.length - 1, a.index + (d.action === 'next-attempt' ? 1 : -1)));
+                persist();
+                render();
+            }
+            break;
+        }
+        case 'leave-attempt':
+            activeAttempt = null;
+            go('sim');
+            break;
+        case 'pause-attempt': {
+            const a = attemptsActive();
+            if (a && a.mode === 'practice') {
+                if (a.pauseSince) {
+                    const delta = Date.now() - a.pauseSince;
+                    a.pausedSeconds += delta / 1000;
+                    a.endsAt += delta;
+                    a.pauseSince = null;
+                }
+                else
+                    a.pauseSince = Date.now();
+                persist();
+                render();
+            }
+            break;
+        }
+        case 'finish-attempt':
+            finishAttempt();
+            break;
+        case 'save-discursive':
+            persist();
+            flash('Rascunho salvo.');
+            break;
+        case 'export': {
+            const json = JSON.stringify(progress, null, 2), blob = new Blob([json], { type: 'application/json' }), url = URL.createObjectURL(blob), link = document.createElement('a');
+            link.href = url;
+            link.download = `enade-backup-${new Date().toISOString().slice(0, 10)}.json`;
+            link.click();
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+            break;
+        }
+        case 'sync-save-config': {
+            try {
+                const val = (document.querySelector('#syncConfig')?.value || '').trim();
+                const config = validateFirebaseConfig(JSON.parse(val));
+                localStorage.setItem(configKey, JSON.stringify(config));
+                syncStatus = 'Configuração pública guardada neste navegador; login ainda necessário.';
+                flash('Configuração guardada localmente.');
+                render();
+            }
+            catch (e) {
+                flash('Configuração inválida: ' + (e instanceof Error ? e.message : String(e)));
+            }
+            break;
+        }
+        case 'sync-connect':
+            void connectCloud();
+            break;
+        case 'sync-now':
+            void cloudSync();
+            break;
+        case 'sync-signout':
+            void (async () => { await syncEngine?.signOut(); syncEngine = null; syncUid = ''; syncEmail = ''; syncStatus = 'Desconectado: dados locais preservados'; render(); })();
+            break;
+        case 'delete-all':
+            if (confirm('Tem certeza que deseja apagar todas as suas respostas, aulas e rascunhos neste dispositivo?')) {
+                progress = initialProgress();
+                persist();
+                go('home');
+                flash('Dados locais apagados.');
+            }
+            break;
+    }
+});
+root.addEventListener('change', ev => { const t = ev.target; if (t.name === 'learn-choice') {
+    quizSelected = Number(t.value);
+    render();
+    return;
+} if (t.name === 'attempt-choice') {
+    const a = attemptsActive();
+    if (a && !a.pauseSince) {
+        a.choices[a.questionIds[a.index]] = Number(t.value);
+        persist();
+        render();
+    }
+    return;
+} if (t.id === 'groupFilter') {
+    groupFilter = t.value;
+    bankLimit = 30;
+    render();
+    return;
+} if (t.id === 'difficultyFilter') {
+    difficultyFilter = t.value;
+    bankLimit = 30;
+    render();
+    return;
+} if (t.id === 'levelFilter') {
+    levelFilter = t.value;
+    bankLimit = 30;
+    render();
+    return;
+} if (t.id === 'formulaArea') {
+    formulaArea = t.value;
+    render();
+    return;
+} if (t.id === 'bankOrigin') {
+    bankOrigin = t.value;
+    bankLimit = 30;
+    render();
+    return;
+} if (t.id === 'bankYear') {
+    bankYear = t.value;
+    bankLimit = 30;
+    render();
+    return;
+} if (t.id === 'simArea') {
+    areaId = t.value;
+    return;
+} if (t.id === 'discSelect') {
+    selectedDisc = t.value;
+    render();
+    return;
+} if (t.id === 'statsPeriod') {
+    statsPeriod = t.value;
+    render();
+    return;
+} if (t.classList?.contains('pdf-upload')) {
+    const file = t.files?.[0], year = Number(t.dataset.year);
+    if (!file)
+        return;
+    file.slice(0, 5).text().then(head => { if (head !== '%PDF-')
+        throw Error('O arquivo selecionado não parece ser um PDF válido.'); return saveExamPdf(year, file); }).then(() => { if (offlinePdfs[year])
+        URL.revokeObjectURL(offlinePdfs[year]); offlinePdfs[year] = URL.createObjectURL(file); render(); flash(`Caderno ${year} guardado neste dispositivo.`); }).catch(err => alert(`Falha ao importar caderno: ${err.message}`));
+    return;
+} if (t.id === 'restore-file') {
+    const file = t.files?.[0];
+    if (!file)
+        return;
+    file.text().then(s => { const parsed = restore(JSON.parse(s)); if (confirm('Restaurar este backup? O progresso atual será substituído.')) {
+        progress = parsed;
+        persist();
+        go('home');
+        flash('Backup restaurado.');
+    } }).catch(e => alert(`Falha ao restaurar: ${e.message}`));
+    return;
+} });
+root.addEventListener('input', ev => { const t = ev.target; if (t.id === 'formulaSearch') {
+    const start = t.selectionStart || t.value.length;
+    formulaQuery = t.value;
+    render();
+    const inp = document.querySelector('#formulaSearch');
+    inp?.focus();
+    inp?.setSelectionRange(start, start);
+    return;
+} if (t.id === 'search') {
+    const start = t.selectionStart || t.value.length;
+    search = t.value;
+    bankLimit = 30;
+    render();
+    const inp = document.querySelector('#search');
+    inp?.focus();
+    inp?.setSelectionRange(start, start);
+    return;
+} if (t.id === 'discText') {
+    progress.discursive[selectedDisc] = t.value;
+    persist();
+    const label = document.getElementById('discSaved');
+    if (label)
+        label.textContent = `${t.value.length} caracteres · salvo automaticamente`;
+    return;
+} });
+window.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden')
+    persist(); });
+window.addEventListener('online', () => { void cloudSync(); });
+Promise.all([load(), ...[2023, 2019, 2017].map(async (y) => { const pdf = await loadExamPdf(y); if (pdf)
+        offlinePdfs[y] = URL.createObjectURL(pdf); })]).then(([p]) => { progress = p; render(); if ('serviceWorker' in navigator && location.protocol.startsWith('http'))
+    navigator.serviceWorker.register(new URL('sw.js', location.href).toString()).catch(() => { }); }).catch(() => render());
