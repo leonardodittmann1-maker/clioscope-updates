@@ -1,37 +1,60 @@
 # ENADE Engenharia Elétrica 2026 — Registro de desenvolvimento
 
-Atualizado em: 2026-11-05
-Branch exclusiva: `enade-eletrica-2026`
+Atualização: 2026-11-05
 Repositório: `leonardodittmann1-maker/clioscope-updates`
-Aplicativo existente: `app.html`
-Versão de referência do aplicativo: commit `c8b2cde10ec5f0780c94a4732f9ba829ef27baba`
+Branch exclusiva: `enade-eletrica-2026`
+Aplicativo: `app.html`
 
-## Estado confirmado na branch
-- `app.html` existe e concentra a aplicação HTML/JavaScript com conteúdo e interface para estudo.
-- Há mecanismos de armazenamento local com IndexedDB e registro de sessões; o código contém um índice de questões históricas e referências a fontes oficiais.
-- O avanço de conteúdos foi ajustado previamente.
-- A importação de PDFs oficiais para consulta offline é suportada pelo código.
-- **Não há integração Firebase/Google implementada no `app.html` conferido.** Sincronização automática entre aparelhos não está concluída.
-- O índice das provas oficiais não equivale a questões completas: faltam enunciados, alternativas e eventuais figuras diretamente no app para várias questões.
-- O nível de dificuldade de questões autorais precisa ser auditado em comparação com provas reais.
-- A aba de Fórmulas Essenciais ainda precisa ser verificada e implementada.
-- Não há comprovação de testes atuais executados em dispositivos Samsung físicos.
+## Ciclo 1 — Auditoria e integridade do banco de questões
 
-## Restrições absolutas
-- Trabalhar somente na branch `enade-eletrica-2026`, preservando `main`, `meu-ponto-app` e demais branches.
-- Preservar identificadores, histórico, progresso local e backups; migrar estruturas de dados com segurança.
-- Não ativar custos, faturamento, serviços pagos ou expor segredos.
-- Questões oficiais somente podem ser marcadas completas quando enunciado, alternativas, figuras necessárias e gabarito tiverem sido conferidos e forem usados dentro do app; verificar condições legais de reprodução.
-- Priorizar qualidade acadêmica, didática, matemática e de fontes sobre quantidade de telas ou itens.
+**Status:** implementado e aprovado nos testes automatizados disponíveis; validação em navegador real pendente.
 
-## Próxima tarefa — uma sessão curta
-1. Confirmar que o workspace do Codex foi baseado na branch `enade-eletrica-2026` e contém `app.html`.
-2. Auditar código, modelos de questão, persistência e testes disponíveis, preservando tudo que já funciona.
-3. Implementar **um lote pequeno de questões oficiais plenamente revisadas**, se os cadernos e permissões de reprodução puderem ser confirmados; caso contrário, implementar o validador que impede que índices incompletos apareçam como exercícios resolúveis, incluindo testes pertinentes.
-4. Executar testes específicos, fazer commit apenas de mudanças aprovadas e atualizar este registro.
+### Alterações realizadas
+- `app.html`: gabaritos oficiais sem enunciado e alternativas completos passaram a ser exibidos **somente como índice documental**.
+- O banco distingue conteúdo respondível do material catalogado e identifica a insuficiência de enunciados oficiais.
+- Simulados baseados somente em índices oficiais incompletos permanecem bloqueados. A seleção adaptativa continua usando apenas exercícios respondíveis.
+- Os registros antigos não foram apagados: respostas e tentativas anteriores com itens incompletos continuam presentes no armazenamento/backup, identificadas como legadas e excluídas das estatísticas válidas; não são retomáveis como novas avaliações.
+- Tentativas de abrir um identificador oficial incompleto diretamente são bloqueadas.
+- `tests/quality-gates.mjs`: testes de regressão independentes de dependências externas, executáveis com `node --test tests/quality-gates.mjs`.
 
-## Fluxo entre sessões
-- Em cada sessão, selecionar apenas uma entrega pequena e verificável.
-- Documentar arquivos alterados, testes realmente executados, conteúdo validado, commit e próxima tarefa.
-- Não relatar como concluído o que estiver somente planejado ou catalogado.
-- Se rede/acesso Git estiver bloqueado, evitar modificações em checkout de outra branch; registrar a falha e retomar no ambiente correto.
+### Inventário real após auditoria
+- 31 áreas cadastradas na estrutura (19 específicas e 12 de Formação Geral), sem afirmar que todas possuem aulas prontas.
+- 11 aulas existentes.
+- 22 questões autorais disponíveis, predominantemente introdutórias; **a dificuldade de padrão ENADE ainda precisa ser reavaliada**.
+- 108 itens objetivos históricos indexados (2023: 38; 2019: 35; 2017: 35): **101 com gabarito cadastrado e 7 anulados**.
+- **0 questões oficiais completas e resolvíveis dentro do aplicativo.** O banco de gabaritos não deve ser contado como banco de perguntas completas.
+- 12 discursivas históricas catalogadas; não integradas como editor com textos oficiais verificados.
+- 2 propostas discursivas autorais no editor.
+- Login Google / Firebase / sincronização automática entre Samsung Galaxy Tab S10 FE e S23: **não implementados**.
+- Aba de Fórmulas Essenciais: **não implementada**.
+
+### Testes executados
+- Compilação TypeScript + validador do conteúdo: aprovado.
+- 23 testes Node da versão-fonte recuperada do pacote local anterior: **23 aprovados**, incluindo preservação de respostas legadas e bloqueio de simulados incompletos.
+- Três testes equivalentes da integridade em HTML independente: **3 aprovados no pacote local**; uma versão independente dos testes está versionada em `tests/quality-gates.mjs`.
+- Testes Playwright/Chromium em navegador real: **não executados com sucesso**; política de execução do ambiente retornou `ERR_BLOCKED_BY_ADMINISTRATOR` tanto em HTTP local quanto em `file://`.
+- Não realizados testes físicos em Galaxy Tab S10 FE/S23, sincronização remota ou testes ponta a ponta reais.
+
+### Alterações no GitHub
+- `app.html`: commit `4b49bf432458defa314983b2e9c1544f2e97b08f`.
+- `tests/quality-gates.mjs`: commit `b910607235586ee0100dfef7d85620a5749dff76`.
+- Este registro: commit posterior de documentação.
+- Sem alterações em `main`, `meu-ponto-app` ou outras branches.
+
+## Próxima entrega recomendada — pequena e acadêmica
+
+**Etapa 2: primeira questão oficial completa, realmente respondível.**
+1. Obter o documento oficial do Inep, verificar as condições de uso/reprodução e conferir visualmente o item com texto, alternativas, figuras e número original.
+2. Conferir o gabarito definitivo; produzir resolução didática independente com cálculos e hipóteses revisados.
+3. Adicionar somente um lote pequeno de itens totalmente verificados, com metadados de fonte e página. Se a origem ou a licença não puder ser confirmada, deixar o item em quarentena em vez de publicar como resolúvel.
+4. Testar apresentação, resposta, correção, persistência e regressão; publicar commit da entrega.
+
+**Pendência de engenharia para o próximo ciclo:** a branch GitHub contém o `app.html` executável, não toda a árvore TypeScript de construção usada no pacote local anterior. Antes de edições maiores, versionar de modo controlado os arquivos-fonte, testes e scripts de compilação (sem dependências pagas), ou manter alterações cautelosas no HTML independente. Não reescrever o projeto do zero.
+
+## Regras permanentes
+
+- Priorizar rigor acadêmico, pedagógico, documental e matemático; o software serve à aprendizagem.
+- Trabalhar só em `enade-eletrica-2026`; preservar as branches `main` e `meu-ponto-app`.
+- Preservar histórico, respostas, IDs e backups. Não migrar dados sem verificação e plano de recuperação.
+- Sem pagamento, cobrança, segredos no repositório ou promessa de sincronização não testada.
+- Uma única entrega pequena e verificável por ciclo; registrar testes reais, commit e próxima tarefa.
