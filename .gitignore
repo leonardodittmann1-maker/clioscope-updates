@@ -6,3 +6,8 @@ node_modules/
 !*.example
 __pycache__/
 .pytest_cache/
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
+android/app/src/main/assets/index.html

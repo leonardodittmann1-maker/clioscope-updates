@@ -1,0 +1,63 @@
+name: ENADE Elétrica 2026 - APK privado de estudos
+on:
+  push:
+    branches: [enade-eletrica-2026]
+    paths:
+      - 'android/**'
+      - 'app.html'
+      - '.github/workflows/build-enade-apk.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: enade-eletrica-apk
+  cancel-in-progress: true
+jobs:
+  android-apk:
+    name: Compilar e testar instalador
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout da branch ENADE
+        uses: actions/checkout@v4
+        with:
+          ref: enade-eletrica-2026
+      - name: Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Preparar Gradle 8.10.2
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+      - name: Incluir aplicativo offline no pacote Android
+        run: |
+          test -f app.html
+          mkdir -p android/app/src/main/assets
+          cp app.html android/app/src/main/assets/index.html
+          test -s android/app/src/main/assets/index.html
+          grep -q "master-chapter" android/app/src/main/assets/index.html
+          grep -q "CASO-014" android/app/src/main/assets/index.html
+      - name: Compilar APK Android
+        run: gradle -p android :app:assembleDebug --no-daemon --stacktrace
+      - name: Verificar integridade do APK
+        run: |
+          cp android/app/build/outputs/apk/debug/app-debug.apk ENADE-Eletrica-2026.apk
+          unzip -t ENADE-Eletrica-2026.apk | tail -1
+          sha256sum ENADE-Eletrica-2026.apk
+          ls -lh ENADE-Eletrica-2026.apk
+      - name: Disponibilizar artefato instalável
+        uses: actions/upload-artifact@v4
+        with:
+          name: ENADE-Eletrica-2026-Android
+          path: ENADE-Eletrica-2026.apk
+          retention-days: 30
+      - name: Versionar APK na branch exclusiva
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add ENADE-Eletrica-2026.apk
+          if ! git diff --cached --quiet; then
+            git commit -m 'Distribui APK de estudos ENADE [skip ci]'
+            git push origin HEAD:enade-eletrica-2026
+          fi

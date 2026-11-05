@@ -1,5 +1,7 @@
 import { ADVANCED_LESSONS } from './advancedLessons.js';
 import { ADVANCED_QUESTIONS } from './advanced.js';
+import { CASE_QUESTIONS } from './caseQuestions.js';
+import { MASTER_BY_LESSON } from './masterclasses.js';
 import { OFFICIAL_QUESTIONS } from './official.js';
 export const SOURCES = { p164: 'https://www.in.gov.br/en/web/dou/-/portaria-n-164-de-14-de-abril-de-2026-699934764', p154: 'https://www.crub.org.br/portaria-no-154-de-14-04-2026/', exam2023: 'https://download.inep.gov.br/enade/provas_e_gabaritos/2023_PV_engenharia_eletrica.pdf', answers2023: 'https://download.inep.gov.br/enade/provas_e_gabaritos/2023_GB_engenharia_eletrica.pdf', inep: 'https://www.gov.br/inep/pt-br/acesso-a-informacao/perguntas-frequentes/exame-nacional-de-desempenho-dos-estudantes-enade', edital61: 'https://www.in.gov.br/web/dou/-/edital-n-61-de-14-de-maio-de-2026-705977430', edital49: 'https://www.in.gov.br/en/web/dou/-/edital-n-49-de-24-de-abril-de-2026-701698729' };
 const specific = [
@@ -46,6 +48,14 @@ export const LESSONS = [
     ], ['V_pico ≈ √2 × V_rms (senoidal)', 'f_ondulação ≈ 2 × f_rede (ponte completa monofásica)'], ['V_rms: valor eficaz (V)', 'V_pico: valor de pico (V)', 'f: frequência (Hz)'], ['Exemplo: rede senoidal de 60 Hz alimenta uma ponte ideal.', 'A ondulação antes da filtragem ocorre com frequência de aproximadamente 120 Hz.', 'Para 12 V eficazes, pico ideal ≈ 12×√2 = 16,97 V.', 'Quedas em diodos, carga e filtragem alteram a tensão real.'], 'Fontes CC, carregadores e acionamentos industriais.', ['Confundir pico com valor RMS.', 'Achar que o capacitor sempre elimina toda ondulação.'], 'Ponte de onda completa: ondulação 2× frequência da rede; Vpico≈√2 Vrms.')
 ];
 LESSONS.push(...ADVANCED_LESSONS);
+for (const l of LESSONS) {
+    const depth = MASTER_BY_LESSON.get(l.id);
+    if (depth) {
+        l.duration = depth.estimatedMinutes;
+        l.version = '3.0';
+        l.sources.push(...depth.sources);
+    }
+}
 const mk = (id, areaId, lessonId, topic, prompt, choices, answer, why, difficulty = 'Fácil', hints = [], calc = '') => ({ id, areaId, lessonId, topic, prompt, choices, answer, why, hints, difficulty, origin: 'autoral', year: 2026, source: 'Questão autoral de treinamento; base conceitual na aula vinculada e na matriz oficial.', status: 'resolucao-independente-revisada', revisionDate: '2026-10-30', calculation: calc });
 export const QUESTIONS = [
     mk('AUT-001', 'EE06', 'circuito-ohm', 'Lei de Ohm', 'Uma resistência de 10 Ω é alimentada com 50 V contínuos. Qual corrente elétrica circula?', ['2 A', '5 A', '10 A', '50 A', '500 A'], 1, 'Pela lei de Ohm, I=V/R=50/10=5 A.', 'Fácil', ['Separe tensão e resistência.', 'Use I=V/R.'], '50/10=5'),
@@ -74,7 +84,7 @@ export const QUESTIONS = [
 // Referência verificável ao item oficial: por direitos de reprodução e necessidade do diagrama,
 // o enunciado completo permanece no caderno original, e a questão não entra em simulados offline.
 QUESTIONS.push({ id: 'INEP-2023-EE-Q10', areaId: 'EE15', lessonId: 'trafo-ideal', topic: 'Autotransformador', prompt: 'QUESTÃO OFICIAL REFERENCIADA — ENADE 2023, questão 10, página 13. Abra o caderno oficial para consultar o esquema e todas as afirmações. Qual alternativa o gabarito definitivo aponta?', choices: ['A — apenas II', 'B — apenas III', 'C — I e II', 'D — I e IV', 'E — III e IV'], answer: 0, why: 'Gabarito definitivo do Inep: alternativa A. Resolução independente orientativa: 10 kVA/460 V≈21,7 A na entrada; 10 kVA/230 V≈43,5 A na carga. No trecho comum do autotransformador, a corrente resulta da diferença das correntes, não da soma 65,2 A, de modo que I é falsa. Consulte o esquema e o contexto no documento antes de estudar a afirmação II.', hints: ['Abra o caderno oficial e identifique os terminais A, B e D.', 'Compare correntes de entrada e saída por S/V.'], difficulty: 'Difícil', origin: 'oficial-referenciada', year: 2023, source: SOURCES.exam2023, page: 13, status: 'oficial-gabarito-conferido', revisionDate: '2026-10-30', needsSource: true });
-QUESTIONS.push(...OFFICIAL_QUESTIONS, ...ADVANCED_QUESTIONS);
+QUESTIONS.push(...OFFICIAL_QUESTIONS, ...ADVANCED_QUESTIONS, ...CASE_QUESTIONS);
 // Fontes públicas de suporte conceitual. O texto didático é original e independente.
 const TECHNICAL_SOURCES = {
     'circuito-ohm': ['https://openstax.org/books/university-physics-volume-2/pages/10-2-resistors-in-series-and-parallel'],

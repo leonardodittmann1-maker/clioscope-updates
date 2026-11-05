@@ -1,36 +1,33 @@
-# Histórico de desenvolvimento — ENADE Engenharia Elétrica 2026
+# Registro do ENADE Engenharia Elétrica 2026
 
-**Atualizado:** 2026-11-05
-**Repositório:** `leonardodittmann1-maker/clioscope-updates`
-**Branch exclusiva:** `enade-eletrica-2026`
+Data de referência: 2026-11-05.
+Branch exclusiva: `enade-eletrica-2026`.
 
-## Entrega desta execução
+## Implementado nesta versão
 
-- Preservado o projeto e o armazenamento local existentes; schema de progresso original mantido.
-- Aumentado o conteúdo para **21 aulas reais**, **48 questões autorais completas** (26 novas com desenvolvimento multietapas) e **26 fichas de fórmulas explicadas**.
-- Adicionado menu de Fórmulas Essenciais, pesquisa, favoritos e ligações aos exercícios.
-- Adicionados filtros por nível de desafio, treino autoral avançado com 10 questões, indicadores separados para fundamentos e avançadas.
-- Implementada biblioteca opcional TypeScript de integração com Google Authentication + Firestore, mecanismo de conciliação de progresso, rascunhos e tentativas, regras restritivas por UID e tela de configuração.
-- Mantido modo offline e exportação/restauração JSON. HTML independente e versão PWA com cache e ícones PNG 192/512 adequados a Android gerados.
-- Compilação TypeScript e validação de dados **aprovadas**; **34 testes Node aprovados**, incluindo rechecagem independente de 25 respostas quantitativas. Testes de navegador real bloqueados pela infraestrutura local e **não considerados aprovados**.
+- Conteúdo original aprofundado em 10 dos 21 tópicos existentes (arquivo `src/masterclasses.ts`), com etapas, problemas quantitativos e 4 diagramas SVG originais.
+- 14 casos autorais avançados adicionais (`src/caseQuestions.ts`), total de 62 questões autorais respondíveis.
+- Aulas aprofundadas integradas na biblioteca e ao fluxo de progresso anterior, IDs de aulas e questões antigas preservados.
+- APK Android nativo como casca offline com WebView e origem virtual HTTPS segura, importação de PDFs/JSON por seletor de arquivos e exportação de backup pelo Android Storage Access Framework.
+- Workflow GitHub Actions para construir APK sem custo de SDK local, versionando exclusivamente nesta branch.
+- 41 testes Node aprovados no ambiente de origem. Sem dispositivo Android ou SDK local; verificar resultado de compilação no GitHub Actions.
 
-## Inventário e limitações
+## Não implementado ou não comprovado
 
-- Índice oficial: 108 questões objetivas históricas, 101 gabaritos, 7 anuladas. **0 questões oficiais com textos/alternativas/figuras verificados e inseridos no aplicativo**. Não misturar catálogo com questões resolúveis.
-- Discursivas: 2 autorais; 12 históricas apenas catalogadas.
-- Frequência real de fórmulas em 2017/2019/2023 não auditada; não há ranking de 'mais cobradas'.
-- Firebase: integração em código pronta para configuração, **não conectada**. Sem projeto remoto, HTTPS, regra UID implantada nem teste entre Samsung Tab S10 FE e S23. Sem faturamento ativado.
-- Suporte Samsung: estilos responsivos implementados; sem testes físicos e sem validação em Samsung Internet real.
-- Não há simulado oficial completo ENADE 2026 por falta de 45 questões completas por composição oficial.
-- Não há gravação/exfiltração de histórico no GitHub.
+- Questões oficiais dentro do aplicativo: 108 itens catalogados, 101 com gabarito, 7 anulados, **zero enunciados/alternativas e diagramas oficiais completamente validados**. Não confundir com itens autorais.
+- Aulas profundas nas demais 11 áreas/tópicos atuais; cobertura integral das 31 áreas ainda está pendente.
+- Sincronização automática entre S23 e Tab S10 FE: estrutura web preparada, **Firebase não configurado** e login Google nativo Android não implementado. Dados são locais até ativar backend com a autorização da usuária.
+- Teste de instalação e navegação nos Samsung reais não foi executado; o build do GitHub Actions deve ser conferido.
+- Assinatura de APK persistente: debug APK pode exigir desinstalação entre compilação em diferentes runners. Exportar backup previamente.
+- Levantamento documental de frequência das fórmulas e incorporações oficiais com direitos de reprodução revisados.
 
-## Próximos trabalhos documentados
+## Próximas entregas acadêmicas prioritárias
 
-1. Obter os cadernos oficiais íntegros de 2017/2019/2023, conferir o direito de reprodução e extrair enunciados, alternativas e figuras com verificação humana; publicar em pequenos lotes rotulados.
-2. Produzir resoluções específicas de cada questão oficial e conferir cálculos/gabaritos, mantendo as não validadas em quarentena.
-3. Auditar recorrência real de fórmulas e mapeá-las às questões e anos, sem extrapolar probabilidades.
-4. Configurar Auth e Firestore na conta autorizada, implantar `dist` em HTTPS, testar sincronização e recuperação offline nos dois aparelhos.
-5. Realizar testes de navegador e dispositivos físicos, revisar acessibilidade e compatibilidade com Samsung Internet.
-6. Avaliar limites do armazenamento Firestore e paginação para histórico longo.
+1. Importar pequenos lotes de questões oficiais completas com revisão visual dos PDFs, atribuição e conferência do gabarito definitivo.
+2. Aprofundar as 11 revisões ainda curtas e criar aulas para áreas sem cobertura.
+3. Configurar autenticação e sincronização segura real entre dispositivos, com testes de mesclagem offline e controle por UID.
+4. Validar APK e assinatura de atualização em dispositivos Samsung físicos.
 
-**Regras:** só branch ENADE; nunca modificar `main`, `meu-ponto-app` ou outros projetos; não declarar recurso ativo sem validação real; não habilitar cobrança; preservar backups.
+## Regras permanentes
+
+Trabalhar exclusivamente em `enade-eletrica-2026`, preservar `main` e `meu-ponto-app` e dados locais. Não declarar funcionalidade concluída sem evidência de execução. Não habilitar pagamentos, não publicar segredos, não inventar estatísticas ou questões oficiais.

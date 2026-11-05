@@ -1,60 +1,50 @@
-# ENADE Engenharia Elétrica 2026 — Plataforma pessoal de estudos
+# ENADE Engenharia Elétrica 2026 — Aplicativo Android de estudos
 
-Aplicação existente, preservada e expandida na branch `enade-eletrica-2026` do repositório `leonardodittmann1-maker/clioscope-updates`. As branches `main` e `meu-ponto-app` não fazem parte deste aplicativo.
+Projeto pessoal e independente, construído na branch exclusiva `enade-eletrica-2026` do repositório `clioscope-updates`; nenhum arquivo ou branch de Meu Ponto deve ser alterado.
 
-## Conteúdo disponível (05/11/2026)
+## Aplicativo Android (APK)
 
-- **21 aulas com conteúdo real** (11 anteriores + 10 novas de aprofundamento).
-- **48 questões autorais completas** (22 fundamentos + 26 problemas autorais mais exigentes, identificados como treinamento, não como itens oficiais).
-- **26 fichas de fórmulas** com hipóteses, variáveis, unidades, exemplo, equívocos e questão relacionada. A frequência de cobrança nas provas anteriores **não foi auditada**; nenhuma fórmula é anunciada como "mais cobrada" sem provas.
-- **108 itens oficiais históricos apenas catalogados**, com 101 gabaritos registrados e 7 anulados. **Zero questões oficiais completas/respondíveis**, pois os enunciados e diagramas não foram integralmente extraídos e validados. Não confunda índice documental com banco oficial resolúvel. Esse trabalho continua pendente.
-- **2 propostas discursivas autorais**; treinamento com rascunho e critérios orientativos, não nota oficial.
-- Biblioteca de 31 áreas/objetos, com indicação de matérias sem aula concluída; filtros, tutor guiado, revisão, estatísticas, progresso e simulados de treino. Simulado completo no formato ENADE 2026 exige 45 itens **verificados** de formação específica/geral mais uma discursiva, ainda indisponíveis.
+O código-fonte nativo está em `android/` e o fluxo de compilação gratuita do instalador em `.github/workflows/build-enade-apk.yml`. O Android incorpora `app.html` como conteúdo offline e carrega o documento numa origem virtual HTTPS local por `WebView`. **Isso não é um site público.** A aplicação tem armazenamento por `IndexedDB` e `localStorage` da sua instalação Android e utiliza o seletor de documentos Android para exportar o backup JSON e importar backups.
 
-## Arquivos para uso
+Depois que o GitHub Actions completar com sucesso, o instalador `ENADE-Eletrica-2026.apk` poderá ser obtido pelo próprio repositório/artefato do workflow. O APK debug é assinado com chave de desenvolvimento do runner: instalações futuras geradas em runners diferentes podem exigir desinstalação e nova instalação se a assinatura não coincidir. **Faça backup JSON antes de atualizar**. Para atualizações sem desinstalação será necessário configurar chave persistente de assinatura, mantida exclusivamente em segredos GitHub, sem publicá-la.
 
-- `app.html`: versão única, HTML/CSS/JS incorporados, para estudo local e offline após salvar no dispositivo.
-- `dist/index.html`: versão web/PWA para ser servida em uma origem HTTPS, com `dist/assets`, `dist/sw.js`, `dist/manifest.webmanifest` e `dist/icon.svg`.
-- `src/*.ts`: código-fonte TypeScript.
-- `tests/*.test.mjs`: testes Node determinísticos, inclusive recomputação independente de 25 problemas numéricos.
-- `docs/firestore.rules`: regras restritivas do Firestore, **bloqueiam todos os acessos até substituir o UID autorizado e implantar**.
+Não há necessidade de Play Store nem publicação de um site aberto. A sincronização entre Galaxy S23 e Galaxy Tab S10 FE **ainda não funciona**: exigirá habilitar Firebase, regras por UID, autenticação adequada ao Android e testes entre dispositivos. A estrutura web opcional não deve ser confundida com sincronização ativa no APK.
 
-## Executar e validar
+## Conteúdos realmente disponíveis
 
-Com Node e TypeScript disponíveis:
+- 31 áreas/objetos de conhecimento catalogados, conforme portarias 2026.
+- **21 aulas**, das quais **10 possuem cadernos de estudo aprofundados** com explicação conceitual, hipóteses, estudos de caso numéricos multietapas, verificações de entendimento e conclusões; as outras 11 são revisões estruturadas mais curtas (não atribuir-lhes profundidade que ainda não têm).
+- **62 questões autorais respondíveis**, incluindo 22 fundamentos, 26 avançadas anteriores e **14 novos estudos de caso** de maior complexidade com respostas e explicações desenvolvidas. Não são questões oficiais do Inep.
+- **26 fichas de fórmulas** com variáveis, unidades, condições de uso, exemplo e armadilhas. A incidência em provas anteriores não foi auditada: **não há ranking de fórmulas mais cobradas**.
+- 108 itens históricos oficiais no índice, dos quais 101 com gabaritos cadastrados e 7 anulados. **0 questões oficiais completas diretamente resolvíveis**, pois ainda faltam verificar e incorporar integralmente enunciados, alternativas, diagramas, direitos e resoluções. Índices não entram em simulados.
+- 2 discursivas autorais, treino de respostas e tutor guiado (sem IA generativa).
+- Simulados de treinamento, revisão de erros, histórico, plano, progresso e backup JSON.
 
-```sh
-npm install --ignore-scripts
+## Compilação e testes
+
+A versão web/HTML é gerada com TypeScript 5.9 instalado e Node 22:
+
+```bash
 npm run build
-npm test
 npm run single
-npm run start
+npm test
 ```
 
-`npm run start` serve o diretório `dist` na porta 4173; a aplicação deve ser acessada em navegador local. Para a versão HTML, abra `app.html` sem compilação. A versão `dist` possui um service worker de cache das páginas e dos conteúdos de estudo após primeira visita online. O HTML local armazena progresso no navegador atual e não garante acesso ao mesmo armazenamento ao mudar de nome/URI do arquivo.
+O projeto Android utiliza Java 17, Android Gradle Plugin 8.7.3 e Gradle 8.10.2. Compile em máquina com SDK Android instalado, ou utilize o workflow GitHub Actions da branch ENADE:
 
-## Google Login, Firestore e privacidade
+```bash
+cp app.html android/app/src/main/assets/index.html
+gradle -p android :app:assembleDebug --no-daemon
+```
 
-**O login Google e a sincronização entre Galaxy Tab S10 FE e Galaxy S23 foram implementados como integração opcional de código, mas NÃO estão operacionais nem validados em contas reais.** Não existe projeto Firebase conectado, endereço HTTPS implantado, regra de UID autorizada, ou teste em dois dispositivos neste projeto. Nenhum pagamento/serviço de faturamento foi ativado.
+O APK local deverá aparecer em `android/app/build/outputs/apk/debug/app-debug.apk`. O fluxo de Actions valida o ZIP do APK, publica um artefato e tenta versionar o instalador na branch exclusiva.
 
-Para ativar futuramente:
+Os testes Node conferem matrizes, preservação de histórico, filtros, correção, fórmulas, 14 novos problemas com cálculos independentes, existência da estrutura Android e workflow. **Sem SDK no ambiente de desenvolvimento local, a compilação Android somente é comprovada quando o GitHub Actions rodar com sucesso.** Compatibilidade real em Galaxy S23/Tab S10 FE permanece pendente de teste físico.
 
-1. Criar projeto Firebase no **plano Spark**, sem faturamento e conferir as cotas aplicáveis. Ativar Authentication/Google e Firestore.
-2. Hospedar a pasta `dist` em endereço HTTPS e registrar domínio autorizado no Firebase Authentication. Um endereço tecnicamente acessível não torna o banco privado público: as regras de autorização devem impedir acesso por outras contas. Não é necessário divulgar o endereço.
-3. Em `docs/firestore.rules`, substituir **INSIRA_UID_AUTORIZADO_AQUI** pelo UID que aparece nas configurações do aplicativo após entrar com Google e publicar as regras na própria conta Firebase. Antes disso o Firestore deve permanecer inacessível.
-4. No aplicativo, em Configurações, informar a **configuração web pública** do Firebase (`apiKey`, `authDomain`, `projectId`, `appId`) e conectar-se com o Google no **HTTPS**. Não fornecer senhas nem chaves privadas.
-5. Testar backup local, primeiro acesso, fechamento da aba, duas sessões independentes, conflitos offline e sincronização ao reconectar em ambos os dispositivos.
+## Segurança e backups
 
-O código usa IDs estáveis e tenta mesclar respostas e tentativas, conservando conflitos de rascunhos para revisão. O armazenamento remoto compacto atual aceita até 850 KB: migrar para documentos paginados antes de atingir esse limite. Uma instalação completa depende de acesso à conta autorizada e não pode ser declarada pronta apenas por existir código.
+Sem publicação de credenciais ou faturamento. A integração Google/Firebase web foi preparada, mas não está autenticada nem sincronizando. No APK, o login Google em WebView está intencionalmente bloqueado porque requer integração nativa correta, não um popup web no aplicativo incorporado.
 
-## Migração e backups
+Os dados de estudo no APK não são automaticamente os mesmos que foram salvos em versões HTML `content://`. Exporte backup JSON na versão antiga e importe na instalação nova. Guarde cópias atualizadas. Para atualizações futuras, mantenha uma assinatura Android persistente: o APK de debug gerado em máquinas diferentes pode não atualizar o anterior sem reinstalação.
 
-**Antes de substituir versões no Android, exporte o backup JSON em Configurações e backup**. O progresso é guardado localmente, separado por navegador/origem; substituir arquivos `content://` pode mudar a origem e parecer que os dados desapareceram. A importação do backup restaura o progresso de maneira compatível, mas solicita confirmação e substitui o progresso local atual. Guarde cópia do backup.
-
-## Fontes e validade acadêmica
-
-O escopo segue Portaria Inep nº 164/2026, Portaria nº 154/2026 e o edital de bacharelados aplicável. Questões de 2023/2019/2017 são documentos históricos de treinamento e não refletem o formato de 2026. Referências e anos estão em `src/official.ts` e `docs/FONTES.md`. Não há afirmativa de que o Inep tenha revisado as resoluções autorais ou as aulas. A classificação "padrão ENADE" é uma proposta didática, não calibração psicométrica comprovada.
-
-## Limitações e qualidade
-
-Os **34 testes Node** da versão de trabalho passaram em 05/11/2026. Os testes de navegador real, Samsung Tab S10 FE/S23 e Firebase não puderam ser concluídos. A auditoria e a correspondência integral de questões originais oficiais continuam pendentes; não inventar itens, enunciados, gabaritos ou imagens.
+Fontes oficiais: [Legislação ENADE](https://www.gov.br/inep/pt-br/centrais-de-conteudo/legislacao/enade) e [Provas e gabaritos](https://www.gov.br/inep/pt-br/areas-de-atuacao/avaliacao-e-exames-educacionais/enade/provas-e-gabaritos). Os conteúdos didáticos novos são autorais e não representam padrões oficiais de resolução do Inep.

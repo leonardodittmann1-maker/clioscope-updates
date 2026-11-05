@@ -1,5 +1,5 @@
-const CACHE='enade-eletrica-2026-v6';
-const CORE=['./','./index.html','./assets/main.js','./assets/styles.css','./manifest.webmanifest','./icon.svg','./icon-192.png','./icon-512.png','./assets/content.js','./assets/model.js','./assets/official.js','./assets/store.js','./assets/advanced.js','./assets/advancedLessons.js','./assets/formulae.js','./assets/sync.js'];
+const CACHE='enade-eletrica-2026-v8';
+const CORE=['./','./index.html','./assets/main.js','./assets/styles.css','./manifest.webmanifest','./icon.svg','./icon-192.png','./icon-512.png','./assets/content.js','./assets/model.js','./assets/official.js','./assets/store.js','./assets/advanced.js','./assets/advancedLessons.js','./assets/masterclasses.js','./assets/diagrams.js','./assets/caseQuestions.js','./assets/formulae.js','./assets/sync.js'];
 self.addEventListener('install',event=>{event.waitUntil(caches.open(CACHE).then(c=>c.addAll(CORE)).then(()=>self.skipWaiting()))});
 self.addEventListener('activate',event=>{event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim()))});
 self.addEventListener('fetch',event=>{if(event.request.method!=='GET'||new URL(event.request.url).origin!==location.origin)return;event.respondWith(caches.match(event.request).then(hit=>hit||fetch(event.request).then(response=>{if(response.ok){const copy=response.clone();caches.open(CACHE).then(c=>c.put(event.request,copy))}return response}).catch(()=>caches.match(new URL('./index.html',self.registration.scope)))))});
