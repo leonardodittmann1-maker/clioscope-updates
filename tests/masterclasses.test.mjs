@@ -5,7 +5,7 @@ import {LESSONS,QUESTIONS} from '../dist/assets/content.js';
 import {eligible} from '../dist/assets/model.js';
 const close=(actual,expected,tolerance=.01)=>assert.ok(Math.abs(actual-expected)<=tolerance,`expected ${expected} actual ${actual}`);
 test('cadernos universitários com hipóteses, conteúdo e exemplos completos',()=>{
- assert.equal(MASTERCLASSES.length,10);
+ assert.equal(MASTERCLASSES.length,21);
  const ids=new Set(LESSONS.map(l=>l.id));
  for(const c of MASTERCLASSES){assert.ok(ids.has(c.lessonId),c.lessonId);assert.ok(c.objectives.length>=2,c.lessonId);assert.ok(c.chapters.length>=3,c.lessonId);
   assert.ok(c.chapters.some(x=>x.steps?.length>=5),`Falta exemplo multietapas em ${c.lessonId}`);
