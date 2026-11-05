@@ -11,8 +11,8 @@
 - Adicionado menu de Fórmulas Essenciais, pesquisa, favoritos e ligações aos exercícios.
 - Adicionados filtros por nível de desafio, treino autoral avançado com 10 questões, indicadores separados para fundamentos e avançadas.
 - Implementada biblioteca opcional TypeScript de integração com Google Authentication + Firestore, mecanismo de conciliação de progresso, rascunhos e tentativas, regras restritivas por UID e tela de configuração.
-- Mantido modo offline e exportação/restauração JSON. HTML independente e versão PWA com cache gerados.
-- Compilação TypeScript e validação de dados **aprovadas**; **33 testes Node aprovados**, incluindo rechecagem independente de 25 respostas quantitativas. Testes de navegador real bloqueados pela infraestrutura local e **não considerados aprovados**.
+- Mantido modo offline e exportação/restauração JSON. HTML independente e versão PWA com cache e ícones PNG 192/512 adequados a Android gerados.
+- Compilação TypeScript e validação de dados **aprovadas**; **34 testes Node aprovados**, incluindo rechecagem independente de 25 respostas quantitativas. Testes de navegador real bloqueados pela infraestrutura local e **não considerados aprovados**.
 
 ## Inventário e limitações
 

@@ -57,4 +57,4 @@ O escopo segue Portaria Inep nº 164/2026, Portaria nº 154/2026 e o edital de b
 
 ## Limitações e qualidade
 
-Os **33 testes Node** da versão de trabalho passaram em 05/11/2026. Os testes de navegador real, Samsung Tab S10 FE/S23 e Firebase não puderam ser concluídos. A auditoria e a correspondência integral de questões originais oficiais continuam pendentes; não inventar itens, enunciados, gabaritos ou imagens.
+Os **34 testes Node** da versão de trabalho passaram em 05/11/2026. Os testes de navegador real, Samsung Tab S10 FE/S23 e Firebase não puderam ser concluídos. A auditoria e a correspondência integral de questões originais oficiais continuam pendentes; não inventar itens, enunciados, gabaritos ou imagens.
