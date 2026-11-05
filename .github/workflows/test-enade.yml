@@ -1,0 +1,33 @@
+name: ENADE 2026 - testes academicos e build
+on:
+  push:
+    branches: [enade-eletrica-2026]
+    paths:
+      - 'src/**'
+      - 'tests/**'
+      - 'tools/**'
+      - 'package.json'
+      - 'tsconfig.json'
+      - '.github/workflows/test-enade.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install TypeScript
+        run: npm install --ignore-scripts --no-audit --no-fund
+      - name: Compile and validate academic content
+        run: npm run build
+      - name: Automated mathematical and app tests
+        run: npm test
+      - name: Rebuild standalone Android study document
+        run: |
+          npm run single
+          grep -q "CASO-014" ENADE_Eletrica_2026_Teste_Offline.html
+          grep -q "trafo-ideal" ENADE_Eletrica_2026_Teste_Offline.html
