@@ -1,5 +1,5 @@
 import fs from 'node:fs';
-const files=['model.js','official.js','advanced.js','formulae.js','advancedLessons.js','content.js','sync.js','store.js','main.js'];
+const files=['model.js','official.js','advanced.js','formulae.js','advancedLessons.js','additionalCourses.js','masterclasses.js','diagrams.js','caseQuestions.js','content.js','sync.js','store.js','main.js'];
 let js=files.map(f=>fs.readFileSync(`dist/assets/${f}`,'utf8').replace(/^import .*?;\s*$/gm,'').replace(/^export /gm,'')).join('\n');
 js=js.replace("if ('serviceWorker' in navigator && location.protocol.startsWith('http'))\n    navigator.serviceWorker.register('/sw.js').catch(() => { });",'');
 const css=fs.readFileSync('dist/assets/styles.css','utf8');
