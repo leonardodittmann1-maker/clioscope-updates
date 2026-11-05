@@ -6,14 +6,14 @@ Projeto pessoal e independente, construído na branch exclusiva `enade-eletrica-
 
 O código-fonte nativo está em `android/` e o fluxo de compilação gratuita do instalador em `.github/workflows/build-enade-apk.yml`. O Android incorpora `app.html` como conteúdo offline e carrega o documento numa origem virtual HTTPS local por `WebView`. **Isso não é um site público.** A aplicação tem armazenamento por `IndexedDB` e `localStorage` da sua instalação Android e utiliza o seletor de documentos Android para exportar o backup JSON e importar backups.
 
-Depois que o GitHub Actions completar com sucesso, o instalador `ENADE-Eletrica-2026.apk` poderá ser obtido pelo próprio repositório/artefato do workflow. O APK debug é assinado com chave de desenvolvimento do runner: instalações futuras geradas em runners diferentes podem exigir desinstalação e nova instalação se a assinatura não coincidir. **Faça backup JSON antes de atualizar**. Para atualizações sem desinstalação será necessário configurar chave persistente de assinatura, mantida exclusivamente em segredos GitHub, sem publicá-la.
+O GitHub Actions concluiu com sucesso a compilação de `ENADE-Eletrica-2026.apk` em 05/11/2026. O instalador está na branch exclusiva do ENADE. O APK debug é assinado com chave de desenvolvimento do runner: instalações futuras geradas em runners diferentes podem exigir desinstalação e nova instalação se a assinatura não coincidir. **Faça backup JSON antes de atualizar**. Para atualizações sem desinstalação será necessário configurar chave persistente de assinatura, mantida exclusivamente em segredos GitHub, sem publicá-la.
 
 Não há necessidade de Play Store nem publicação de um site aberto. A sincronização entre Galaxy S23 e Galaxy Tab S10 FE **ainda não funciona**: exigirá habilitar Firebase, regras por UID, autenticação adequada ao Android e testes entre dispositivos. A estrutura web opcional não deve ser confundida com sincronização ativa no APK.
 
 ## Conteúdos realmente disponíveis
 
 - 31 áreas/objetos de conhecimento catalogados, conforme portarias 2026.
-- **21 aulas**, das quais **10 possuem cadernos de estudo aprofundados** com explicação conceitual, hipóteses, estudos de caso numéricos multietapas, verificações de entendimento e conclusões; as outras 11 são revisões estruturadas mais curtas (não atribuir-lhes profundidade que ainda não têm).
+- **21 aulas com cadernos de estudo aprofundados** (10 cadernos iniciais e 11 complementos), incluindo fundamentos, hipóteses explícitas, exemplos de várias etapas, interpretação física e perguntas de autoavaliação. Permanecem disciplinas da matriz sem aula própria.
 - **62 questões autorais respondíveis**, incluindo 22 fundamentos, 26 avançadas anteriores e **14 novos estudos de caso** de maior complexidade com respostas e explicações desenvolvidas. Não são questões oficiais do Inep.
 - **26 fichas de fórmulas** com variáveis, unidades, condições de uso, exemplo e armadilhas. A incidência em provas anteriores não foi auditada: **não há ranking de fórmulas mais cobradas**.
 - 108 itens históricos oficiais no índice, dos quais 101 com gabaritos cadastrados e 7 anulados. **0 questões oficiais completas diretamente resolvíveis**, pois ainda faltam verificar e incorporar integralmente enunciados, alternativas, diagramas, direitos e resoluções. Índices não entram em simulados.
@@ -48,3 +48,7 @@ Sem publicação de credenciais ou faturamento. A integração Google/Firebase w
 Os dados de estudo no APK não são automaticamente os mesmos que foram salvos em versões HTML `content://`. Exporte backup JSON na versão antiga e importe na instalação nova. Guarde cópias atualizadas. Para atualizações futuras, mantenha uma assinatura Android persistente: o APK de debug gerado em máquinas diferentes pode não atualizar o anterior sem reinstalação.
 
 Fontes oficiais: [Legislação ENADE](https://www.gov.br/inep/pt-br/centrais-de-conteudo/legislacao/enade) e [Provas e gabaritos](https://www.gov.br/inep/pt-br/areas-de-atuacao/avaliacao-e-exames-educacionais/enade/provas-e-gabaritos). Os conteúdos didáticos novos são autorais e não representam padrões oficiais de resolução do Inep.
+
+## Atualização acadêmica (05/11/2026)
+
+As 11 aulas antes curtas foram ampliadas. A versão Android distribuída incorpora os 21 cadernos aprofundados. A compilação e integridade do APK foram confirmadas via GitHub Actions; **não houve teste físico nos dois aparelhos Samsung**. O banco oficial continua com **zero questões completas**, e Firebase ainda não está ativado.
