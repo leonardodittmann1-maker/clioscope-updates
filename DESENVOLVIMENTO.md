@@ -31,3 +31,14 @@ Branch exclusiva: `enade-eletrica-2026`.
 ## Regras permanentes
 
 Trabalhar exclusivamente em `enade-eletrica-2026`, preservar `main` e `meu-ponto-app` e dados locais. Não declarar funcionalidade concluída sem evidência de execução. Não habilitar pagamentos, não publicar segredos, não inventar estatísticas ou questões oficiais.
+
+## Atualização adicional — aprofundamento completo das aulas (05/11/2026)
+
+- **21 de 21 aulas existentes** possuem agora cadernos aprofundados (10 iniciais + 11 módulos adicionais) com capítulos, exemplos e perguntas de revisão. As áreas da matriz sem aulas próprias continuam identificadas como pendentes.
+- **62 questões autorais respondíveis**, das quais 14 novas de integração de Engenharia; 26 fichas de fórmulas comentadas.
+- **43 testes automatizados Node aprovados** localmente, mais compilação TypeScript, validação de conteúdos e geração de HTML offline.
+- **APK nativo Android** gerado e publicado com sucesso no GitHub Actions, novamente compilado após atualização das aulas, integridade ZIP conferida.
+- Login Firebase/sincronização entre dispositivos: implementação básica em código, não configurada nem validada; **não funciona atualmente**.
+- Provas históricas: 108 itens apenas catalogados; **zero questões oficiais transcritas integralmente e validadas**. Não utilizá-las em simulados como perguntas respondíveis.
+- Testes reais nos modelos Samsung: ainda não realizados.
+- Modificadas somente pastas e arquivos da branch `enade-eletrica-2026`; nenhuma outra branch alterada.
