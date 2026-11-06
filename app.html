@@ -233,18 +233,24 @@ function reportData(){
   }));
   const categories=db.categories.map(cat=>({name:cat,cents:sumOf(transactions.filter(t=>t.category===cat))}))
     .filter(c=>c.cents!==0).sort((a,b)=>b.cents-a.cents);
+  const incomes=db.incomes.filter(g=>(period==='all'||g.date?.slice(0,7)===month)&&(!person||g.personId===person.id)).sort((a,b)=>a.date.localeCompare(b.date)||(a.createdAt||'').localeCompare(b.createdAt||''));
+  const incomeTotal=incomes.reduce((sum,g)=>sum+Number(g.cents||0),0);
+  const expenseTotal=sumOf(transactions);
+  const incomeByCategory=[...new Set(incomes.map(g=>g.category||'Outros'))].map(cat=>({name:cat,cents:incomes.filter(g=>(g.category||'Outros')===cat).reduce((n,g)=>n+Number(g.cents||0),0)})).sort((a,b)=>b.cents-a.cents);
+  const incomeByPerson=(person?[person]:db.people).map(p=>({name:p.name,cents:incomes.filter(g=>g.personId===p.id).reduce((n,g)=>n+Number(g.cents||0),0)}));
   return {period:period==='all'?'Todo o histórico':'Mês de referência: '+monthLabel(month),
-    person,transactions,total:sumOf(transactions),grossTotal:signedTotal(transactions),
+    person,transactions,total:expenseTotal,grossTotal:signedTotal(transactions),
+    incomes,incomeTotal,expenseTotal,balance:incomeTotal-expenseTotal,incomeByCategory,incomeByPerson,
     cards,people,categories};
 }
-function reportSections(data){return [{title:'Gastos por cartão e fora da fatura',rows:data.cards},{title:'Gastos por pessoa',rows:data.people},{title:'Gastos por categoria',rows:data.categories}]}
+function reportSections(data){return [{title:'Ganhos por pessoa',rows:data.incomeByPerson},{title:'Ganhos por tipo',rows:data.incomeByCategory},{title:'Gastos por cartão e fora da fatura',rows:data.cards},{title:'Gastos por pessoa',rows:data.people},{title:'Gastos por categoria',rows:data.categories}]}
 function reportHTML(data,complete){
   const rows=(items)=>items.map(x=>`<tr><td>${escapeHtml(x.name)}</td><td class="number">${money(x.cents/100)}</td></tr>`).join('');
   const table=(headers,body)=>`<table><thead><tr>${headers.map(x=>`<th>${escapeHtml(x)}</th>`).join('')}</tr></thead><tbody>${body}</tbody></table>`;
   const sections=reportSections(data).map(s=>`<section><h2>${escapeHtml(s.title)}</h2>${table(['Descrição','Valor'],rows(s.rows)||'<tr><td colspan="2">Sem lançamentos</td></tr>')}</section>`).join('');
   const details=complete?`<section class="full"><h2>Detalhamento de todas as compras (${data.transactions.length})</h2>${table(['Data','Compra','Comentários','Categoria','Parcela','Cartão / origem','Responsável / rateio','Valor','Mês de referência','Renovação'],data.transactions.map(t=>`<tr><td>${readableDate(t.date)}</td><td>${escapeHtml(t.merchant)}</td><td>${escapeHtml(t.comments||'—')}</td><td>${escapeHtml(t.category)}</td><td>${t.installmentTotal>1?t.installmentCurrent+'/'+t.installmentTotal:'—'}</td><td>${escapeHtml(cardName(t.cardId))}</td><td>${escapeHtml(transactionParts(t).map(p=>personName(p.personId)+' ('+money(p.cents/100)+')').join(' + '))}</td><td class="number">${money(t.cents/100)}</td><td>${escapeHtml(t.invoiceMonth)}</td><td>${t.category==='Assinaturas'&&t.renewalDate?readableDate(t.renewalDate)+(t.renewalActive===false?' (pausada)':''): '—'}</td></tr>`).join('')||'<tr><td colspan="10">Nenhuma compra no período</td></tr>')}</section>`:'';
   const title='Conta Clara — relatório '+(complete?'completo':'simples');
-  return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${title}</title><style>body{font:14px system-ui,-apple-system,sans-serif;color:#17213b;margin:0 auto;padding:40px;max-width:1050px;background:#fff}header{border-bottom:3px solid #5267e9;padding-bottom:18px;margin-bottom:25px}h1{font-size:27px;margin:0 0 7px}h2{font-size:18px;margin:0 0 12px}p{color:#526078;line-height:1.5}.summary{display:flex;gap:15px;margin-bottom:25px}.summary div{background:#f3f5fd;padding:16px;border-radius:12px;min-width:180px}.summary b{display:block;font-size:26px;margin-top:7px}section{break-inside:avoid;margin:0 0 27px}section.full{break-inside:auto}table{border-collapse:collapse;width:100%}th,td{text-align:left;vertical-align:top;border-bottom:1px solid #dfe5ef;padding:9px 10px;overflow-wrap:anywhere}th{background:#edf0fa;font-size:12px}td.number{text-align:right;white-space:nowrap;font-weight:700}.full{font-size:11px}.full td,.full th{padding:7px 5px}.full table{table-layout:auto}.note{font-size:12px;margin-top:20px}footer{border-top:1px solid #e5e8f0;padding-top:14px;font-size:11px;color:#8792a8}@media print{body{padding:0;max-width:none}section{break-inside:avoid}section.full{break-inside:auto}thead{display:table-header-group}@page{size:A4 landscape;margin:12mm}}@media(max-width:650px){body{padding:15px}.summary{flex-wrap:wrap}.summary div{min-width:130px;flex:1}.full{overflow-x:auto}.full table{min-width:900px}}</style></head><body><header><h1>Conta Clara</h1><p>${escapeHtml(complete?'Relatório completo de gastos':'Relatório simples de gastos')} · ${escapeHtml(data.period)}<br>Gerado em ${readableDate([new Date().getFullYear(),String(new Date().getMonth()+1).padStart(2,'0'),String(new Date().getDate()).padStart(2,'0')].join('-'))}</p></header><div class="summary"><div>Gastos registrados<b>${money(data.total/100)}</b></div><div>Compras registradas<b>${data.transactions.length}</b></div></div>${sections}${details}<p class="note">Valores por pessoa incluem somente sua parcela nas compras divididas. Gastos fora da fatura entram no total geral. Previsões futuras de assinaturas não entram nos totais de gastos registrados.</p><footer>Relatório gerado no Conta Clara. Abra este arquivo em um navegador e use Imprimir → Salvar em PDF.</footer></body></html>`;
+  return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${title}</title><style>body{font:14px system-ui,-apple-system,sans-serif;color:#17213b;margin:0 auto;padding:40px;max-width:1050px;background:#fff}header{border-bottom:3px solid #5267e9;padding-bottom:18px;margin-bottom:25px}h1{font-size:27px;margin:0 0 7px}h2{font-size:18px;margin:0 0 12px}p{color:#526078;line-height:1.5}.summary{display:flex;gap:15px;margin-bottom:25px}.summary div{background:#f3f5fd;padding:16px;border-radius:12px;min-width:180px}.summary b{display:block;font-size:26px;margin-top:7px}section{break-inside:avoid;margin:0 0 27px}section.full{break-inside:auto}table{border-collapse:collapse;width:100%}th,td{text-align:left;vertical-align:top;border-bottom:1px solid #dfe5ef;padding:9px 10px;overflow-wrap:anywhere}th{background:#edf0fa;font-size:12px}td.number{text-align:right;white-space:nowrap;font-weight:700}.full{font-size:11px}.full td,.full th{padding:7px 5px}.full table{table-layout:auto}.note{font-size:12px;margin-top:20px}footer{border-top:1px solid #e5e8f0;padding-top:14px;font-size:11px;color:#8792a8}@media print{body{padding:0;max-width:none}section{break-inside:avoid}section.full{break-inside:auto}thead{display:table-header-group}@page{size:A4 landscape;margin:12mm}}@media(max-width:650px){body{padding:15px}.summary{flex-wrap:wrap}.summary div{min-width:130px;flex:1}.full{overflow-x:auto}.full table{min-width:900px}}</style></head><body><header><h1>Conta Clara</h1><p>${escapeHtml(complete?'Relatório completo de gastos':'Relatório simples de gastos')} · ${escapeHtml(data.period)}<br>Gerado em ${readableDate([new Date().getFullYear(),String(new Date().getMonth()+1).padStart(2,'0'),String(new Date().getDate()).padStart(2,'0')].join('-'))}</p></header><div class="summary"><div>Ganhos<b>${money(data.incomeTotal/100)}</b></div><div>Gastos<b>${money(data.expenseTotal/100)}</b></div><div>Saldo líquido<b>${money(data.balance/100)}</b></div><div>Compras registradas<b>${data.transactions.length}</b></div></div>${sections}${details}<p class="note">Valores por pessoa incluem somente sua parcela nas compras divididas. Gastos fora da fatura entram no total geral. Previsões futuras de assinaturas não entram nos totais de gastos registrados.</p><footer>Relatório gerado no Conta Clara. Abra este arquivo em um navegador e use Imprimir → Salvar em PDF.</footer></body></html>`;
 }
 function reportCSV(data,complete){
   const lines=[];
@@ -253,7 +259,7 @@ function reportCSV(data,complete){
   push('Conta Clara',complete?'Relatório completo':'Relatório simples');
   push('Período',data.period);
   if(data.person)push('Pessoa',data.person.name);
-  push(data.person?'Total da pessoa':'Total registrado',money(data.total/100));
+  push('Ganhos recebidos',money(data.incomeTotal/100));push(data.person?'Gastos atribuídos à pessoa':'Gastos registrados',money(data.expenseTotal/100));push('Saldo (ganhos - gastos)',money(data.balance/100));push('Quantidade de ganhos',data.incomes.length);
   if(data.person)push('Valor integral das compras relacionadas',money(data.grossTotal/100));
   push('Quantidade de compras',data.transactions.length);push();
   for(const section of reportSections(data)){
@@ -262,6 +268,7 @@ function reportCSV(data,complete){
     push();
   }
   if(complete){
+    push('DETALHAMENTO DE GANHOS');push('Data','Origem / descrição','Tipo de ganho','Pessoa','Valor recebido (R$)','Comentários');for(const g of data.incomes)push(readableDate(g.date),g.title,g.category||'Outros',personName(g.personId),decStr(g.cents),g.comments||'');push();
     push('DETALHAMENTO DE COMPRAS');
     push('Data','Compra / estabelecimento','Comentários','Categoria','Parcela','Parcelas restantes','Cartão / origem',
       'Pessoa(s)','Rateio em R$','Valor total da compra (R$)',...(data.person?['Valor da pessoa (R$)']:[]),
@@ -313,14 +320,23 @@ function reportPdfBytes(data,complete){
   lines('Gerado em '+readableDate(todayStr),{size:8,leading:14,tint:muted});
   gap(12);
   rect(M,y+6,W-2*M,64,[0.95,0.96,1]);
-  drawText(M+14,y-12,data.person?'TOTAL DA PESSOA':'TOTAL DE GASTOS',10,true,dark);
-  drawText(M+14,y-37,money(Number(data.total||0)/100),19,true,blue);
+  drawText(M+14,y-12,'SALDO (GANHOS - GASTOS)',10,true,dark);
+  drawText(M+14,y-37,money(Number(data.balance||0)/100),19,true,blue);
   drawText(W-159,y-12,'COMPRAS REGISTRADAS',8,true,muted);
   drawText(W-150,y-36,String(data.transactions.length),15,true,dark);
   y-=78;
+  lines('Ganhos: '+money(data.incomeTotal/100)+'   ·   Gastos: '+money(data.expenseTotal/100),{size:10,leading:16,bold:true});
+  lines('Recebimentos: '+data.incomes.length+'   ·   Compras: '+data.transactions.length,{size:8,leading:13,tint:muted});
   if(data.person){lines('Valor integral das compras em que participou: '+money(data.grossTotal/100),{size:9,leading:14,tint:muted});lines('Esse valor integral é apenas referência; a soma acima considera somente a parte da pessoa.',{size:8,leading:12,tint:muted});}
   for(const block of reportSections(data))summaryBlock(block.title,block.rows);
   if(complete){
+    section('DETALHAMENTO DOS GANHOS ('+data.incomes.length+')');
+    if(!data.incomes.length)lines('Nenhum ganho registrado no período.',{size:9,tint:muted});
+    for(const [i,g] of data.incomes.entries()){
+      ensure(60);lines((i+1)+'. '+readableDate(g.date)+'  ·  '+g.title,{size:10,leading:14,bold:true});
+      note('Valor recebido',money(Number(g.cents||0)/100));note('Tipo / pessoa',(g.category||'Outros')+'  ·  '+personName(g.personId));
+      if(g.comments)note('Comentários',g.comments);gap(4);rule();
+    }
     section('DETALHAMENTO DAS COMPRAS ('+data.transactions.length+')');
     if(!data.transactions.length)lines('Nenhuma compra registrada no período.',{tint:muted});
     for(let index=0;index<data.transactions.length;index++){
@@ -340,7 +356,7 @@ function reportPdfBytes(data,complete){
     }
   }
   gap(12);
-  lines(data.person?'Este relatório inclui compras individuais e divididas atribuídas à pessoa. O total dela soma somente suas parcelas, não o valor integral das compras compartilhadas. Previsões de assinaturas não entram nos gastos registrados.':'Os valores de cada pessoa consideram apenas a sua parte nas compras divididas. As previsões de assinaturas não entram nos gastos já registrados.',{size:8,leading:12,tint:muted});
+  lines(data.person?'Saldo = ganhos recebidos pela pessoa menos os gastos atribuídos a ela, incluindo apenas sua parte nas compras divididas.':'Saldo = ganhos recebidos menos gastos registrados. Os valores por pessoa respeitam os rateios. Previsões futuras de assinaturas não entram no saldo.',{size:8,leading:12,tint:muted});
   for(let i=0;i<pages.length;i++){
     const save=page;page=pages[i];
     rect(M,43,W-2*M,0.6,[0.88,0.9,0.94]);
