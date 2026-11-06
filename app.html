@@ -292,7 +292,7 @@ function reportHTML(data,complete){
   const rows=(items)=>items.map(x=>`<tr><td>${escapeHtml(x.name)}</td><td class="number">${money(x.cents/100)}</td></tr>`).join('');
   const table=(headers,body)=>`<table><thead><tr>${headers.map(x=>`<th>${escapeHtml(x)}</th>`).join('')}</tr></thead><tbody>${body}</tbody></table>`;
   const sections=reportSections(data).map(s=>`<section><h2>${escapeHtml(s.title)}</h2>${table(['Descrição','Valor'],rows(s.rows)||'<tr><td colspan="2">Sem lançamentos</td></tr>')}</section>`).join('');
-  const details=complete?`<section class="full"><h2>Detalhamento de todas as compras (${data.transactions.length})</h2>${table(['Data','Compra','Comentários','Categoria','Parcela','Cartão / origem','Responsável / rateio','Valor','Mês de referência','Renovação'],data.transactions.map(t=>`<tr><td>${readableDate(t.date)}</td><td>${escapeHtml(t.merchant)}</td><td>${escapeHtml(t.comments||'—')}</td><td>${escapeHtml(t.category)}</td><td>${t.installmentTotal>1?t.installmentCurrent+'/'+t.installmentTotal:'—'}</td><td>${escapeHtml(cardName(t.cardId))}</td><td>${escapeHtml(transactionParts(t).map(p=>personName(p.personId)+' ('+money(p.cents/100)+')').join(' + '))}</td><td class="number">${money(t.cents/100)}</td><td>${escapeHtml(t.invoiceMonth)}</td><td>${t.category==='Assinaturas'&&t.renewalDate?readableDate(t.renewalDate)+(t.renewalActive===false?' (pausada)':''): '—'}</td></tr>`).join('')||'<tr><td colspan="10">Nenhuma compra no período</td></tr>')}</section>`:'';
+  const details=complete?`<section class="full"><h2>Detalhamento de todas as compras (${data.transactions.length})</h2>${table(['Data','Compra','Comentários','Categoria','Parcela','Cartão / origem','Responsável / rateio','Valor','Mês de referência','Recorrência'],data.transactions.map(t=>`<tr><td>${readableDate(t.date)}</td><td>${escapeHtml(t.merchant)}</td><td>${escapeHtml(t.comments||'—')}</td><td>${escapeHtml(t.category)}</td><td>${t.installmentTotal>1?t.installmentCurrent+'/'+t.installmentTotal:'—'}</td><td>${escapeHtml(cardName(t.cardId))}</td><td>${escapeHtml(transactionParts(t).map(p=>personName(p.personId)+' ('+money(p.cents/100)+')').join(' + '))}</td><td class="number">${money(t.cents/100)}</td><td>${escapeHtml(t.invoiceMonth)}</td><td>${t.recurring&&t.renewalDate?readableDate(t.renewalDate)+(t.subscriptionEndedAt?' (encerrada)':t.renewalActive===false?' (pausada)':''): '—'}</td></tr>`).join('')||'<tr><td colspan="10">Nenhuma compra no período</td></tr>')}</section>`:'';
   const title='Conta Clara — relatório '+(complete?'completo':'simples');
   return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${title}</title><style>body{font:14px system-ui,-apple-system,sans-serif;color:#17213b;margin:0 auto;padding:40px;max-width:1050px;background:#fff}header{border-bottom:3px solid #5267e9;padding-bottom:18px;margin-bottom:25px}h1{font-size:27px;margin:0 0 7px}h2{font-size:18px;margin:0 0 12px}p{color:#526078;line-height:1.5}.summary{display:flex;gap:15px;margin-bottom:25px}.summary div{background:#f3f5fd;padding:16px;border-radius:12px;min-width:180px}.summary b{display:block;font-size:26px;margin-top:7px}section{break-inside:avoid;margin:0 0 27px}section.full{break-inside:auto}table{border-collapse:collapse;width:100%}th,td{text-align:left;vertical-align:top;border-bottom:1px solid #dfe5ef;padding:9px 10px;overflow-wrap:anywhere}th{background:#edf0fa;font-size:12px}td.number{text-align:right;white-space:nowrap;font-weight:700}.full{font-size:11px}.full td,.full th{padding:7px 5px}.full table{table-layout:auto}.note{font-size:12px;margin-top:20px}footer{border-top:1px solid #e5e8f0;padding-top:14px;font-size:11px;color:#8792a8}@media print{body{padding:0;max-width:none}section{break-inside:avoid}section.full{break-inside:auto}thead{display:table-header-group}@page{size:A4 landscape;margin:12mm}}@media(max-width:650px){body{padding:15px}.summary{flex-wrap:wrap}.summary div{min-width:130px;flex:1}.full{overflow-x:auto}.full table{min-width:900px}}</style></head><body><header><h1>Conta Clara</h1><p>${escapeHtml(complete?'Relatório completo de gastos':'Relatório simples de gastos')} · ${escapeHtml(data.period)}<br>Gerado em ${readableDate([new Date().getFullYear(),String(new Date().getMonth()+1).padStart(2,'0'),String(new Date().getDate()).padStart(2,'0')].join('-'))}</p></header><div class="summary"><div>Ganhos<b>${money(data.incomeTotal/100)}</b></div><div>Gastos<b>${money(data.expenseTotal/100)}</b></div><div>Saldo líquido<b>${money(data.balance/100)}</b></div><div>Compras registradas<b>${data.transactions.length}</b></div></div>${sections}${details}<p class="note">Valores por pessoa incluem somente sua parcela nas compras divididas. Gastos fora da fatura entram no total geral. Previsões futuras de assinaturas não entram nos totais de gastos registrados.</p><footer>Relatório gerado no Conta Clara. Abra este arquivo em um navegador e use Imprimir → Salvar em PDF.</footer></body></html>`;
 }
@@ -316,7 +316,7 @@ function reportCSV(data,complete){
     push('DETALHAMENTO DE COMPRAS');
     push('Data','Compra / estabelecimento','Comentários','Categoria','Parcela','Parcelas restantes','Cartão / origem',
       'Pessoa(s)','Rateio em R$','Valor total da compra (R$)',...(data.person?['Valor da pessoa (R$)']:[]),
-      'Mês de referência','Data de renovação','Ativa','Fonte');
+      'Mês de referência','Data de renovação','Recorrência ativa','Fonte');
     for(const t of data.transactions){
       push(readableDate(t.date),t.merchant,t.comments||'',t.category,
         t.installmentTotal>1?t.installmentCurrent+'/'+t.installmentTotal:'',
@@ -326,7 +326,7 @@ function reportCSV(data,complete){
         transactionParts(t).map(p=>personName(p.personId)+': '+decStr(p.cents)).join(' / '),
         decStr(t.cents),...(data.person?[decStr(reportShare(t,data.person.id))]:[]),
         t.invoiceMonth,t.renewalDate||'',
-        t.category==='Assinaturas'&&t.renewalDate?(t.renewalActive!==false?'Sim':'Não'):'',
+        t.recurring&&t.renewalDate?(t.renewalActive!==false&&!t.subscriptionEndedAt?'Sim':'Não'):'',
         t.source||'');
     }
   }
@@ -394,7 +394,7 @@ function reportPdfBytes(data,complete){
       note('Categoria / origem',meta.join('  ·  '));
       if(t.comments)note('Comentários',t.comments);
       note('Responsável / divisão',people.map(p=>personName(p.personId)+' '+money(Number(p.cents||0)/100)).join('  +  '));
-      if(t.recurring&&t.renewalDate)note('Renovação',readableDate(t.renewalDate)+(t.renewalActive===false?' (pausada)':''));
+      if(t.recurring&&t.renewalDate)note('Cobrança recorrente',readableDate(t.renewalDate)+(t.subscriptionEndedAt?' (encerrada)':t.renewalActive===false?' (pausada)':''));
       if(t.source)note('Fonte',t.source);
       gap(4);rule();
     }
