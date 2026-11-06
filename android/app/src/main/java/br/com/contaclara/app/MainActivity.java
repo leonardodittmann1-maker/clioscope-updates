@@ -1,6 +1,12 @@
 package br.com.contaclara.app;
 
 import android.app.Activity;
+import android.app.NotificationManager;
+import android.content.ComponentName;
+import android.provider.Settings;
+import android.content.SharedPreferences;
+import org.json.JSONArray;
+import org.json.JSONObject;
 import android.os.Bundle;
 import android.content.Intent;
 import android.graphics.Color;
@@ -35,6 +41,51 @@ public class MainActivity extends Activity {
     private String pendingMime;
 
     public final class ContaClaraBridge {
+        @JavascriptInterface public String walletStatus() {
+            try {
+                boolean enabled=getSharedPreferences(WalletNotificationService.OPTIONS,MODE_PRIVATE).getBoolean("enabled",false);
+                NotificationManager manager=(NotificationManager)getSystemService(NOTIFICATION_SERVICE);
+                boolean permission=manager!=null&&manager.isNotificationListenerAccessGranted(
+                    new ComponentName(MainActivity.this,WalletNotificationService.class));
+                int queued=new JSONArray(getSharedPreferences(WalletNotificationService.STORAGE,MODE_PRIVATE).getString("queue","[]")).length();
+                JSONObject result=new JSONObject();
+                result.put("enabled",enabled);result.put("permission",permission);result.put("queued",queued);
+                result.put("source","com.samsung.android.spay");
+                return result.toString();
+            } catch(Exception ignored){return "{\"enabled\":false,\"permission\":false,\"queued\":0}";}
+        }
+        @JavascriptInterface public void setWalletCaptureEnabled(boolean enabled) {
+            getSharedPreferences(WalletNotificationService.OPTIONS,MODE_PRIVATE).edit().putBoolean("enabled",enabled).apply();
+        }
+        @JavascriptInterface public void openWalletAccessSettings() {
+            runOnUiThread(()->{
+                try {startActivity(new Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS));}
+                catch(Exception e){notifyUser("Não foi possível abrir o acesso às notificações.");}
+            });
+        }
+        @JavascriptInterface public String pendingWalletPurchases() {
+            synchronized(WalletNotificationService.class){
+                return getSharedPreferences(WalletNotificationService.STORAGE,MODE_PRIVATE).getString("queue","[]");
+            }
+        }
+        @JavascriptInterface public void acknowledgeWalletPurchases(String idsJson) {
+            synchronized(WalletNotificationService.class){
+                try {
+                    JSONArray ids=new JSONArray(idsJson),pending=new JSONArray(
+                        getSharedPreferences(WalletNotificationService.STORAGE,MODE_PRIVATE).getString("queue","[]"));
+                    java.util.HashSet<String> acknowledged=new java.util.HashSet<>();
+                    for(int i=0;i<Math.min(ids.length(),150);i++)acknowledged.add(ids.optString(i));
+                    JSONArray keep=new JSONArray();
+                    for(int i=0;i<pending.length();i++){
+                        JSONObject item=pending.optJSONObject(i);
+                        if(item!=null&&!acknowledged.contains(item.optString("id")))keep.put(item);
+                    }
+                    getSharedPreferences(WalletNotificationService.STORAGE,MODE_PRIVATE).edit()
+                        .putString("queue",keep.toString()).commit();
+                }catch(Exception ignored){}
+            }
+        }
+
         @JavascriptInterface public void reloadApp() {
             runOnUiThread(() -> loadApplication());
         }
@@ -177,6 +228,11 @@ public class MainActivity extends Activity {
                 else notifyUser("Não foi possível carregar o aplicativo.");
             });
         }).start();
+    }
+
+    @Override protected void onResume(){
+        super.onResume();
+        if(web!=null)web.evaluateJavascript("if(window.syncSamsungWallet){window.syncSamsungWallet()}",null);
     }
 
     @Override protected void onActivityResult(int request, int result, Intent data) {
