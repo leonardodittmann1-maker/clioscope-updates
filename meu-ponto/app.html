@@ -2546,8 +2546,10 @@ function renderSimulation(){
  $('simStatus').textContent=partial
   ?'Meta parcial até '+fmtDate(d.end)+': '+fmtMin(d.requested)+' de '+(d.unit==='work'?'HE trabalhadas':'crédito de banco')+'. O restante será compensado depois.'
   :d.due?'Até '+fmtDate(d.end)+' será necessário gerar '+fmtMin(d.due)+' de crédito para quitar o débito conhecido.':'Sem débito a quitar até '+fmtDate(d.end)+'.';
- if(partial&&d.unit==='work'&&d.requested>0&&d.requested<6)
-  $('simStatus').textContent+=' São necessários pelo menos 6 minutos extras para gerar crédito.';
+ if(partial&&d.requested>0&&((d.unit==='work'&&d.workMinutes<d.requested)||(d.unit==='credit'&&d.earned<d.requested)))
+  $('simStatus').textContent+=' Atenção: não há dias suficientes para cumprir toda a meta no período escolhido. O saldo não compensado permanece no planejamento posterior.';
+ if(!partial&&d.due>0&&d.earned<d.due)
+  $('simStatus').textContent+=' Atenção: o saldo não poderá ser zerado até essa data com os dias disponíveis.';
  $('simDailyExtra').textContent=d.schedule.length
   ?d.minPerDay===d.maxPerDay?fmtMin(d.maxPerDay):fmtMin(d.minPerDay)+' a '+fmtMin(d.maxPerDay)
   :'0min';
