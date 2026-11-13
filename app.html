@@ -1,4 +1,4 @@
-<!doctype html><html lang="pt-BR"><head><meta charset="UTF-8"><meta name="meuponto-ui-revision" content="2026.11.13.1"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#fbfaf8"><title>Meu Ponto</title><style>
+<!doctype html><html lang="pt-BR"><head><meta charset="UTF-8"><meta name="meuponto-ui-revision" content="2026.11.13.2"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#fbfaf8"><title>Meu Ponto</title><style>
 :root{--bg:#faf8f5;--white:#fff;--ink:#26231f;--muted:#857f7a;--line:#eae5df;--accent:#b65c47;--accent2:#d68e78;--mint:#eaf7f0;--green:#147551;--ice:#e8f1fe;--blue:#1768b4;--rose:#fff0e9;--red:#b74e32;--lav:#f0e9fb;--purple:#7352ab}
 *{box-sizing:border-box}html,body{margin:0;min-height:100%;background:var(--bg);color:var(--ink);font:14px system-ui,-apple-system,Roboto,'Segoe UI',sans-serif}button,input,textarea,select{font:inherit}button{cursor:pointer;-webkit-tap-highlight-color:transparent}button:disabled{opacity:.4}h1,h2,h3,p{margin:0}h1{font-size:26px;letter-spacing:-.9px}h2{font-size:18px;letter-spacing:-.45px}h3{font-size:15px}small,.muted{color:var(--muted)}strong{font-weight:750}.app{max-width:720px;margin:0 auto;padding:calc(env(safe-area-inset-top) + 15px) 16px 113px}.header{display:flex;align-items:center;justify-content:space-between;margin:0 0 21px}.logo-title{display:flex;align-items:center;gap:11px}.logo{width:44px;height:44px;object-fit:cover;border-radius:13px}.head-month{font-size:12px;color:var(--muted);background:#fff;border:1px solid var(--line);border-radius:30px;padding:9px 10px}.eyebrow{font-size:11px;font-weight:730;letter-spacing:.65px;color:var(--muted);text-transform:uppercase}.section-title{display:flex;align-items:center;justify-content:space-between;margin:21px 1px 12px}.section-title button{color:var(--accent);background:transparent;border:0;font-weight:750;font-size:12px}.statgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.stat{padding:15px 13px 13px;min-height:110px;border-radius:14px}.stat.green{background:var(--mint);color:var(--green)}.stat.blue{background:var(--ice);color:var(--blue)}.stat.red{background:var(--rose);color:var(--red)}.stat.purple{background:var(--lav);color:var(--purple)}.stathead{display:flex;align-items:center;gap:7px;font-size:11px;font-weight:600}.stat .value{font-size:25px;letter-spacing:-.8px;font-weight:770;margin:9px 0 0;white-space:nowrap}.stat .subtitle{font-size:11px;margin-top:3px}.card{background:white;border:1px solid var(--line);border-radius:16px;padding:16px;margin-bottom:12px;box-shadow:0 3px 8px #442c1405}.action-scan{display:flex;align-items:center;justify-content:space-between;background:linear-gradient(100deg,#bd755f,#d99b83);color:white;width:100%;border:none;text-align:left;padding:18px 17px;border-radius:15px;box-shadow:0 6px 15px #b16c4730}.action-scan b{font-size:15px}.action-scan small{display:block;margin-top:5px;color:#fff5f0}.circle-arrow{font-size:25px;font-weight:300}.list-row{display:flex;align-items:center;gap:11px;padding:12px 2px;border-bottom:1px solid var(--line);cursor:pointer}.list-row:last-child{border-bottom:0}.daybox{width:45px;min-width:45px;text-align:center}.daybox b{font-size:20px;display:block;line-height:1.25}.daybox small{font-size:10px;text-transform:uppercase}.list-main{min-width:0;flex:1}.list-main strong{font-size:13px}.list-main p{font-size:12px;color:var(--muted);margin-top:4px}.row-right{display:flex;flex-direction:column;align-items:end;gap:5px;white-space:nowrap}.row-right small{font-size:11px}.chip{display:inline-block;border-radius:8px;padding:5px 8px;font-size:10px;font-weight:700;background:#f1efed;color:#69645e}.chip.good{background:#eaf7ea;color:#246a3c}.chip.debit{background:#ffece5;color:#b4482f}.chip.credit{background:#e6f0fe;color:#2867ae}.chip.holiday{background:#f2eafa;color:#8562a4}.empty{text-align:center;padding:25px 10px;color:var(--muted);font-size:13px;line-height:1.55}.page{display:none}.page.active{display:block}.bottom{height:calc(68px + env(safe-area-inset-bottom));padding-bottom:env(safe-area-inset-bottom);background:#fff;position:fixed;bottom:0;left:0;right:0;display:flex;justify-content:center;border-top:1px solid #e9e4e0;z-index:20}.nav-inner{width:100%;max-width:720px;display:grid;grid-template-columns:repeat(5,1fr);align-items:center}.nav{border:0;background:none;color:#8e8a86;display:flex;flex-direction:column;align-items:center;gap:4px;font-size:10px;font-weight:600;padding:6px 3px}.nav.active{color:var(--accent)}.nav svg{width:22px;height:22px;stroke:currentColor;stroke-width:1.85;stroke-linecap:round;stroke-linejoin:round;fill:none}.plus{width:51px;height:51px;background:#bc6f59;color:white;border-radius:50%;font-size:33px;line-height:48px;box-shadow:0 6px 16px #b56b5540;margin-top:-12px}.panel-header{display:flex;align-items:center;justify-content:space-between;gap:6px;margin:0 0 19px}.panel-header button{border:0;background:#fff;color:#6b605a;padding:8px 12px;border-radius:12px}.panel-header strong{font-size:19px}.field{margin:0 0 14px;min-width:0}.field label{display:block;font-size:12px;font-weight:670;color:#68615a;margin-bottom:7px}.field input,.field select,.field textarea{width:100%;height:46px;min-width:0;background:#fbfaf8;border:1px solid #e2dcd5;border-radius:11px;padding:10px 11px;outline:none;color:#26231f;font-size:15px}.field textarea{height:68px;resize:vertical}.field input:focus,.field textarea:focus,.field select:focus{border-color:#c77b63;background:white}.field input::placeholder{color:#b8b4b0}.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}.hint{font-size:11px;color:#a39b95;margin-top:5px;line-height:1.45}.btn{width:100%;border:0;border-radius:12px;background:var(--accent2);color:white;font-weight:730;padding:13px 16px;min-height:44px}.btn.light{background:#faefeb;color:var(--accent)}.btn.outline{border:1px solid #ded8d3;background:#fff;color:#665b55}.btn.danger{background:#fff0ed;color:#c14c3d}.btnline{display:flex;gap:10px}.btnline>*{flex:1;min-width:0}.select-group{display:grid;gap:8px}.choice{display:flex;align-items:start;gap:8px;border:1px solid #e8e1da;padding:11px;border-radius:12px;line-height:1.4}.choice:has(input:checked){border-color:#cb8370;background:#fff4ef}.choice input{accent-color:var(--accent);margin-top:3px}.choice strong{display:block}.choice span{font-size:11px;color:#847c76}.info{background:#f5f0ec;border-radius:12px;padding:12px;font-size:12px;line-height:1.65;color:#6b625c}.spaced{margin-bottom:12px}.timeline .list-row{padding:14px 0}.monthnav{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:15px}.monthnav button{background:#fff;border:1px solid var(--line);border-radius:10px;padding:9px 15px;font-size:18px}.monthnav strong{text-transform:capitalize}.adjust{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 0;border-bottom:1px solid var(--line)}.adjust button{border:0;background:#fff0ed;color:var(--red);padding:7px 10px;border-radius:8px}.divider{height:1px;background:var(--line);margin:16px 0}.date-message{font-size:12px;color:var(--muted);margin:5px 0 14px}.hidden{display:none!important}.scan-picture{display:block;object-fit:contain;width:100%;max-height:290px;border-radius:12px;background:#f5eee7;margin:12px 0}.toast{position:fixed;bottom:82px;left:50%;transform:translate(-50%,15px);background:#392d26;color:#fff;padding:10px 15px;border-radius:12px;z-index:40;opacity:0;transition:.2s;pointer-events:none;max-width:90vw;text-align:center;font-size:12px}.toast.show{opacity:1;transform:translate(-50%,0)}.progress{font-size:12px;color:var(--muted);margin-top:10px;line-height:1.6}.upload{display:none}details summary{cursor:pointer;color:var(--accent);font-size:12px;margin-top:10px}.ocrtext{white-space:pre-wrap;max-height:150px;overflow:auto;font:11px/1.4 monospace;background:#f8f5f2;padding:10px;border-radius:8px;margin-top:8px}.value-line{display:flex;align-items:baseline;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--line)}.value-line:last-child{border-bottom:0}.value-line b{font-size:16px}.label-holiday{background:#f3ebff;color:#71529e;border-radius:9px;padding:7px 11px;margin:9px 0;font-size:11px}.edit-bottom{position:sticky;bottom:78px;background:#faf8f5;padding:7px 0}.status-day{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:14px 0}.status-day div{background:#f8f4f0;border-radius:12px;padding:13px}.status-day b{display:block;margin-top:5px;font-size:17px}.kicker{font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.5px}.no-select{user-select:none}@media(min-width:580px){.app{padding-left:28px;padding-right:28px}}
 
@@ -84,6 +84,8 @@
 .sim-form{display:grid;gap:12px}
 .sim-form .field{margin:0}
 .sim-form .field label{font-size:13px;font-weight:700;color:#50443c}
+.sim-plan-fields{display:grid;gap:12px}
+.sim-plan-fields .field{margin:0}
 .sim-date-field{display:flex;align-items:center;gap:8px}
 .sim-date-field input[type=date]{flex:1 1 0;min-width:0;width:0;max-width:100%;display:block}
 .sim-date-field button,.sim-remove{flex:0 0 auto;border:1px solid var(--line);background:#fff;color:#874b39;border-radius:10px;min-height:44px;padding:8px;font-size:12px;font-weight:700}
@@ -456,8 +458,19 @@
   <button id="simPlanVacation" type="button">Férias e folgas</button>
  </div>
  <p class="sim-balance"><span>Saldo atual do banco</span><strong id="simCurrentBalance"></strong></p>
- <div class="card">
-  <div class="field" style="margin:0">
+ <div class="card sim-plan-fields">
+  <div class="field">
+   <label for="simMethod">Como você quer calcular?</label>
+   <select id="simMethod"><option value="deadline">Pela data limite</option><option value="daily">Pelo tempo extra por dia</option></select>
+  </div>
+  <div id="simDailyFields" class="hidden">
+   <div class="sim-add-fields">
+    <div class="field"><label for="simDailyHours">Horas extras por dia</label><input id="simDailyHours" type="number" min="0" max="23" step="1" inputmode="numeric" placeholder="0" aria-describedby="simDailyError"></div>
+    <div class="field"><label for="simDailyMinutes">Minutos extras por dia</label><input id="simDailyMinutes" type="number" min="0" max="59" step="1" inputmode="numeric" placeholder="0" aria-describedby="simDailyError"></div>
+   </div>
+   <p id="simDailyError" class="sim-warning hidden" role="status"></p>
+  </div>
+  <div class="field">
    <label for="simTargetDate">Data limite para zerar o saldo</label>
    <div class="sim-date-field">
     <input id="simTargetDate" type="date" required aria-describedby="simDateError">
@@ -570,7 +583,7 @@
  <p class="hint">Se você guardou o backup em uma nota, cole aqui todo o conteúdo JSON e toque em Restaurar texto.</p>
  <textarea id="restorePaste" rows="5" placeholder="Cole o backup JSON completo" spellcheck="false" aria-label="Cole aqui o backup JSON"></textarea>
  <button id="restorePasted" class="btn outline" type="button" style="width:100%;margin-top:8px">Restaurar texto</button>
-</details></div><p class="hint">Controle pessoal. Confira o tratamento de ausências, abonos e descontos com o espelho de ponto da empresa.</p><div class="card" style="margin-top:16px"><button class="btn" style="width:100%" onclick="location.href='https://meuponto.app.local/refresh?ts='+Date.now()">↻ Verificar atualização</button><div style="text-align:center;color:#857f7a;margin-top:8px;font-size:11px" id="appUiVersion">Interface 2026.11.13.1 · atualizações pelo GitHub</div>
+</details></div><p class="hint">Controle pessoal. Confira o tratamento de ausências, abonos e descontos com o espelho de ponto da empresa.</p><div class="card" style="margin-top:16px"><button class="btn" style="width:100%" onclick="location.href='https://meuponto.app.local/refresh?ts='+Date.now()">↻ Verificar atualização</button><div style="text-align:center;color:#857f7a;margin-top:8px;font-size:11px" id="appUiVersion">Interface 2026.11.13.2 · atualizações pelo GitHub</div>
 <div style="text-align:center;color:#857f7a;margin-top:5px;font-size:11px">13º e férias aparecem ao expandir Salário estimado.</div></div></section>
 </div><input class="upload" id="fileCamera" type="file" accept="image/*" capture="environment"><input class="upload" id="fileGallery" type="file" accept="image/*"><input class="upload" id="sheetFileCamera" type="file" accept="image/*" capture="environment">
 <input class="upload" id="sheetFileGallery" type="file" accept="image/*">
@@ -2454,11 +2467,15 @@ function simulationDayExclusion(date){
  return '';
 }
 
+function simulationDailyCapacity(){
+ // A jornada deve caber no dia a partir da entrada mínima e com o almoço padrão.
+ return Math.floor(1439-parseTime(cfg.start)-Number(cfg.lunch)-Number(cfg.workday));
+}
+
 function distributeSimulation(days,target,multiplier){
  const minimum=EXIT_TOLERANCE_MIN+1;
  const credit=minutes=>Math.round(minutes*multiplier);
- // A jornada deve caber no dia a partir da entrada mínima e com o almoço padrão.
- const capacity=Math.floor(1439-parseTime(cfg.start)-Number(cfg.lunch)-Number(cfg.workday));
+ const capacity=simulationDailyCapacity();
  if(target<=0||days.length===0||!Number.isFinite(capacity)||capacity<minimum)return {rows:[],work:0,credit:0};
  const count=Math.min(days.length,Math.max(1,Math.floor(target/credit(minimum))));
  // O crédito é arredondado por registro. Encontre o menor total que cobre a meta com uma distribuição uniforme.
@@ -2477,13 +2494,20 @@ function distributeSimulation(days,target,multiplier){
  return {rows,work:low,credit:rows.reduce((sum,row)=>sum+row.credit,0)};
 }
 
+function fixedDailySimulation(days,target,minutes,multiplier){
+ const creditPerDay=Math.round(minutes*multiplier);
+ const daysNeeded=Math.ceil(target/creditPerDay);
+ const rows=days.slice(0,daysNeeded).map(date=>({date,minutes,credit:creditPerDay}));
+ return {rows,work:rows.length*minutes,credit:rows.length*creditPerDay,creditPerDay,daysNeeded};
+}
+
 function simulationEntries(){
  if(!Array.isArray(cfg.simEntries))return [];
  return cfg.simEntries.filter(entry=>entry&&typeof entry.id==='string'&&isValidPlanDate(entry.date)&&
   Number.isSafeInteger(entry.minutes)&&entry.minutes!==0);
 }
 
-function calculateBankSimulation(today,end){
+function calculateBankSimulation(today,end,dailyExtra=null){
  const balance=balanceUntilDate(today),future=futureSimulationEntries(today,end);
  const entries=[...future.entries,...simulationEntries().filter(entry=>entry.date>=today&&entry.date<=end)]
   .sort((a,b)=>a.date.localeCompare(b.date));
@@ -2497,7 +2521,8 @@ function calculateBankSimulation(today,end){
   else available.push(date);
  }
  const factor=Number(cfg.multiplier),multiplier=Number.isFinite(factor)&&factor>=1?factor:1.5;
- const plan=distributeSimulation(available,needed,multiplier);
+ const plan=dailyExtra===null?distributeSimulation(available,needed,multiplier)
+  :fixedDailySimulation(available,needed,dailyExtra,multiplier);
  return {end,balance,entries,credit,debit,projected,needed,available,excluded,multiplier,plan,incomplete:future.incomplete};
 }
 
@@ -2521,6 +2546,11 @@ function renderSimulation(){
  date.min=today;
  date.max=semesterEnd;
  date.value=isValidPlanDate(cfg.simDate)&&cfg.simDate>=today&&cfg.simDate<=semesterEnd?cfg.simDate:semesterEnd;
+ $('simMethod').value=cfg.simMethod==='daily'?'daily':'deadline';
+ const daily=cfg.simDailyExtra;
+ const hasDaily=Number.isInteger(daily)&&daily>=0&&daily<1440;
+ $('simDailyHours').value=hasDaily?Math.floor(daily/60):'';
+ $('simDailyMinutes').value=hasDaily?daily%60:'';
  const entryDate=$('simEntryDate');
  entryDate.min=today;
  entryDate.max=semesterEnd;
@@ -2542,16 +2572,36 @@ function renderSimulationEntries(today,end){
  }).join('');
 }
 
+function readSimulationDailyExtra(){
+ const hours=$('simDailyHours'),minutes=$('simDailyMinutes');
+ if(!hours.validity.valid||!minutes.validity.valid)return null;
+ if(hours.value===''&&minutes.value==='')return null;
+ return Number(hours.value)*60+Number(minutes.value);
+}
+
 function updateSimulation(){
  const today=localDate(),date=$('simTargetDate'),end=date.value;
  const valid=isValidPlanDate(end)&&end>=today&&end<=semesterEndFor(today);
  const dateError=$('simDateError');
  dateError.classList.toggle('hidden',valid);
  dateError.textContent=valid?'':'Escolha uma data entre '+fmtDate(today)+' e '+fmtDate(semesterEndFor(today))+'.';
- $('simResults').classList.toggle('hidden',!valid);
+ const fixed=$('simMethod').value==='daily',dailyExtra=fixed?readSimulationDailyExtra():null;
+ $('simDailyFields').classList.toggle('hidden',!fixed);
+ let dailyError='';
+ if(fixed){
+  const capacity=simulationDailyCapacity();
+  if(dailyExtra===null)dailyError='Informe o tempo extra que você quer trabalhar por dia.';
+  else if(dailyExtra<=EXIT_TOLERANCE_MIN)dailyError='A partir de '+(EXIT_TOLERANCE_MIN+1)+' min extras por dia, o tempo começa a gerar crédito no banco.';
+  else if(!Number.isFinite(capacity)||capacity<=EXIT_TOLERANCE_MIN)dailyError='A jornada configurada não comporta horas extras.';
+  else if(dailyExtra>capacity)dailyError='Pela jornada configurada, cabem até '+simulationDuration(capacity)+' extras no dia.';
+ }
+ $('simDailyError').textContent=dailyError;
+ $('simDailyError').classList.toggle('hidden',!dailyError);
+ const canCalculate=valid&&!dailyError;
+ $('simResults').classList.toggle('hidden',!canCalculate);
  renderSimulationEntries(today,valid?end:'');
  const balance=$('simCurrentBalance');
- const d=valid?calculateBankSimulation(today,end):null;
+ const d=canCalculate?calculateBankSimulation(today,end,dailyExtra):null;
  const currentBalance=d?.balance??balanceUntilDate(today);
  balance.textContent=simulationBalance(currentBalance);
  balance.className=simulationBalanceClass(currentBalance);
@@ -2560,7 +2610,10 @@ function updateSimulation(){
  const {plan}=d,shortDate=value=>fmtDate(value).slice(0,5);
  const remaining=Math.max(0,d.needed-plan.credit);
  let lead='Nenhuma hora extra necessária',note='',warning='';
- if(plan.rows.length){
+ if(fixed&&d.needed){
+  lead=plan.daysNeeded+(plan.daysNeeded===1?' dia de extra':' dias de extra')+' para compensar';
+  if(plan.rows.length)note=simulationDuration(plan.work)+' de trabalho extra até o prazo → '+simulationDuration(plan.credit)+' de crédito no banco.';
+ }else if(plan.rows.length){
   const durations=plan.rows.map(row=>row.minutes),min=Math.min(...durations),max=Math.max(...durations);
   lead=(min===max?simulationDuration(min):simulationDuration(min)+' a '+simulationDuration(max))
    +(plan.rows.length===1?' extra em 1 dia':' extras por dia');
@@ -2570,14 +2623,21 @@ function updateSimulation(){
  }
  if(remaining){
   if(!d.available.length)warning='Nenhum dia útil disponível até '+shortDate(end)+'.';
+  else if(fixed){
+   const missingDays=plan.daysNeeded-plan.rows.length;
+   warning=missingDays===1?'Falta 1 dia de extra para compensar.':'Faltam '+missingDays+' dias de extra para compensar.';
+  }
   else if(!plan.rows.length)warning='A jornada configurada não comporta horas extras.';
   warning+=(warning?' ':'')+'Ficam '+simulationDuration(remaining)+' em débito no prazo escolhido.';
  }
  $('simStages').innerHTML='<article class="card sim-stage"><h3>Até '+shortDate(end)+'</h3>'
   +'<p class="sim-lead">'+lead+'</p>'
   +(note?'<p class="sim-result-note">'+note+'</p>':'')
+  +(fixed?simulationValueLine('Crédito por dia de extra',simulationDuration(plan.creditPerDay)+' ('+d.multiplier.toLocaleString('pt-BR')+'×)'):'')
   +simulationValueLine('Dias úteis disponíveis',d.available.length)
-  +(plan.rows.length&&plan.rows.length<d.available.length?simulationValueLine('Dias com horas extras',plan.rows.length):'')
+  +(fixed&&remaining?simulationValueLine('Trabalho extra para compensar',simulationDuration(plan.daysNeeded*dailyExtra)):'')
+  +(!fixed&&plan.rows.length&&plan.rows.length<d.available.length?simulationValueLine('Dias com horas extras',plan.rows.length):'')
+  +(fixed&&plan.rows.length&&!remaining?simulationValueLine('Último dia de extra',shortDate(plan.rows[plan.rows.length-1].date)):'')
   +simulationValueLine('Saldo com os lançamentos futuros',simulationBalance(d.projected),simulationBalanceClass(d.projected))
   +simulationValueLine('Saldo previsto com o plano',simulationBalance(d.projected+plan.credit),simulationBalanceClass(d.projected+plan.credit))
   +(warning?'<p class="sim-warning">'+warning+'</p>':'')+'</article>';
@@ -2631,6 +2691,17 @@ function bind(){
  $('homeVacationDetails').onclick=openPlanning;
  $('settingsPlanVacation').onclick=openPlanning;
  $('simPlanVacation').onclick=openPlanning;
+ $('simMethod').onchange=()=>{
+  cfg.simMethod=$('simMethod').value;
+  saveSimulationSettings();
+ };
+ for(const id of ['simDailyHours','simDailyMinutes']){
+  $(id).oninput=updateSimulation;
+  $(id).onchange=()=>{
+   cfg.simDailyExtra=readSimulationDailyExtra();
+   saveSimulationSettings();
+  };
+ }
  $('simTargetDate').onchange=()=>{
   const field=$('simTargetDate');
   if(!field.validity.valid){updateSimulation();return}
